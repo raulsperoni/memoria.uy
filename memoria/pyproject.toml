@@ -2,7 +2,7 @@
 name = "memoria"
 version = "0.1.0"
 description = ""
-authors = ["raulsperoni <rsperoni@expertinstitute.com>"]
+authors = ["raulsperoni <raulsperoni@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]

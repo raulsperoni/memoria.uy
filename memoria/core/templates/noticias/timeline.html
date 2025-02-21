@@ -1,0 +1,31 @@
+<!-- templates/noticias/timeline.html -->
+***REMOVED***% extends "base.html" %***REMOVED***
+***REMOVED***% load static %***REMOVED***
+
+***REMOVED***% block content %***REMOVED***
+<h1>News Timeline</h1>
+<div class="timeline">
+  ***REMOVED***% for noticia in noticias %***REMOVED***
+    <div class="timeline-item" id="noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
+      <h3>***REMOVED******REMOVED*** noticia.titulo ***REMOVED******REMOVED***</h3>
+      <p><a href="***REMOVED******REMOVED*** noticia.enlace ***REMOVED******REMOVED***" target="_blank">Original Link</a></p>
+      ***REMOVED***% if noticia.archivo_url %***REMOVED***
+        <p>Archived: <a href="***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***" target="_blank">***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***</a></p>
+      ***REMOVED***% endif %***REMOVED***
+      ***REMOVED***% if noticia.archivo_fecha %***REMOVED***
+        <p>Archive Date: ***REMOVED******REMOVED*** noticia.archivo_fecha ***REMOVED******REMOVED***</p>
+      ***REMOVED***% endif %***REMOVED***
+      ***REMOVED***% if noticia.archivo_imagen %***REMOVED***
+        <img src="***REMOVED******REMOVED*** noticia.archivo_imagen ***REMOVED******REMOVED***" alt="Screenshot" style="max-width:300px;">
+      ***REMOVED***% endif %***REMOVED***
+
+      <!-- Vote area: this div will be updated via HTMX -->
+      <div id="vote-area-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
+        ***REMOVED***% include "noticias/vote_area.html" with noticia=noticia %***REMOVED***
+      </div>
+    </div>
+  ***REMOVED***% empty %***REMOVED***
+    <p>No news available.</p>
+  ***REMOVED***% endfor %***REMOVED***
+</div>
+***REMOVED***% endblock %***REMOVED***
