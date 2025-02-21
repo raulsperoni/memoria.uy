@@ -1,0 +1,31 @@
+<!-- templates/noticias/timeline.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<h1>News Timeline</h1>
+<div class="timeline">
+  {% for noticia in noticias %}
+    <div class="timeline-item" id="noticia-{{ noticia.pk }}">
+      <h3>{{ noticia.titulo }}</h3>
+      <p><a href="{{ noticia.enlace }}" target="_blank">Original Link</a></p>
+      {% if noticia.archivo_url %}
+        <p>Archived: <a href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a></p>
+      {% endif %}
+      {% if noticia.archivo_fecha %}
+        <p>Archive Date: {{ noticia.archivo_fecha }}</p>
+      {% endif %}
+      {% if noticia.archivo_imagen %}
+        <img src="{{ noticia.archivo_imagen }}" alt="Screenshot" style="max-width:300px;">
+      {% endif %}
+
+      <!-- Vote area: this div will be updated via HTMX -->
+      <div id="vote-area-{{ noticia.pk }}">
+        {% include "noticias/vote_area.html" with noticia=noticia %}
+      </div>
+    </div>
+  {% empty %}
+    <p>No news available.</p>
+  {% endfor %}
+</div>
+{% endblock %}

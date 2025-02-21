@@ -1,0 +1,21 @@
+<!-- templates/noticias/vote_area.html -->
+{% load vote_extras %}
+<p>
+    Votes: 
+    Buena: {{ noticia.votos|vote_count:"buena" }} |
+    Mala: {{ noticia.votos|vote_count:"mala" }} |
+    Neutral: {{ noticia.votos|vote_count:"neutral" }}
+  </p>
+  {% if user.is_authenticated %}
+    <form hx-post="{% url 'vote' noticia.pk %}" hx-target="#vote-area-{{ noticia.pk }}" hx-swap="outerHTML">
+      {% csrf_token %}
+      <select name="opinion">
+        <option value="buena">Buena</option>
+        <option value="mala">Mala</option>
+        <option value="neutral">Neutral</option>
+      </select>
+      <button type="submit">Vote</button>
+    </form>
+  {% else %}
+    <p><a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to vote.</p>
+  {% endif %}
