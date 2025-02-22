@@ -2,16 +2,19 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+from core import archive
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Noticia(models.Model):
-    titulo = models.CharField(max_length=255)
+    titulo = models.CharField(max_length=255, null=True)
     enlace = models.URLField(unique=True)
     archivo_url = models.URLField(blank=True, null=True)
     archivo_fecha = models.DateTimeField(blank=True, null=True)
     archivo_imagen = models.URLField(blank=True, null=True)
-    fecha_publicacion = models.DateField()
-    fuente = models.CharField(max_length=255)
+    fuente = models.CharField(max_length=255, null=True)
     categoria = models.CharField(
         max_length=100,
         choices=[
@@ -26,15 +29,32 @@ class Noticia(models.Model):
     fecha_agregado = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.titulo
+        if self.titulo:
+            return self.titulo
+        return self.enlace
+
+    def get_archive(self):
+        try:
+            archive_url, archive_metadata = archive.capture(self.enlace)
+            self.archivo_url = archive_url
+            self.archivo_imagen = archive_metadata.get("screenshot_url")
+            self.archivo_fecha = archive_metadata.get("archive_date")
+            self.titulo = archive_metadata.get("title")
+            logger.info(f"Archived ***REMOVED***self.enlace***REMOVED*** to ***REMOVED***archive_url***REMOVED***")
+        except archive.ArchiveInProgress as e:
+            logger.warning(e)
+        except archive.ArchiveFailure as e:
+            logger.error(e)
+        except Exception as e:
+            logger.error(
+                f"Error archiving ***REMOVED***self.enlace if 'noticia' in locals() else ''***REMOVED***: ***REMOVED***e***REMOVED***"
+            )
 
     def save(self, *args, **kwargs):
         # Save the object first so we have an ID
-        super().save(*args, **kwargs)
         if not self.archivo_url:
-            from core.tasks import archive_url_async
-
-            archive_url_async.delay(self.pk)
+            self.get_archive()
+        super().save(*args, **kwargs)
 
 
 class Voto(models.Model):

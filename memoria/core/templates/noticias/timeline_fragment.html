@@ -1,5 +1,16 @@
-***REMOVED***# templates/noticias/timeline_items.html #***REMOVED***
-<div class="timeline">
+***REMOVED***# templates/noticias/timeline_fragment.html #***REMOVED***
+<div id="timeline-container">
+  
+  <h2>Add New Noticia</h2>
+  <form method="post" action="***REMOVED***% url 'noticia-create' %***REMOVED***" 
+        hx-post="***REMOVED***% url 'noticia-create' %***REMOVED***" hx-target="#timeline-container" hx-swap="outerHTML">
+    ***REMOVED***% csrf_token %***REMOVED***
+    ***REMOVED******REMOVED*** form.as_p ***REMOVED******REMOVED***
+    <button type="submit">Submit</button>
+  </form>
+  <hr/>
+
+  <div class="timeline">
     ***REMOVED***% for noticia in noticias %***REMOVED***
       <div class="timeline-item" id="noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
         <h3>***REMOVED******REMOVED*** noticia.titulo ***REMOVED******REMOVED***</h3>
@@ -13,8 +24,8 @@
         ***REMOVED***% if noticia.archivo_imagen %***REMOVED***
           <img src="***REMOVED******REMOVED*** noticia.archivo_imagen ***REMOVED******REMOVED***" alt="Screenshot" style="max-width:300px;">
         ***REMOVED***% endif %***REMOVED***
-  
-        <!-- Vote area -->
+
+        <!-- Vote area remains the same -->
         <div id="vote-area-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
           ***REMOVED***% include "noticias/vote_area.html" with noticia=noticia %***REMOVED***
         </div>
@@ -24,4 +35,4 @@
       <p>No news available.</p>
     ***REMOVED***% endfor %***REMOVED***
   </div>
-  
+</div>

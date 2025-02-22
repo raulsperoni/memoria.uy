@@ -1,20 +1,6 @@
-<!-- templates/noticias/timeline.html -->
+***REMOVED***# templates/noticias/timeline.html #***REMOVED***
 ***REMOVED***% extends "base.html" %***REMOVED***
-***REMOVED***% load static %***REMOVED***
-
 ***REMOVED***% block content %***REMOVED***
 <h1>News Timeline</h1>
-
-<!-- HTMX-enabled form for adding a new Noticia -->
-<h2>Add New Noticia</h2>
-<form method="post" action="***REMOVED***% url 'noticia-create' %***REMOVED***" 
-      hx-post="***REMOVED***% url 'noticia-create' %***REMOVED***" hx-target="#timeline" hx-swap="outerHTML">
-  ***REMOVED***% csrf_token %***REMOVED***
-  ***REMOVED******REMOVED*** form.as_p ***REMOVED******REMOVED***
-  <button type="submit">Submit</button>
-</form>
-
-<div id="timeline">
-  ***REMOVED***% include "noticias/timeline_items.html" with noticias=noticias %***REMOVED***
-</div>
+***REMOVED***% include "noticias/timeline_fragment.html" %***REMOVED***
 ***REMOVED***% endblock %***REMOVED***

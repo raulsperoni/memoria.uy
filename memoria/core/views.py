@@ -13,7 +13,7 @@ class NewsTimelineView(ListView):
     model = Noticia
     template_name = "noticias/timeline.html"
     context_object_name = "noticias"
-    ordering = ["-fecha_publicacion"]
+    ordering = ["-fecha_agregado"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -42,7 +42,6 @@ class VoteView(LoginRequiredMixin, View):
 class NoticiaCreateView(LoginRequiredMixin, CreateView):
     model = Noticia
     form_class = NoticiaForm
-    template_name = "noticias/noticia_form.html"  # We’ll use a simple template
     success_url = reverse_lazy("timeline")
 
     def form_valid(self, form):
@@ -53,11 +52,13 @@ class NoticiaCreateView(LoginRequiredMixin, CreateView):
         Voto.objects.create(
             usuario=self.request.user, noticia=self.object, opinion="buena"
         )
-        # If this is an HTMX request, re-render the timeline partial.
         if self.request.headers.get("HX-Request"):
-            noticias = Noticia.objects.all().order_by("-fecha_publicacion")
+            noticias = Noticia.objects.all().order_by("-fecha_agregado")
+            # Render the full timeline fragment, which includes the form.
             return render(
-                self.request, "noticias/timeline_items.html", ***REMOVED***"noticias": noticias***REMOVED***
+                self.request,
+                "noticias/timeline_fragment.html",
+                ***REMOVED***"noticias": noticias, "form": self.form_class()***REMOVED***,
             )
 
         return response

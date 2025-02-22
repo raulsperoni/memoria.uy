@@ -36,7 +36,10 @@ def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
     # Otherwise, try to extract the archive URL from the HTML using regex.
     match = re.search(r"(https?://archive\.ph/\w+)", response.text)
     if match:
-        return match.group(1), get_archive_details(response.text)
+        archive_url = match.group(1)
+        if archive_url == "https://archive.ph/wip":
+            raise ArchiveInProgress(f"Archiving in progress for ***REMOVED***url***REMOVED***")
+        return archive_url, get_archive_details(response.text)
 
     raise ArchiveFailure(
         f"Failed to capture ***REMOVED***url***REMOVED*** via archive.ph (status: ***REMOVED***response.status_code***REMOVED***)"
