@@ -17,10 +17,11 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from core.views import NewsTimelineView, VoteView
+from core.views import NewsTimelineView, VoteView, NoticiaCreateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", NewsTimelineView.as_view(), name="timeline"),
     path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
+    path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
 ]

@@ -1,8 +1,12 @@
-from django.views.generic import ListView, View
+# views.py
+
+from django.views.generic import ListView, View, CreateView
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponseBadRequest
 from django.contrib.auth.mixins import LoginRequiredMixin
 from core.models import Noticia, Voto
+from core.forms import NoticiaForm
+from django.urls import reverse_lazy
 
 
 class NewsTimelineView(ListView):
@@ -10,6 +14,12 @@ class NewsTimelineView(ListView):
     template_name = "noticias/timeline.html"
     context_object_name = "noticias"
     ordering = ["-fecha_publicacion"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Provide an empty form for creating a new Noticia.
+        context["form"] = NoticiaForm()
+        return context
 
 
 class VoteView(LoginRequiredMixin, View):
@@ -27,3 +37,27 @@ class VoteView(LoginRequiredMixin, View):
         # Render the updated vote area partial.
         context = ***REMOVED***"noticia": noticia, "user": request.user***REMOVED***
         return render(request, "noticias/vote_area.html", context)
+
+
+class NoticiaCreateView(LoginRequiredMixin, CreateView):
+    model = Noticia
+    form_class = NoticiaForm
+    template_name = "noticias/noticia_form.html"  # We’ll use a simple template
+    success_url = reverse_lazy("timeline")
+
+    def form_valid(self, form):
+        # Set the creator of the news item.
+        form.instance.agregado_por = self.request.user
+        response = super().form_valid(form)
+        # Automatically create a vote by the creator with opinion "buena"
+        Voto.objects.create(
+            usuario=self.request.user, noticia=self.object, opinion="buena"
+        )
+        # If this is an HTMX request, re-render the timeline partial.
+        if self.request.headers.get("HX-Request"):
+            noticias = Noticia.objects.all().order_by("-fecha_publicacion")
+            return render(
+                self.request, "noticias/timeline_items.html", ***REMOVED***"noticias": noticias***REMOVED***
+            )
+
+        return response

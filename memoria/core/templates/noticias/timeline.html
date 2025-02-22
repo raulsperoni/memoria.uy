@@ -4,28 +4,17 @@
 
 ***REMOVED***% block content %***REMOVED***
 <h1>News Timeline</h1>
-<div class="timeline">
-  ***REMOVED***% for noticia in noticias %***REMOVED***
-    <div class="timeline-item" id="noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
-      <h3>***REMOVED******REMOVED*** noticia.titulo ***REMOVED******REMOVED***</h3>
-      <p><a href="***REMOVED******REMOVED*** noticia.enlace ***REMOVED******REMOVED***" target="_blank">Original Link</a></p>
-      ***REMOVED***% if noticia.archivo_url %***REMOVED***
-        <p>Archived: <a href="***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***" target="_blank">***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***</a></p>
-      ***REMOVED***% endif %***REMOVED***
-      ***REMOVED***% if noticia.archivo_fecha %***REMOVED***
-        <p>Archive Date: ***REMOVED******REMOVED*** noticia.archivo_fecha ***REMOVED******REMOVED***</p>
-      ***REMOVED***% endif %***REMOVED***
-      ***REMOVED***% if noticia.archivo_imagen %***REMOVED***
-        <img src="***REMOVED******REMOVED*** noticia.archivo_imagen ***REMOVED******REMOVED***" alt="Screenshot" style="max-width:300px;">
-      ***REMOVED***% endif %***REMOVED***
 
-      <!-- Vote area: this div will be updated via HTMX -->
-      <div id="vote-area-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
-        ***REMOVED***% include "noticias/vote_area.html" with noticia=noticia %***REMOVED***
-      </div>
-    </div>
-  ***REMOVED***% empty %***REMOVED***
-    <p>No news available.</p>
-  ***REMOVED***% endfor %***REMOVED***
+<!-- HTMX-enabled form for adding a new Noticia -->
+<h2>Add New Noticia</h2>
+<form method="post" action="***REMOVED***% url 'noticia-create' %***REMOVED***" 
+      hx-post="***REMOVED***% url 'noticia-create' %***REMOVED***" hx-target="#timeline" hx-swap="outerHTML">
+  ***REMOVED***% csrf_token %***REMOVED***
+  ***REMOVED******REMOVED*** form.as_p ***REMOVED******REMOVED***
+  <button type="submit">Submit</button>
+</form>
+
+<div id="timeline">
+  ***REMOVED***% include "noticias/timeline_items.html" with noticias=noticias %***REMOVED***
 </div>
 ***REMOVED***% endblock %***REMOVED***
