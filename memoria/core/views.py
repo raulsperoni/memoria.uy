@@ -91,3 +91,14 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
                 ***REMOVED***"noticias": noticias, "form": self.get_form_class()()***REMOVED***,
             )
         return redirect(self.success_url)
+
+
+class RefreshNoticiaView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        noticia = get_object_or_404(Noticia, pk=pk)
+        noticia.get_archive()
+        noticia.save(
+            update_fields=["archivo_url", "archivo_fecha", "archivo_imagen", "titulo"]
+        )
+        # Render the updated timeline item fragment.
+        return render(request, "noticias/timeline_item.html", ***REMOVED***"noticia": noticia***REMOVED***)

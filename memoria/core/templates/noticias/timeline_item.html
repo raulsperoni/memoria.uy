@@ -1,0 +1,29 @@
+***REMOVED***# templates/noticias/timeline_item.html #***REMOVED***
+<div class="timeline-item" id="noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
+    <h3>***REMOVED******REMOVED*** noticia.titulo ***REMOVED******REMOVED***</h3>
+    <p><a href="***REMOVED******REMOVED*** noticia.enlace ***REMOVED******REMOVED***" target="_blank">Original Link</a></p>
+    ***REMOVED***% if noticia.archivo_url %***REMOVED***
+      <p>Archived: <a href="***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***" target="_blank">***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***</a></p>
+    ***REMOVED***% endif %***REMOVED***
+    ***REMOVED***% if noticia.archivo_fecha %***REMOVED***
+      <p>Archive Date: ***REMOVED******REMOVED*** noticia.archivo_fecha ***REMOVED******REMOVED***</p>
+    ***REMOVED***% endif %***REMOVED***
+    ***REMOVED***% if noticia.archivo_imagen %***REMOVED***
+      <img src="***REMOVED******REMOVED*** noticia.archivo_imagen ***REMOVED******REMOVED***" alt="Screenshot" style="max-width:300px;">
+    ***REMOVED***% endif %***REMOVED***
+  
+    <!-- Refresh button using HTMX -->
+    <button 
+      hx-post="***REMOVED***% url 'noticia-refresh' noticia.pk %***REMOVED***" 
+      hx-target="#noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***" 
+      hx-swap="outerHTML"
+      hx-headers='***REMOVED***"X-CSRFToken": "***REMOVED******REMOVED*** csrf_token ***REMOVED******REMOVED***"***REMOVED***'>
+      Refresh Archive
+    </button>
+  
+    <!-- Vote area (assuming you already have a vote_area.html partial) -->
+    <div id="vote-area-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
+      ***REMOVED***% include "noticias/vote_area.html" with noticia=noticia %***REMOVED***
+    </div>
+  </div>
+  
