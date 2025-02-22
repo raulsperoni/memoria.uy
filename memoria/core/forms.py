@@ -1,11 +1,14 @@
 # forms.py
 
 from django import forms
-from .models import Noticia
+
+VOTE_CHOICES = [
+    ("buena", "Buena noticia"),
+    ("mala", "Mala noticia"),
+    ("neutral", "Neutral"),
+]
 
 
-class NoticiaForm(forms.ModelForm):
-    class Meta:
-        model = Noticia
-        # Include only the fields you want the user to input.
-        fields = ["enlace", "fuente", "categoria"]
+class NoticiaForm(forms.Form):
+    opinion = forms.ChoiceField(choices=VOTE_CHOICES, label="Your Vote")
+    enlace = forms.URLField(label="URL")

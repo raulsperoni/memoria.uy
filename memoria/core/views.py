@@ -1,12 +1,13 @@
 # views.py
 
-from django.views.generic import ListView, View, CreateView
+from django.views.generic import ListView, View, FormView
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponseBadRequest
 from django.contrib.auth.mixins import LoginRequiredMixin
 from core.models import Noticia, Voto
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
+from django.shortcuts import redirect
 
 
 class NewsTimelineView(ListView):
@@ -39,26 +40,54 @@ class VoteView(LoginRequiredMixin, View):
         return render(request, "noticias/vote_area.html", context)
 
 
-class NoticiaCreateView(LoginRequiredMixin, CreateView):
-    model = Noticia
+class NoticiaCreateView(LoginRequiredMixin, FormView):
+    template_name = "noticias/timeline_fragment.html"  # This fragment includes both the form and the timeline
     form_class = NoticiaForm
     success_url = reverse_lazy("timeline")
 
     def form_valid(self, form):
-        # Set the creator of the news item.
-        form.instance.agregado_por = self.request.user
-        response = super().form_valid(form)
-        # Automatically create a vote by the creator with opinion "buena"
-        Voto.objects.create(
-            usuario=self.request.user, noticia=self.object, opinion="buena"
-        )
+        vote_opinion = form.cleaned_data.get("opinion")
+        enlace = form.cleaned_data.get("enlace")
+        try:
+            # Try to retrieve an existing Noticia with this enlace.
+            noticia = Noticia.objects.get(enlace=enlace)
+            # Refresh its archive data.
+            noticia.get_archive()
+            noticia.save(
+                update_fields=[
+                    "archivo_url",
+                    "archivo_fecha",
+                    "archivo_imagen",
+                    "titulo",
+             ***REMOVED***
+            )
+            # Update or create the vote for the current user.
+            Voto.objects.update_or_create(
+                usuario=self.request.user,
+                noticia=noticia,
+                defaults=***REMOVED***"opinion": vote_opinion***REMOVED***,
+            )
+        except Noticia.DoesNotExist:
+            # Create a new Noticia if it doesn't exist.
+            noticia = Noticia(
+                agregado_por=self.request.user,
+                enlace=enlace,
+            )
+            noticia.get_archive()
+            noticia.save()
+            Voto.objects.create(
+                usuario=self.request.user,
+                noticia=noticia,
+                opinion=vote_opinion,
+            )
+
+        # For HTMX requests, re-render the entire timeline fragment (form and timeline).
         if self.request.headers.get("HX-Request"):
             noticias = Noticia.objects.all().order_by("-fecha_agregado")
-            # Render the full timeline fragment, which includes the form.
+            # Pass a fresh form instance so the fields are cleared.
             return render(
                 self.request,
                 "noticias/timeline_fragment.html",
-                ***REMOVED***"noticias": noticias, "form": self.form_class()***REMOVED***,
+                ***REMOVED***"noticias": noticias, "form": self.get_form_class()()***REMOVED***,
             )
-
-        return response
+        return redirect(self.success_url)
