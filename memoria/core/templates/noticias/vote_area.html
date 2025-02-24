@@ -2,9 +2,9 @@
 {% load vote_extras %}
 <p>
     Votes: 
-    Buena: {% noticia.votos|vote_count:"buena" %} |
-    Mala: {%  noticia.votos|vote_count:"mala" %} |
-    Neutral: {%  noticia.votos|vote_count:"neutral" %}
+    Buena: {{ noticia.votos|vote_count:"buena" }} |
+    Mala: {{ noticia.votos|vote_count:"mala" }} |
+    Neutral: {{  noticia.votos|vote_count:"neutral" }}
   </p>
   {% if user.is_authenticated %}
     <form hx-post="{% url 'vote' noticia.pk %}" hx-target="#vote-area-{{ noticia.pk }}" hx-swap="outerHTML">
