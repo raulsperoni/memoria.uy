@@ -4,6 +4,7 @@ from litellm import completion
 from bs4 import BeautifulSoup
 import logging
 
+# litellm._turn_on_debug()
 logger = logging.getLogger(__name__)
 
 
@@ -66,7 +67,7 @@ def parse_noticia(html) -> Union[Articulo, None]:
     try:
         clean_html = remove_unnecessary_tags(html)
         response = completion(
-            model="gpt-4o-mini",
+            model="openrouter/openai/o3-mini",  # "",
             caching=True,
             response_format=Articulo,
             messages=[
@@ -86,10 +87,8 @@ def parse_noticia(html) -> Union[Articulo, None]:
             ],
         )
         article_data = response.choices[0].message.content
+        logger.debug(article_data)
         return Articulo.parse_raw(article_data)
     except Exception as e:
-        logger.error(
-            f"Error parsing the article: {e}\nOriginal HTML:{html}\nClean HTML: {clean_html}"
-        )
         logger.error(f"Error parsing the article: {e}")
         return None

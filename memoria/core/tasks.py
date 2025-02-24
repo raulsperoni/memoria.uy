@@ -11,6 +11,9 @@ def parse(noticia_id, html):
     noticia = Noticia.objects.get(id=noticia_id)
     logger.info(f"Parsing {noticia.enlace}")
     articulo = parse_noticia(html)
+    if not articulo:
+        logger.error(f"Failed to parse {noticia.enlace}")
+        return
     noticia.fuente = articulo.fuente
     noticia.categoria = articulo.categoria if articulo.categoria else "otros"
     noticia.resumen = articulo.resumen
