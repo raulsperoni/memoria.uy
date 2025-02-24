@@ -1,14 +1,14 @@
 <!-- templates/noticias/vote_area.html -->
-***REMOVED***% load vote_extras %***REMOVED***
+{% load vote_extras %}
 <p>
     Votes: 
-    Buena: ***REMOVED******REMOVED*** noticia.votos|vote_count:"buena" ***REMOVED******REMOVED*** |
-    Mala: ***REMOVED******REMOVED*** noticia.votos|vote_count:"mala" ***REMOVED******REMOVED*** |
-    Neutral: ***REMOVED******REMOVED*** noticia.votos|vote_count:"neutral" ***REMOVED******REMOVED***
+    Buena: {% noticia.votos|vote_count:"buena" %} |
+    Mala: {%  noticia.votos|vote_count:"mala" %} |
+    Neutral: {%  noticia.votos|vote_count:"neutral" %}
   </p>
-  ***REMOVED***% if user.is_authenticated %***REMOVED***
-    <form hx-post="***REMOVED***% url 'vote' noticia.pk %***REMOVED***" hx-target="#vote-area-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***" hx-swap="outerHTML">
-      ***REMOVED***% csrf_token %***REMOVED***
+  {% if user.is_authenticated %}
+    <form hx-post="{% url 'vote' noticia.pk %}" hx-target="#vote-area-{{ noticia.pk }}" hx-swap="outerHTML">
+      {% csrf_token %}
       <select name="opinion">
         <option value="buena">Buena</option>
         <option value="mala">Mala</option>
@@ -16,6 +16,6 @@
       </select>
       <button type="submit">Vote</button>
     </form>
-  ***REMOVED***% else %***REMOVED***
-    <p><a href="***REMOVED***% url 'login' %***REMOVED***?next=***REMOVED******REMOVED*** request.path ***REMOVED******REMOVED***">Log in</a> to vote.</p>
-  ***REMOVED***% endif %***REMOVED***
+  {% else %}
+    <p><a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to vote.</p>
+  {% endif %}

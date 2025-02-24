@@ -5,11 +5,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "memoria.settings")
 app = Celery(
     "memoria",
     broker_url="filesystem://",
-    broker_transport_options=***REMOVED***
+    broker_transport_options={
         "data_folder_in": "./.data/broker",
         "data_folder_out": "./.data/broker/",
         "data_folder_processed": "./.data/broker/processed",
-  ***REMOVED***
+    },
     result_persistent=False,
     task_serializer="json",
     result_serializer="json",

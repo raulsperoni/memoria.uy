@@ -6,12 +6,11 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
- ***REMOVED***
+    ]
 
     operations = [
         migrations.CreateModel(
@@ -40,7 +39,7 @@ class Migration(migrations.Migration):
                             ("salud", "Salud"),
                             ("educacion", "Educación"),
                             ("otros", "Otros"),
-                     ***REMOVED***,
+                        ],
                         max_length=100,
                     ),
                 ),
@@ -52,7 +51,7 @@ class Migration(migrations.Migration):
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
-         ***REMOVED***,
+            ],
         ),
         migrations.CreateModel(
             name="Voto",
@@ -73,7 +72,7 @@ class Migration(migrations.Migration):
                             ("buena", "Buena noticia"),
                             ("mala", "Mala noticia"),
                             ("neutral", "Neutral"),
-                     ***REMOVED***,
+                        ],
                         max_length=10,
                     ),
                 ),
@@ -93,9 +92,9 @@ class Migration(migrations.Migration):
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
-         ***REMOVED***,
-            options=***REMOVED***
-                "unique_together": ***REMOVED***("usuario", "noticia")***REMOVED***,
-          ***REMOVED***
+            ],
+            options={
+                "unique_together": [("usuario", "noticia")],
+            },
         ),
- ***REMOVED***
+    ]

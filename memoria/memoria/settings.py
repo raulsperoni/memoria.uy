@@ -38,38 +38,38 @@ MIDDLEWARE = [
 ROOT_URLCONF = "memoria.urls"
 
 TEMPLATES = [
-    ***REMOVED***
+    {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
-        "OPTIONS": ***REMOVED***
+        "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-         ***REMOVED***,
-      ***REMOVED***
-  ***REMOVED***
+            ],
+        },
+    },
 ]
 
 WSGI_APPLICATION = "memoria.wsgi.application"
 
-DATABASES = ***REMOVED***
+DATABASES = {
     "default": dj_database_url.config(
-        default=f"sqlite:///***REMOVED***BASE_DIR / 'db.sqlite3'***REMOVED***"
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
         if DEBUG
         else os.getenv("SUPABASE_DATABASE_URL")
     )
-***REMOVED***
+}
 
 AUTH_PASSWORD_VALIDATORS = [
-    ***REMOVED***
+    {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-  ***REMOVED***
-    ***REMOVED***"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"***REMOVED***,
-    ***REMOVED***"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"***REMOVED***,
-    ***REMOVED***"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"***REMOVED***,
+    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 LANGUAGE_CODE = "es-uy"
@@ -84,17 +84,17 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Configuración de Django REST Framework
-REST_FRAMEWORK = ***REMOVED***
+REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ),
-***REMOVED***
+}
 
 
-LOGGING = ***REMOVED***
+LOGGING = {
     "version": 1,  # the dictConfig format version
     "disable_existing_loggers": False,  # retain the default loggers
-***REMOVED***
+}

@@ -5,11 +5,9 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0003_remove_noticia_fecha_publicacion_and_more"),
- ***REMOVED***
-
+    ]
     operations = [
         migrations.CreateModel(
             name="Entidad",
@@ -32,11 +30,11 @@ class Migration(migrations.Migration):
                             ("organizacion", "Organización"),
                             ("lugar", "Lugar"),
                             ("otro", "Otro"),
-                     ***REMOVED***,
+                        ],
                         max_length=100,
                     ),
                 ),
-         ***REMOVED***,
+            ],
         ),
         migrations.AddField(
             model_name="noticia",
@@ -54,7 +52,7 @@ class Migration(migrations.Migration):
                     ("salud", "Salud"),
                     ("educacion", "Educación"),
                     ("otros", "Otros"),
-             ***REMOVED***,
+                ],
                 max_length=100,
             ),
         ),
@@ -77,7 +75,7 @@ class Migration(migrations.Migration):
                             ("positivo", "Positivo"),
                             ("negativo", "Negativo"),
                             ("neutral", "Neutral"),
-                     ***REMOVED***,
+                        ],
                         max_length=10,
                     ),
                 ),
@@ -95,9 +93,9 @@ class Migration(migrations.Migration):
                         to="core.noticia",
                     ),
                 ),
-         ***REMOVED***,
-            options=***REMOVED***
-                "unique_together": ***REMOVED***("noticia", "entidad")***REMOVED***,
-          ***REMOVED***
+            ],
+            options={
+                "unique_together": [("noticia", "entidad")],
+            },
         ),
- ***REMOVED***
+    ]

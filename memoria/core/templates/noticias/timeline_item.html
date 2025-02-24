@@ -1,58 +1,58 @@
-***REMOVED***# templates/noticias/timeline_item.html #***REMOVED***
-<div class="timeline-item" id="noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
-    <h3>***REMOVED******REMOVED*** noticia.titulo ***REMOVED******REMOVED***</h3>
-    <p><a href="***REMOVED******REMOVED*** noticia.enlace ***REMOVED******REMOVED***" target="_blank">Original Link</a></p>
-    ***REMOVED***% if noticia.archivo_url %***REMOVED***
-      <p>Archived: <a href="***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***" target="_blank">***REMOVED******REMOVED*** noticia.archivo_url ***REMOVED******REMOVED***</a></p>
-    ***REMOVED***% endif %***REMOVED***
-    ***REMOVED***% if noticia.archivo_fecha %***REMOVED***
-      <p>Archive Date: ***REMOVED******REMOVED*** noticia.archivo_fecha ***REMOVED******REMOVED***</p>
-    ***REMOVED***% endif %***REMOVED***
-    ***REMOVED***% if noticia.archivo_imagen %***REMOVED***
-      <img src="***REMOVED******REMOVED*** noticia.archivo_imagen ***REMOVED******REMOVED***" alt="Screenshot" style="max-width:300px;">
-    ***REMOVED***% endif %***REMOVED***
+{# templates/noticias/timeline_item.html #}
+<div class="timeline-item" id="noticia-{{ noticia.pk }}">
+    <h3>{{ noticia.titulo }}</h3>
+    <p><a href="{{ noticia.enlace }}" target="_blank">Original Link</a></p>
+    {% if noticia.archivo_url %}
+      <p>Archived: <a href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a></p>
+    {% endif %}
+    {% if noticia.archivo_fecha %}
+      <p>Archive Date: {{ noticia.archivo_fecha }}</p>
+    {% endif %}
+    {% if noticia.archivo_imagen %}
+      <img src="{{ noticia.archivo_imagen }}" alt="Screenshot" style="max-width:300px;">
+    {% endif %}
     
     <!-- Add resumen, fuente, and categoria -->
-    ***REMOVED***% if noticia.resumen %***REMOVED***
-      <p>Summary: ***REMOVED******REMOVED*** noticia.resumen ***REMOVED******REMOVED***</p>
-    ***REMOVED***% endif %***REMOVED***
-    ***REMOVED***% if noticia.fuente %***REMOVED***
-      <p>Source: ***REMOVED******REMOVED*** noticia.fuente ***REMOVED******REMOVED***</p>
-    ***REMOVED***% endif %***REMOVED***
-    ***REMOVED***% if noticia.categoria %***REMOVED***
-      <p>Category: ***REMOVED******REMOVED*** noticia.get_categoria_display ***REMOVED******REMOVED***</p>
-    ***REMOVED***% endif %***REMOVED***
+    {% if noticia.resumen %}
+      <p>Summary: {{ noticia.resumen }}</p>
+    {% endif %}
+    {% if noticia.fuente %}
+      <p>Source: {{ noticia.fuente }}</p>
+    {% endif %}
+    {% if noticia.categoria %}
+      <p>Category: {{ noticia.get_categoria_display }}</p>
+    {% endif %}
     
     <!-- Add related entities with sentiment emojis -->
-    ***REMOVED***% if noticia.entidades.exists %***REMOVED***
+    {% if noticia.entidades.exists %}
       <p>Entities:</p>
       <ul>
-        ***REMOVED***% for entidad in noticia.entidades.all %***REMOVED***
+        {% for entidad in noticia.entidades.all %}
           <li>
-            ***REMOVED******REMOVED*** entidad.entidad.nombre ***REMOVED******REMOVED*** 
-            ***REMOVED***% if entidad.sentimiento == "positivo" %***REMOVED***
+            {{ entidad.entidad.nombre }} 
+            {% if entidad.sentimiento == "positivo" %}
               😊
-            ***REMOVED***% elif entidad.sentimiento == "negativo" %***REMOVED***
+            {% elif entidad.sentimiento == "negativo" %}
               😞
-            ***REMOVED***% else %***REMOVED***
+            {% else %}
               😐
-            ***REMOVED***% endif %***REMOVED***
+            {% endif %}
           </li>
-        ***REMOVED***% endfor %***REMOVED***
+        {% endfor %}
       </ul>
-    ***REMOVED***% endif %***REMOVED***
+    {% endif %}
   
     <!-- Refresh button using HTMX -->
     <button 
-      hx-post="***REMOVED***% url 'noticia-refresh' noticia.pk %***REMOVED***" 
-      hx-target="#noticia-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***" 
+      hx-post="{% url 'noticia-refresh' noticia.pk %}" 
+      hx-target="#noticia-{{ noticia.pk }}" 
       hx-swap="outerHTML"
-      hx-headers='***REMOVED***"X-CSRFToken": "***REMOVED******REMOVED*** csrf_token ***REMOVED******REMOVED***"***REMOVED***'>
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
       Refresh Archive
     </button>
   
     <!-- Vote area (assuming you already have a vote_area.html partial) -->
-    <div id="vote-area-***REMOVED******REMOVED*** noticia.pk ***REMOVED******REMOVED***">
-      ***REMOVED***% include "noticias/vote_area.html" with noticia=noticia %***REMOVED***
+    <div id="vote-area-{{ noticia.pk }}">
+      {% include "noticias/vote_area.html" with noticia=noticia %}
     </div>
   </div>

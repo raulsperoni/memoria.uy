@@ -7,6 +7,6 @@ register = template.Library()
 def vote_count(votos, opinion):
     """
     Given a queryset of votes and an opinion string, returns the count.
-    Usage: ***REMOVED******REMOVED*** noticia.votos|vote_count:"buena" ***REMOVED******REMOVED***
+    Usage: {{ noticia.votos|vote_count:"buena" }}
     """
     return votos.filter(opinion=opinion).count()

@@ -24,7 +24,7 @@ class Noticia(models.Model):
             ("salud", "Salud"),
             ("educacion", "Educación"),
             ("otros", "Otros"),
-     ***REMOVED***,
+        ],
     )
     resumen = models.TextField(blank=True, null=True)
     agregado_por = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -42,7 +42,7 @@ class Noticia(models.Model):
             self.archivo_imagen = archive_metadata.get("screenshot_url")
             self.archivo_fecha = archive_metadata.get("archive_date")
             self.titulo = archive_metadata.get("title")
-            logger.info(f"Archived ***REMOVED***self.enlace***REMOVED*** to ***REMOVED***archive_url***REMOVED***")
+            logger.info(f"Archived {self.enlace} to {archive_url}")
             from core.tasks import parse
 
             parse.delay(self.id, html)
@@ -52,7 +52,7 @@ class Noticia(models.Model):
             logger.error(e)
         except Exception as e:
             logger.error(
-                f"Error archiving ***REMOVED***self.enlace if 'noticia' in locals() else ''***REMOVED***: ***REMOVED***e***REMOVED***"
+                f"Error archiving {self.enlace if 'noticia' in locals() else ''}: {e}"
             )
 
     def save(self, *args, **kwargs):
@@ -71,7 +71,7 @@ class Voto(models.Model):
             ("buena", "Buena noticia"),
             ("mala", "Mala noticia"),
             ("neutral", "Neutral"),
-     ***REMOVED***,
+        ],
     )
     fecha_voto = models.DateTimeField(auto_now_add=True)
 
@@ -79,7 +79,7 @@ class Voto(models.Model):
         unique_together = ("usuario", "noticia")
 
     def __str__(self):
-        return f"***REMOVED***self.usuario.username***REMOVED*** - ***REMOVED***self.opinion***REMOVED*** - ***REMOVED***self.noticia.titulo***REMOVED***"
+        return f"{self.usuario.username} - {self.opinion} - {self.noticia.titulo}"
 
 
 class Entidad(models.Model):
@@ -91,7 +91,7 @@ class Entidad(models.Model):
             ("organizacion", "Organización"),
             ("lugar", "Lugar"),
             ("otro", "Otro"),
-     ***REMOVED***,
+        ],
     )
 
     def __str__(self):
@@ -109,11 +109,11 @@ class NoticiaEntidad(models.Model):
             ("positivo", "Positivo"),
             ("negativo", "Negativo"),
             ("neutral", "Neutral"),
-     ***REMOVED***,
+        ],
     )
 
     class Meta:
         unique_together = ("noticia", "entidad")
 
     def __str__(self):
-        return f"***REMOVED***self.noticia.titulo***REMOVED*** - ***REMOVED***self.entidad.nombre***REMOVED***"
+        return f"{self.noticia.titulo} -{self.entidad.nombre}"

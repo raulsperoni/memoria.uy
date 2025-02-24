@@ -4,10 +4,9 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0001_initial"),
- ***REMOVED***
+    ]
 
     operations = [
         migrations.AddField(
@@ -20,4 +19,4 @@ class Migration(migrations.Migration):
             name="archivo_imagen",
             field=models.URLField(blank=True, null=True),
         ),
- ***REMOVED***
+    ]

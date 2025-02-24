@@ -19,9 +19,9 @@ def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
     Capture the given URL using archive.ph.
     Returns the final archive URL or raises an Exception.
     """
-    headers = ***REMOVED***"User-Agent": user_agent***REMOVED***
+    headers = {"User-Agent": user_agent}
     # Some minimal data; the archive service expects a "url" parameter.
-    data = ***REMOVED***"url": url, "submitid": "1"***REMOVED***
+    data = {"url": url, "submitid": "1"}
     response = requests.post(
         ARCHIVE_PH_SUBMIT_URL, data=data, headers=headers, timeout=30
     )
@@ -30,7 +30,7 @@ def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
     if response.status_code == 302 and "Location" in response.headers:
         archive_url = response.headers["Location"]
         if archive_url == "https://archive.ph/wip":
-            raise ArchiveInProgress(f"Archiving in progress for ***REMOVED***url***REMOVED***")
+            raise ArchiveInProgress(f"Archiving in progress for {url}")
         return archive_url, get_archive_details(response.text), response.text
 
     # Otherwise, try to extract the archive URL from the HTML using regex.
@@ -38,11 +38,11 @@ def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
     if match:
         archive_url = match.group(1)
         if archive_url == "https://archive.ph/wip":
-            raise ArchiveInProgress(f"Archiving in progress for ***REMOVED***url***REMOVED***")
+            raise ArchiveInProgress(f"Archiving in progress for {url}")
         return archive_url, get_archive_details(response.text), response.text
 
     raise ArchiveFailure(
-        f"Failed to capture ***REMOVED***url***REMOVED*** via archive.ph (status: ***REMOVED***response.status_code***REMOVED***)"
+        f"Failed to capture {url} via archive.ph (status: {response.status_code})"
     )
 
 
@@ -62,23 +62,23 @@ def get_archive_details(html):
 
     # Try to get archive date from a meta tag (this may vary depending on archive.ph's HTML).
     archive_date = None
-    meta_date = soup.find("meta", attrs=***REMOVED***"property": "article:published_time"***REMOVED***)
+    meta_date = soup.find("meta", attrs={"property": "article:published_time"})
     if meta_date and meta_date.get("content"):
         archive_date = meta_date["content"]
 
     # Parse screenshot URL from the Open Graph image meta tag.
     screenshot_url = None
-    meta_img = soup.find("meta", attrs=***REMOVED***"property": "og:image"***REMOVED***)
+    meta_img = soup.find("meta", attrs={"property": "og:image"})
     if meta_img and meta_img.get("content"):
         screenshot_url = meta_img["content"]
 
-    url = soup.find("meta", attrs=***REMOVED***"property": "og:url"***REMOVED***)
+    url = soup.find("meta", attrs={"property": "og:url"})
     if url and url.get("content"):
         url = url["content"]
 
-    return ***REMOVED***
+    return {
         "title": page_title,
         "archive_date": archive_date,
         "screenshot_url": screenshot_url,
         "archive_url": url,
-***REMOVED***
+    }

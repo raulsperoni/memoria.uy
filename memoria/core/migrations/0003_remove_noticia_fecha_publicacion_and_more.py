@@ -4,10 +4,9 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("core", "0002_noticia_archivo_fecha_noticia_archivo_imagen"),
- ***REMOVED***
+    ]
 
     operations = [
         migrations.RemoveField(
@@ -24,4 +23,4 @@ class Migration(migrations.Migration):
             name="titulo",
             field=models.CharField(max_length=255, null=True),
         ),
- ***REMOVED***
+    ]

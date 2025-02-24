@@ -33,10 +33,10 @@ class VoteView(LoginRequiredMixin, View):
         # Update or create the vote for this user.
         # (This allows a user to change their vote.)
         Voto.objects.update_or_create(
-            usuario=request.user, noticia=noticia, defaults=***REMOVED***"opinion": opinion***REMOVED***
+            usuario=request.user, noticia=noticia, defaults={"opinion": opinion}
         )
         # Render the updated vote area partial.
-        context = ***REMOVED***"noticia": noticia, "user": request.user***REMOVED***
+        context = {"noticia": noticia, "user": request.user}
         return render(request, "noticias/vote_area.html", context)
 
 
@@ -59,13 +59,13 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
                     "archivo_fecha",
                     "archivo_imagen",
                     "titulo",
-             ***REMOVED***
+                ]
             )
             # Update or create the vote for the current user.
             Voto.objects.update_or_create(
                 usuario=self.request.user,
                 noticia=noticia,
-                defaults=***REMOVED***"opinion": vote_opinion***REMOVED***,
+                defaults={"opinion": vote_opinion},
             )
         except Noticia.DoesNotExist:
             # Create a new Noticia if it doesn't exist.
@@ -88,7 +88,7 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
             return render(
                 self.request,
                 "noticias/timeline_fragment.html",
-                ***REMOVED***"noticias": noticias, "form": self.get_form_class()()***REMOVED***,
+                {"noticias": noticias, "form": self.get_form_class()()},
             )
         return redirect(self.success_url)
 
@@ -101,4 +101,4 @@ class RefreshNoticiaView(LoginRequiredMixin, View):
             update_fields=["archivo_url", "archivo_fecha", "archivo_imagen", "titulo"]
         )
         # Render the updated timeline item fragment.
-        return render(request, "noticias/timeline_item.html", ***REMOVED***"noticia": noticia***REMOVED***)
+        return render(request, "noticias/timeline_item.html", {"noticia": noticia})
