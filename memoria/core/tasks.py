@@ -1,46 +1,28 @@
 from celery import shared_task
-from typing import Optional, Literal
 from celery.utils.log import get_task_logger
-from pydantic import BaseModel, Field
-from litellm import completion
+from core.parse import parse_noticia
+from core.models import Noticia, Entidad, NoticiaEntidad
 
 logger = get_task_logger(__name__)
 
 
-class EntidadNombrada(BaseModel):
-    nombre: str = Field(alias="nombre")
-    tipo: Literal["persona", "organizacion", "lugar", "otro"]
-    sentimiento: Literal["positivo", "negativo", "neutral"]
-
-
-class Articulo(BaseModel):
-    titulo: str = Field(alias="titulo", description="The title of the article.")
-    fuente: str = Field(alias="fuente", description="The name of the news source.")
-    categoria: Optional[str] = Field(None, description="The category of the article.")
-    autor: Optional[str] = Field(None, description="The author of the article.")
-    resumen: Optional[str] = Field(None, description="A brief summary of the article.")
-    entidades: Optional[list[EntidadNombrada]] = Field(None, alias="entidades")
-
-
 @shared_task
-def parse_noticia(html):
-    response = completion(
-        model="gpt-4o-mini",
-        response_format=Articulo,
-        messages=[
-            ***REMOVED***
-                "role": "system",
-                "content": "You are a helpful html parser designed to output JSON.",
-          ***REMOVED***
-            ***REMOVED***
-                "role": "user",
-                "content": f"""From the crawled content, metadata about the news article should be extracted.
-            The metadata should include the title, source, category, author, and entities mentioned in the article.
-            The entities should include the name, type, and sentiment of each entity.
-            The HTML content to parse is as follows:
-            
-            ***REMOVED***html***REMOVED***""",
-          ***REMOVED***
-     ***REMOVED***,
-    )
-    print(response.choices[0].message.content)
+def parse(noticia_id, html):
+    noticia = Noticia.objects.get(id=noticia_id)
+    logger.info(f"Parsing ***REMOVED***noticia.enlace***REMOVED***")
+    articulo = parse_noticia(html)
+    noticia.fuente = articulo.fuente
+    noticia.categoria = articulo.categoria
+    noticia.resumen = articulo.resumen
+    noticia.save()
+    logger.info(f"Parsed ***REMOVED***noticia.enlace***REMOVED***")
+    for entidad_nombrada in articulo.entidades:
+        logger.info(f"Found entity ***REMOVED***entidad_nombrada***REMOVED***")
+        entidad, _ = Entidad.objects.get_or_create(
+            nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
+        )
+        NoticiaEntidad.objects.create(
+            noticia=noticia, entidad=entidad, sentimiento=entidad_nombrada.sentimiento
+        )
+    logger.info(f"Entities saved for ***REMOVED***noticia.enlace***REMOVED***")
+    return noticia_id

@@ -2,7 +2,7 @@
 
 from django.db import models
 from django.contrib.auth.models import User
-from core import archive, tasks
+from core import archive
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,11 +20,13 @@ class Noticia(models.Model):
         choices=[
             ("politica", "Política"),
             ("economia", "Economía"),
+            ("seguridad", "Seguridad"),
             ("salud", "Salud"),
             ("educacion", "Educación"),
             ("otros", "Otros"),
      ***REMOVED***,
     )
+    resumen = models.TextField(blank=True, null=True)
     agregado_por = models.ForeignKey(User, on_delete=models.CASCADE)
     fecha_agregado = models.DateTimeField(auto_now_add=True)
 
@@ -41,7 +43,9 @@ class Noticia(models.Model):
             self.archivo_fecha = archive_metadata.get("archive_date")
             self.titulo = archive_metadata.get("title")
             logger.info(f"Archived ***REMOVED***self.enlace***REMOVED*** to ***REMOVED***archive_url***REMOVED***")
-            tasks.parse_noticia.delay(html)
+            from core.tasks import parse
+
+            parse.delay(self.id, html)
         except archive.ArchiveInProgress as e:
             logger.warning(e)
         except archive.ArchiveFailure as e:
@@ -76,3 +80,40 @@ class Voto(models.Model):
 
     def __str__(self):
         return f"***REMOVED***self.usuario.username***REMOVED*** - ***REMOVED***self.opinion***REMOVED*** - ***REMOVED***self.noticia.titulo***REMOVED***"
+
+
+class Entidad(models.Model):
+    nombre = models.CharField(max_length=255)
+    tipo = models.CharField(
+        max_length=100,
+        choices=[
+            ("persona", "Persona"),
+            ("organizacion", "Organización"),
+            ("lugar", "Lugar"),
+            ("otro", "Otro"),
+     ***REMOVED***,
+    )
+
+    def __str__(self):
+        return self.nombre
+
+
+class NoticiaEntidad(models.Model):
+    noticia = models.ForeignKey(
+        Noticia, on_delete=models.CASCADE, related_name="entidades"
+    )
+    entidad = models.ForeignKey(Entidad, on_delete=models.CASCADE)
+    sentimiento = models.CharField(
+        max_length=10,
+        choices=[
+            ("positivo", "Positivo"),
+            ("negativo", "Negativo"),
+            ("neutral", "Neutral"),
+     ***REMOVED***,
+    )
+
+    class Meta:
+        unique_together = ("noticia", "entidad")
+
+    def __str__(self):
+        return f"***REMOVED***self.noticia.titulo***REMOVED*** - ***REMOVED***self.entidad.nombre***REMOVED***"
