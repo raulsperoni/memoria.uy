@@ -1,24 +1,54 @@
 <!-- templates/noticias/vote_area.html -->
 {% load vote_extras %}
-<div class="vote-area p-4 bg-gray-50 rounded">
-  <p class="mb-2">
-    Votes: 
-    Buena: {{ noticia.votos|vote_count:"buena" }} |
-    Mala: {{ noticia.votos|vote_count:"mala" }} |
-    Neutral: {{ noticia.votos|vote_count:"neutral" }}
-  </p>
+<div class="vote-area mt-4 p-4 bg-gray-50 rounded">
+  <!-- Vote Counts -->
+  <div class="mb-3 flex justify-around text-sm">
+    <div class="flex items-center space-x-1">
+      <span>Buena:</span>
+      <span class="font-semibold">{{ noticia.votos|vote_count:"buena" }}</span>
+    </div>
+    <div class="flex items-center space-x-1">
+      <span>Mala:</span>
+      <span class="font-semibold">{{ noticia.votos|vote_count:"mala" }}</span>
+    </div>
+    <div class="flex items-center space-x-1">
+      <span>Neutral:</span>
+      <span class="font-semibold">{{ noticia.votos|vote_count:"neutral" }}</span>
+    </div>
+  </div>
   {% if user.is_authenticated %}
-    <form hx-post="{% url 'vote' noticia.pk %}" hx-target="#vote-area-{{ noticia.pk }}" hx-swap="outerHTML" class="flex items-center space-x-2">
+    <form hx-post="{% url 'vote' noticia.pk %}" hx-target="#vote-area-{{ noticia.pk }}" hx-swap="outerHTML" class="flex flex-col md:flex-row gap-2">
       {% csrf_token %}
-      <select name="opinion" class="border rounded px-2 py-1">
-        <option value="buena">Buena</option>
-        <option value="mala">Mala</option>
-        <option value="neutral">Neutral</option>
-      </select>
-      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Vote</button>
+      <button type="submit" name="opinion" value="buena"
+        class="flex-1 px-4 py-2 rounded text-sm
+          {% if noticia.user_vote == 'buena' %}
+            bg-green-500 text-white
+          {% else %}
+            bg-gray-200 text-gray-700 hover:bg-green-300
+          {% endif %}">
+        Es una buena noticia
+      </button>
+      <button type="submit" name="opinion" value="mala"
+        class="flex-1 px-4 py-2 rounded text-sm
+          {% if noticia.user_vote == 'mala' %}
+            bg-red-500 text-white
+          {% else %}
+            bg-gray-200 text-gray-700 hover:bg-red-300
+          {% endif %}">
+        Es una mala noticia
+      </button>
+      <button type="submit" name="opinion" value="neutral"
+        class="flex-1 px-4 py-2 rounded text-sm
+          {% if noticia.user_vote == 'neutral' %}
+            bg-yellow-500 text-white
+          {% else %}
+            bg-gray-200 text-gray-700 hover:bg-yellow-300
+          {% endif %}">
+        Ni buena ni mala
+      </button>
     </form>
   {% else %}
-    <p>
+    <p class="text-center text-sm">
       <a class="text-blue-500 hover:underline" href="{% url 'login' %}?next={{ request.path }}">Log in</a> to vote.
     </p>
   {% endif %}

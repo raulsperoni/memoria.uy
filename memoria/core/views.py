@@ -15,7 +15,7 @@ class NewsTimelineView(ListView):
     template_name = "noticias/timeline.html"
     context_object_name = "noticias"
     ordering = ["-fecha_agregado"]
-    paginate_by = 3  # Adjust the number as needed
+    paginate_by = 10  # Adjust the number as needed
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -1,13 +1,42 @@
 <div id="timeline-container" class="max-w-2xl mx-auto">
   <div class="bg-white shadow rounded p-6">
-    <h2 class="text-2xl font-semibold mb-4">Add New Noticia</h2>
+    <h2 class="text-2xl font-semibold mb-2">Comparte la Noticia</h2>
+    <p class="text-gray-600 mb-4">
+      Memoria.uy te permite llevar un registro de las noticias gubernamentales para que, en 4 años, puedas revisar los hechos y recordar cómo te hicieron sentir. ¡Contribuye y forma parte de la historia!
+    </p>
     <form method="post" action="{% url 'noticia-create' %}"
           hx-post="{% url 'noticia-create' %}" hx-target="#timeline-container" hx-swap="outerHTML">
       {% csrf_token %}
+      <!-- URL Input Field -->
       <div class="mb-4">
-        {{ form.as_p }}
+        <label for="{{ form.enlace.id_for_label }}" class="block text-sm font-medium text-gray-700">URL de la noticia</label>
+        {{ form.enlace }}
       </div>
-      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Submit</button>
+      <!-- Voting Buttons -->
+      <div class="mb-4">
+        <p class="text-gray-700 mb-2">¿Cómo te parece esta noticia?</p>
+        <div class="flex flex-col md:flex-row gap-2">
+          <button type="submit" name="opinion" value="buena"
+            class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-green-300 text-gray-700">
+            Esto es una buena noticia
+          </button>
+          <button type="submit" name="opinion" value="mala"
+            class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-red-300 text-gray-700">
+            Esto es una mala noticia
+          </button>
+          <button type="submit" name="opinion" value="neutral"
+            class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-yellow-300 text-gray-700">
+            Esta noticia no es buena ni mala
+          </button>
+        </div>
+      </div>
+      <!-- Spinner: visible while the form is submitting -->
+      <div class="flex justify-center">
+        <svg class="hidden animate-spin h-5 w-5 text-blue-500" hx-indicator xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l-2-2-2 2V4a8 8 0 00-4 8h4z"></path>
+        </svg>
+      </div>
     </form>
   </div>
   <div class="timeline mt-6">

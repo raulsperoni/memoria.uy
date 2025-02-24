@@ -2,39 +2,48 @@
   {% if noticia.archivo_imagen %}
     <img src="{{ noticia.archivo_imagen }}" alt="Screenshot" class="w-full object-cover">
   {% endif %}
+  <!-- Metadata Bar with Refresh Button -->
+  <div class="bg-gray-100 px-4 py-2 flex items-center text-sm text-gray-700">
+    <div class="flex flex-wrap items-center">
+      <a href="{{ noticia.enlace }}" target="_blank" class="hover:underline">Leer Original</a>
+      {% if noticia.archivo_url %}
+        <span class="mx-2">|</span>
+        <a href="{{ noticia.archivo_url }}" target="_blank" class="hover:underline">Leer archivado</a>
+      {% endif %}
+      {% if noticia.fuente %}
+        <span class="mx-2">|</span>
+        <span>Fuente: {{ noticia.fuente }}</span>
+      {% endif %}
+      {% if noticia.categoria %}
+        <span class="mx-2">|</span>
+        <span>Categoria: {{ noticia.get_categoria_display }}</span>
+      {% endif %}
+      {% if noticia.archivo_fecha %}
+        <span class="mx-2">|</span>
+        <span>Fecha: {{ noticia.archivo_fecha }}</span>
+      {% endif %}
+    </div>
+    <!-- Refresh button aligned to the right -->
+    <button 
+      hx-post="{% url 'noticia-refresh' noticia.pk %}" 
+      hx-target="#noticia-{{ noticia.pk }}" 
+      hx-swap="outerHTML"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      class="ml-auto text-gray-700 hover:text-gray-900">
+      🔄
+    </button>
+  </div>
   <div class="p-4">
-    <!-- Title placed below the image -->
+    <!-- Title placed below the metadata bar -->
     <h3 class="text-xl font-bold mb-2">{{ noticia.titulo }}</h3>
     
-    <p class="mb-2">
-      <a class="text-blue-500 hover:underline" href="{{ noticia.enlace }}" target="_blank">Original Link</a>
-    </p>
-    
-    {% if noticia.archivo_url %}
-      <p class="mb-2">
-        Archived: <a class="text-blue-500 hover:underline" href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a>
-      </p>
-    {% endif %}
-    
-    {% if noticia.archivo_fecha %}
-      <p class="mb-2">Archive Date: {{ noticia.archivo_fecha }}</p>
-    {% endif %}
-    
     {% if noticia.resumen %}
-      <p class="mb-2">Summary: {{ noticia.resumen }}</p>
-    {% endif %}
-    
-    {% if noticia.fuente %}
-      <p class="mb-2">Source: {{ noticia.fuente }}</p>
-    {% endif %}
-    
-    {% if noticia.categoria %}
-      <p class="mb-2">Category: <span class="font-semibold">{{ noticia.get_categoria_display }}</span></p>
+      <p class="mb-2">{{ noticia.resumen }}</p>
     {% endif %}
     
     {% if noticia.entidades.exists %}
       <div class="mb-2">
-        <p class="font-medium mb-1">Entities:</p>
+        <p class="font-medium mb-1">Menciones:</p>
         <div class="flex flex-wrap gap-2">
           {% for entidad in noticia.entidades.all %}
             <span class="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm">
@@ -52,17 +61,9 @@
       </div>
     {% endif %}
     
-    <button 
-      hx-post="{% url 'noticia-refresh' noticia.pk %}" 
-      hx-target="#noticia-{{ noticia.pk }}" 
-      hx-swap="outerHTML"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-      class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded mb-2">
-      Refresh Archive
-    </button>
     
-    <div id="vote-area-{{ noticia.pk }}">
-      {% include "noticias/vote_area.html" %}
-    </div>
+  </div>
+  <div id="vote-area-{{ noticia.pk }}">
+    {% include "noticias/vote_area.html" %}
   </div>
 </div>
