@@ -12,7 +12,7 @@ def parse(noticia_id, html):
     logger.info(f"Parsing ***REMOVED***noticia.enlace***REMOVED***")
     articulo = parse_noticia(html)
     noticia.fuente = articulo.fuente
-    noticia.categoria = articulo.categoria
+    noticia.categoria = articulo.categoria if articulo.categoria else "otros"
     noticia.resumen = articulo.resumen
     noticia.save()
     logger.info(f"Parsed ***REMOVED***noticia.enlace***REMOVED***")
@@ -21,8 +21,10 @@ def parse(noticia_id, html):
         entidad, _ = Entidad.objects.get_or_create(
             nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
         )
-        NoticiaEntidad.objects.create(
-            noticia=noticia, entidad=entidad, sentimiento=entidad_nombrada.sentimiento
+        NoticiaEntidad.objects.get_or_create(
+            noticia=noticia,
+            entidad=entidad,
+            defaults=***REMOVED***"sentimiento": entidad_nombrada.sentimiento***REMOVED***,
         )
     logger.info(f"Entities saved for ***REMOVED***noticia.enlace***REMOVED***")
     return noticia_id
