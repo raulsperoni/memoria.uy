@@ -9,11 +9,6 @@
   </form>
   <hr/>
   <div class="timeline">
-    {% for noticia in noticias %}
-      {% include "noticias/timeline_item.html" with noticia=noticia %}
-      <hr/>
-    {% empty %}
-      <p>No news available.</p>
-    {% endfor %}
+    {% include "noticias/timeline_items.html" %}
   </div>
 </div>

@@ -15,12 +15,20 @@ class NewsTimelineView(ListView):
     template_name = "noticias/timeline.html"
     context_object_name = "noticias"
     ordering = ["-fecha_agregado"]
+    paginate_by = 3  # Adjust the number as needed
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Provide an empty form for creating a new Noticia.
-        context["form"] = NoticiaForm()
+        # Only include the form in the initial full-page load.
+        if not self.request.headers.get("HX-Request"):
+            context["form"] = NoticiaForm()
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        # If the request is via HTMX, return just the list items partial.
+        if self.request.headers.get("HX-Request"):
+            self.template_name = "noticias/timeline_items.html"
+        return super().render_to_response(context, **response_kwargs)
 
 
 class VoteView(LoginRequiredMixin, View):
