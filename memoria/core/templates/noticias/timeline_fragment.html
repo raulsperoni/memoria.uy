@@ -1,0 +1,19 @@
+{# templates/noticias/timeline_fragment.html #}
+<div id="timeline-container">
+  <h2>Add New Noticia</h2>
+  <form method="post" action="{% url 'noticia-create' %}"
+        hx-post="{% url 'noticia-create' %}" hx-target="#timeline-container" hx-swap="outerHTML">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Submit</button>
+  </form>
+  <hr/>
+  <div class="timeline">
+    {% for noticia in noticias %}
+      {% include "noticias/timeline_item.html" with noticia=noticia %}
+      <hr/>
+    {% empty %}
+      <p>No news available.</p>
+    {% endfor %}
+  </div>
+</div>

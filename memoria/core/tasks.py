@@ -1,26 +1,30 @@
 from celery import shared_task
-from core.models import Noticia
 from celery.utils.log import get_task_logger
-from core import archive
+from core.parse import parse_noticia
+from core.models import Noticia, Entidad, NoticiaEntidad
 
 logger = get_task_logger(__name__)
 
 
 @shared_task
-def archive_url_async(noticia_id):
-    try:
-        noticia = Noticia.objects.get(pk=noticia_id)
-        archive_url, archive_metadata = archive.capture(noticia.enlace)
-        noticia.archivo_url = archive_url
-        noticia.archivo_imagen = archive_metadata.get("screenshot_url")
-        noticia.archivo_fecha = archive_metadata.get("archive_date")
-        noticia.save(update_fields=["archivo_url", "archivo_imagen", "archivo_fecha"])
-        logger.info(f"Archived {noticia.enlace} to {archive_url}")
-    except archive.ArchiveInProgress as e:
-        logger.warning(e)
-    except archive.ArchiveFailure as e:
-        logger.error(e)
-    except Exception as e:
-        logger.error(
-            f"Error archiving {noticia.enlace if 'noticia' in locals() else ''}: {e}"
+def parse(noticia_id, html):
+    noticia = Noticia.objects.get(id=noticia_id)
+    logger.info(f"Parsing {noticia.enlace}")
+    articulo = parse_noticia(html)
+    noticia.fuente = articulo.fuente
+    noticia.categoria = articulo.categoria if articulo.categoria else "otros"
+    noticia.resumen = articulo.resumen
+    noticia.save()
+    logger.info(f"Parsed {noticia.enlace}")
+    for entidad_nombrada in articulo.entidades:
+        logger.info(f"Found entity {entidad_nombrada}")
+        entidad, _ = Entidad.objects.get_or_create(
+            nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
         )
+        NoticiaEntidad.objects.get_or_create(
+            noticia=noticia,
+            entidad=entidad,
+            defaults={"sentimiento": entidad_nombrada.sentimiento},
+        )
+    logger.info(f"Entities saved for  {noticia.enlace}")
+    return noticia_id
