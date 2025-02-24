@@ -2,7 +2,7 @@
 
 from django.db import models
 from django.contrib.auth.models import User
-from core import archive
+from core import archive, tasks
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,12 +35,13 @@ class Noticia(models.Model):
 
     def get_archive(self):
         try:
-            archive_url, archive_metadata = archive.capture(self.enlace)
+            archive_url, archive_metadata, html = archive.capture(self.enlace)
             self.archivo_url = archive_url
             self.archivo_imagen = archive_metadata.get("screenshot_url")
             self.archivo_fecha = archive_metadata.get("archive_date")
             self.titulo = archive_metadata.get("title")
             logger.info(f"Archived ***REMOVED***self.enlace***REMOVED*** to ***REMOVED***archive_url***REMOVED***")
+            tasks.parse_noticia.delay(html)
         except archive.ArchiveInProgress as e:
             logger.warning(e)
         except archive.ArchiveFailure as e:

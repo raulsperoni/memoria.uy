@@ -15,6 +15,7 @@ psycopg2-binary = "^2.9.10"
 supabase = "^2.13.0"
 requests = "^2.32.3"
 bs4 = "^0.0.2"
+crawl4ai = "^0.4.248"
 
 
 [tool.poetry.group.dev.dependencies]

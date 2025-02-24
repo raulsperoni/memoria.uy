@@ -8,6 +8,7 @@ from core.models import Noticia, Voto
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
+from core.tasks import parse_noticia
 
 
 class NewsTimelineView(ListView):
@@ -100,5 +101,6 @@ class RefreshNoticiaView(LoginRequiredMixin, View):
         noticia.save(
             update_fields=["archivo_url", "archivo_fecha", "archivo_imagen", "titulo"]
         )
+        parse_noticia.delay(noticia.pk)
         # Render the updated timeline item fragment.
         return render(request, "noticias/timeline_item.html", ***REMOVED***"noticia": noticia***REMOVED***)
