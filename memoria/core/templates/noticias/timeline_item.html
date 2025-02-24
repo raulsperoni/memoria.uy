@@ -1,32 +1,32 @@
-{# templates/noticias/timeline_item.html #}
-<div class="timeline-item" id="noticia-{{ noticia.pk }}">
-    <h3>{{ noticia.titulo }}</h3>
-    <p><a href="{{ noticia.enlace }}" target="_blank">Original Link</a></p>
-    {% if noticia.archivo_url %}
-      <p>Archived: <a href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a></p>
-    {% endif %}
-    {% if noticia.archivo_fecha %}
-      <p>Archive Date: {{ noticia.archivo_fecha }}</p>
-    {% endif %}
-    {% if noticia.archivo_imagen %}
-      <img src="{{ noticia.archivo_imagen }}" alt="Screenshot" style="max-width:300px;">
-    {% endif %}
-    
-    <!-- Add resumen, fuente, and categoria -->
-    {% if noticia.resumen %}
-      <p>Summary: {{ noticia.resumen }}</p>
-    {% endif %}
-    {% if noticia.fuente %}
-      <p>Source: {{ noticia.fuente }}</p>
-    {% endif %}
-    {% if noticia.categoria %}
-      <p>Category: {{ noticia.get_categoria_display }}</p>
-    {% endif %}
-    
-    <!-- Add related entities with sentiment emojis -->
-    {% if noticia.entidades.exists %}
+<div class="timeline-item bg-white shadow rounded p-4 mb-4" id="noticia-{{ noticia.pk }}">
+  <h3 class="text-xl font-bold mb-2">{{ noticia.titulo }}</h3>
+  <p class="mb-2">
+    <a class="text-blue-500 hover:underline" href="{{ noticia.enlace }}" target="_blank">Original Link</a>
+  </p>
+  {% if noticia.archivo_url %}
+    <p class="mb-2">
+      Archived: <a class="text-blue-500 hover:underline" href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a>
+    </p>
+  {% endif %}
+  {% if noticia.archivo_fecha %}
+    <p class="mb-2">Archive Date: {{ noticia.archivo_fecha }}</p>
+  {% endif %}
+  {% if noticia.archivo_imagen %}
+    <img class="mb-2 max-w-xs" src="{{ noticia.archivo_imagen }}" alt="Screenshot">
+  {% endif %}
+  {% if noticia.resumen %}
+    <p class="mb-2">Summary: {{ noticia.resumen }}</p>
+  {% endif %}
+  {% if noticia.fuente %}
+    <p class="mb-2">Source: {{ noticia.fuente }}</p>
+  {% endif %}
+  {% if noticia.categoria %}
+    <p class="mb-2">Category: <span class="font-semibold">{{ noticia.get_categoria_display }}</span></p>
+  {% endif %}
+  {% if noticia.entidades.exists %}
+    <div class="mb-2">
       <p>Entities:</p>
-      <ul>
+      <ul class="list-disc ml-5">
         {% for entidad in noticia.entidades.all %}
           <li>
             {{ entidad.entidad.nombre }} 
@@ -40,19 +40,18 @@
           </li>
         {% endfor %}
       </ul>
-    {% endif %}
-  
-    <!-- Refresh button using HTMX -->
-    <button 
-      hx-post="{% url 'noticia-refresh' noticia.pk %}" 
-      hx-target="#noticia-{{ noticia.pk }}" 
-      hx-swap="outerHTML"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-      Refresh Archive
-    </button>
-  
-    <!-- Vote area (assuming you already have a vote_area.html partial) -->
-    <div id="vote-area-{{ noticia.pk }}">
-      {% include "noticias/vote_area.html" with noticia=noticia %}
     </div>
+  {% endif %}
+  <button 
+    hx-post="{% url 'noticia-refresh' noticia.pk %}" 
+    hx-target="#noticia-{{ noticia.pk }}" 
+    hx-swap="outerHTML"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded mb-2">
+    Refresh Archive
+  </button>
+  <div id="vote-area-{{ noticia.pk }}">
+    {% include "noticias/vote_area.html" %}
   </div>
+</div>
+

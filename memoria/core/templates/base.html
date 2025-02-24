@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>My News Timeline</title>
-    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-    <!-- Include any CSS for styling your timeline -->
+  <meta charset="utf-8">
+  <title>Memoria - News Timeline</title>
+  <!-- Tailwind CSS via CDN for quick prototyping -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-900 antialiased">
+  <div class="container mx-auto px-4 py-8">
     {% block content %}{% endblock %}
+  </div>
 </body>
 </html>
