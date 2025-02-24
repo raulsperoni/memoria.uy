@@ -1,57 +1,68 @@
-<div class="timeline-item bg-white shadow rounded p-4 mb-4" id="noticia-{{ noticia.pk }}">
-  <h3 class="text-xl font-bold mb-2">{{ noticia.titulo }}</h3>
-  <p class="mb-2">
-    <a class="text-blue-500 hover:underline" href="{{ noticia.enlace }}" target="_blank">Original Link</a>
-  </p>
-  {% if noticia.archivo_url %}
-    <p class="mb-2">
-      Archived: <a class="text-blue-500 hover:underline" href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a>
-    </p>
-  {% endif %}
-  {% if noticia.archivo_fecha %}
-    <p class="mb-2">Archive Date: {{ noticia.archivo_fecha }}</p>
-  {% endif %}
+<div class="timeline-item bg-white shadow rounded overflow-hidden mb-4" id="noticia-{{ noticia.pk }}">
   {% if noticia.archivo_imagen %}
-    <img class="mb-2 max-w-xs" src="{{ noticia.archivo_imagen }}" alt="Screenshot">
+    <img src="{{ noticia.archivo_imagen }}" alt="Screenshot" class="w-full object-cover">
   {% endif %}
-  {% if noticia.resumen %}
-    <p class="mb-2">Summary: {{ noticia.resumen }}</p>
-  {% endif %}
-  {% if noticia.fuente %}
-    <p class="mb-2">Source: {{ noticia.fuente }}</p>
-  {% endif %}
-  {% if noticia.categoria %}
-    <p class="mb-2">Category: <span class="font-semibold">{{ noticia.get_categoria_display }}</span></p>
-  {% endif %}
-  {% if noticia.entidades.exists %}
-    <div class="mb-2">
-      <p>Entities:</p>
-      <ul class="list-disc ml-5">
-        {% for entidad in noticia.entidades.all %}
-          <li>
-            {{ entidad.entidad.nombre }} 
-            {% if entidad.sentimiento == "positivo" %}
-              😊
-            {% elif entidad.sentimiento == "negativo" %}
-              😞
-            {% else %}
-              😐
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
+  <div class="p-4">
+    <!-- Title placed below the image -->
+    <h3 class="text-xl font-bold mb-2">{{ noticia.titulo }}</h3>
+    
+    <p class="mb-2">
+      <a class="text-blue-500 hover:underline" href="{{ noticia.enlace }}" target="_blank">Original Link</a>
+    </p>
+    
+    {% if noticia.archivo_url %}
+      <p class="mb-2">
+        Archived: <a class="text-blue-500 hover:underline" href="{{ noticia.archivo_url }}" target="_blank">{{ noticia.archivo_url }}</a>
+      </p>
+    {% endif %}
+    
+    {% if noticia.archivo_fecha %}
+      <p class="mb-2">Archive Date: {{ noticia.archivo_fecha }}</p>
+    {% endif %}
+    
+    {% if noticia.resumen %}
+      <p class="mb-2">Summary: {{ noticia.resumen }}</p>
+    {% endif %}
+    
+    {% if noticia.fuente %}
+      <p class="mb-2">Source: {{ noticia.fuente }}</p>
+    {% endif %}
+    
+    {% if noticia.categoria %}
+      <p class="mb-2">Category: <span class="font-semibold">{{ noticia.get_categoria_display }}</span></p>
+    {% endif %}
+    
+    {% if noticia.entidades.exists %}
+      <div class="mb-2">
+        <p class="font-medium mb-1">Entities:</p>
+        <div class="flex flex-wrap gap-2">
+          {% for entidad in noticia.entidades.all %}
+            <span class="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm">
+              {{ entidad.entidad.nombre }} 
+              {% if entidad.sentimiento == "positivo" %}
+                😊
+              {% elif entidad.sentimiento == "negativo" %}
+                😞
+              {% else %}
+                😐
+              {% endif %}
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+    
+    <button 
+      hx-post="{% url 'noticia-refresh' noticia.pk %}" 
+      hx-target="#noticia-{{ noticia.pk }}" 
+      hx-swap="outerHTML"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded mb-2">
+      Refresh Archive
+    </button>
+    
+    <div id="vote-area-{{ noticia.pk }}">
+      {% include "noticias/vote_area.html" %}
     </div>
-  {% endif %}
-  <button 
-    hx-post="{% url 'noticia-refresh' noticia.pk %}" 
-    hx-target="#noticia-{{ noticia.pk }}" 
-    hx-swap="outerHTML"
-    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-    class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded mb-2">
-    Refresh Archive
-  </button>
-  <div id="vote-area-{{ noticia.pk }}">
-    {% include "noticias/vote_area.html" %}
   </div>
 </div>
-
