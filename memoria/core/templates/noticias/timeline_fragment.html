@@ -2,9 +2,9 @@
 
 <div id="timeline-container" class="max-w-2xl mx-auto">
   <div class="bg-white shadow rounded p-6">
-    <h2 class="text-2xl font-semibold mb-2">Comparte la Noticia</h2>
+    <h2 class="text-2xl font-semibold mb-2">Hacé Memoria</h2>
     <p class="text-gray-600 mb-4">
-      Memoria.uy te permite llevar un registro de las noticias gubernamentales para que, en 4 años, puedas revisar los hechos y recordar cómo te hicieron sentir. ¡Contribuye y forma parte de la historia!
+      Llevá un registro de las noticias y cómo te hacen sentir, dentro de 4 años lo podés necesitar.
     </p>
     <form method="post" action="{% url 'noticia-create' %}"
           hx-post="{% url 'noticia-create' %}" hx-target="#timeline-container" hx-swap="outerHTML">
@@ -40,31 +40,67 @@
       </div>
     </form>
   </div>
+ 
+
   <!-- Filter bar -->
   <div class="p-1 my-2">
-    <!-- Filter Bar -->
-    <div id="filter-bar" class="my-4 flex space-x-2">
-      <button hx-get="{% url 'timeline' %}?filter=buena" 
-              hx-target="#timeline-items" 
-              hx-swap="innerHTML" 
-              class="px-4 py-2 bg-green-500 text-white rounded">
-        Buenas Noticias
-      </button>
-      <button hx-get="{% url 'timeline' %}?filter=mala" 
-              hx-target="#timeline-items" 
-              hx-swap="innerHTML" 
-              class="px-4 py-2 bg-red-500 text-white rounded">
-        Malas Noticias
-      </button>
-      <!-- Optionally add a button to show all news -->
-      <button hx-get="{% url 'timeline' %}" 
+    <!-- Quick Filters: "Todas" and Opinion Filters -->
+    <div class="my-4 flex flex-wrap gap-2 items-center">
+      <!-- Todas Button -->
+      <button hx-get="{% url 'timeline' %}?filter=todas" 
               hx-target="#timeline-items" 
               hx-swap="innerHTML" 
               class="px-4 py-2 bg-gray-500 text-white rounded">
         Todas
       </button>
+
+      <!-- Opinion Filter with Audience Dropdown -->
+      <div x-data="{ audience: 'mi' }" class="flex items-center gap-2">
+        <select x-model="audience" class="px-2 py-1 border rounded">
+          <option value="mi">Para mí</option>
+          <option value="mayoria">Para la mayoría</option>
+        </select>
+        <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience" 
+                hx-target="#timeline-items" 
+                hx-swap="innerHTML" 
+                class="px-4 py-2 bg-green-500 text-white rounded">
+          Buenas
+        </button>
+        <button x-bind:hx-get="'{% url 'timeline' %}?filter=mala_' + audience" 
+                hx-target="#timeline-items" 
+                hx-swap="innerHTML" 
+                class="px-4 py-2 bg-red-500 text-white rounded">
+          Malas
+        </button>
+      </div>
     </div>
-  </div>
+
+    <!-- Compact Advanced Filter: Two dropdowns and a single apply button -->
+    <div x-data="{ advancedFilter: '', entity: '' }" class="my-4 flex items-center gap-2">
+      <select x-model="advancedFilter" class="px-2 py-1 border rounded">
+        <option value="">None</option>
+        <option value="mencionan_a">Mencionan a</option>
+        <option value="mencionan_positiva">Mencionan positivamente a</option>
+        <option value="mencionan_negativa">Mencionan negativamente a</option>
+      </select>
+      <select x-model="entity" class="px-2 py-1 border rounded">
+        <option value="">Seleccione entidad</option>
+        {% for entidad in entidades %}
+          <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
+        {% endfor %}
+      </select>
+      <button x-bind:hx-get="'{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity"
+              hx-target="#timeline-items"
+              hx-swap="innerHTML"
+              :disabled="advancedFilter === '' || entity === ''"
+              class="px-4 py-2 bg-indigo-500 text-white rounded">
+        Aplicar
+      </button>
+    </div>
+
+
+
+
   <!-- Timeline Items -->
   <div id="timeline-items" class="timeline mt-6">
     {% include "noticias/timeline_items.html" %}
