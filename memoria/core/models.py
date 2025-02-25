@@ -4,6 +4,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from core import archive
 import logging
+from bs4 import BeautifulSoup
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,32 @@ class Noticia(models.Model):
         if self.titulo:
             return self.titulo
         return self.enlace
+
+    def get_title_from_meta_tags(self):
+        try:
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/90.0.4430.93 Safari/537.36"
+                )
+            }
+
+            response = requests.get(self.enlace, headers=headers)
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            # Extract Open Graph meta tags
+            og_title = soup.find("meta", property="og:title")
+            og_image = soup.find("meta", property="og:image")
+
+            title = og_title["content"] if og_title else "No title found"
+            image = og_image["content"] if og_image else "No image found"
+            logger.warning(f"Title: {title}, Image: {image}")
+            self.titulo = title
+            self.archivo_imagen = image
+
+        except Exception as e:
+            logger.error(f"Error getting title from meta tags: {e}")
 
     def get_archive(self):
         try:

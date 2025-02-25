@@ -1,3 +1,5 @@
+{# templates/noticias/timeline_fragment.html #}
+
 <div id="timeline-container" class="max-w-2xl mx-auto">
   <div class="bg-white shadow rounded p-6">
     <h2 class="text-2xl font-semibold mb-2">Comparte la Noticia</h2>
@@ -9,24 +11,23 @@
       {% csrf_token %}
       <!-- URL Input Field -->
       <div class="mb-4">
-        <label for="{{ form.enlace.id_for_label }}" class="block text-sm font-medium text-gray-700">URL de la noticia</label>
         {{ form.enlace }}
       </div>
       <!-- Voting Buttons -->
       <div class="mb-4">
-        <p class="text-gray-700 mb-2">¿Cómo te parece esta noticia?</p>
+        <p class="text-gray-700 mb-2">Guardar noticia como:</p>
         <div class="flex flex-col md:flex-row gap-2">
           <button type="submit" name="opinion" value="buena"
             class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-green-300 text-gray-700">
-            Esto es una buena noticia
+            Buena noticia
           </button>
           <button type="submit" name="opinion" value="mala"
             class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-red-300 text-gray-700">
-            Esto es una mala noticia
+            Mala noticia
           </button>
           <button type="submit" name="opinion" value="neutral"
             class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-yellow-300 text-gray-700">
-            Esta noticia no es buena ni mala
+            Ni buena ni mala
           </button>
         </div>
       </div>
@@ -39,7 +40,33 @@
       </div>
     </form>
   </div>
-  <div class="timeline mt-6">
+  <!-- Filter bar -->
+  <div class="p-1 my-2">
+    <!-- Filter Bar -->
+    <div id="filter-bar" class="my-4 flex space-x-2">
+      <button hx-get="{% url 'timeline' %}?filter=buena" 
+              hx-target="#timeline-items" 
+              hx-swap="innerHTML" 
+              class="px-4 py-2 bg-green-500 text-white rounded">
+        Buenas Noticias
+      </button>
+      <button hx-get="{% url 'timeline' %}?filter=mala" 
+              hx-target="#timeline-items" 
+              hx-swap="innerHTML" 
+              class="px-4 py-2 bg-red-500 text-white rounded">
+        Malas Noticias
+      </button>
+      <!-- Optionally add a button to show all news -->
+      <button hx-get="{% url 'timeline' %}" 
+              hx-target="#timeline-items" 
+              hx-swap="innerHTML" 
+              class="px-4 py-2 bg-gray-500 text-white rounded">
+        Todas
+      </button>
+    </div>
+  </div>
+  <!-- Timeline Items -->
+  <div id="timeline-items" class="timeline mt-6">
     {% include "noticias/timeline_items.html" %}
   </div>
 </div>

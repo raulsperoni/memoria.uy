@@ -17,6 +17,22 @@ class NewsTimelineView(ListView):
     ordering = ["-fecha_agregado"]
     paginate_by = 10  # Adjust the number as needed
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        filter_param = self.request.GET.get("filter")
+        if filter_param == "buena":
+            # Filter by good news by this user.
+            queryset = queryset.filter(
+                votos__usuario=self.request.user, votos__opinion="buena"
+            )
+        elif filter_param == "mala":
+            # Filter by bad news by this user.
+            queryset = queryset.filter(
+                votos__usuario=self.request.user, votos__opinion="mala"
+            )
+        # You can add additional filter conditions here as the filter bar grows.
+        return queryset
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Only include the form in the initial full-page load.
@@ -61,14 +77,7 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
             noticia = Noticia.objects.get(enlace=enlace)
             # Refresh its archive data.
             noticia.get_archive()
-            noticia.save(
-                update_fields=[
-                    "archivo_url",
-                    "archivo_fecha",
-                    "archivo_imagen",
-                    "titulo",
-                ]
-            )
+            noticia.save()
             # Update or create the vote for the current user.
             Voto.objects.update_or_create(
                 usuario=self.request.user,
@@ -81,6 +90,7 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
                 agregado_por=self.request.user,
                 enlace=enlace,
             )
+            noticia.get_title_from_meta_tags()
             noticia.get_archive()
             noticia.save()
             Voto.objects.create(
