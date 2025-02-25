@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from core.views import NewsTimelineView, VoteView, NoticiaCreateView, RefreshNoticiaView
 
 urlpatterns = [
@@ -29,4 +29,5 @@ urlpatterns = [
         RefreshNoticiaView.as_view(),
         name="noticia-refresh",
     ),
+    path("accounts/", include("allauth.urls")),
 ]

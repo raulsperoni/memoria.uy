@@ -33,7 +33,7 @@
       </div>
       <!-- Spinner: visible while the form is submitting -->
       <div class="flex justify-center">
-        <svg class="hidden animate-spin h-5 w-5 text-blue-500" hx-indicator xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="hidden animate-spin h-5 w-5 text-blue-500" hx-indicator="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l-2-2-2 2V4a8 8 0 00-4 8h4z"></path>
         </svg>
@@ -57,7 +57,9 @@
       <!-- Opinion Filter with Audience Dropdown -->
       <div x-data="{ audience: 'mi' }" class="flex items-center gap-2">
         <select x-model="audience" class="px-2 py-1 border rounded">
-          <option value="mi">Para mí</option>
+          {% if user.is_authenticated %}
+            <option value="mi">Para mí</option>
+          {% endif %}
           <option value="mayoria">Para la mayoría</option>
         </select>
         <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience" 

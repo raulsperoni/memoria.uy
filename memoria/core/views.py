@@ -8,6 +8,7 @@ from core.models import Noticia, Voto
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
+from django.db.models import Count, Q, F
 
 
 class NewsTimelineView(ListView):
@@ -20,16 +21,26 @@ class NewsTimelineView(ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         filter_param = self.request.GET.get("filter")
-        if filter_param == "buena":
+        if filter_param == "buena_mi" and self.request.user.is_authenticated:
             # Filter by good news by this user.
             queryset = queryset.filter(
                 votos__usuario=self.request.user, votos__opinion="buena"
             )
-        elif filter_param == "mala":
+        elif filter_param == "mala_mi" and self.request.user.is_authenticated:
             # Filter by bad news by this user.
             queryset = queryset.filter(
                 votos__usuario=self.request.user, votos__opinion="mala"
             )
+        elif filter_param == "buena_mayoria":
+            # Filter by news with a majority of good votes.
+            queryset = queryset.annotate(
+                good_count=Count("votos", filter=Q(votos__opinion="buena"))
+            ).filter(good_count__gt=F("votos__count") / 2)
+        elif filter_param == "mala_mayoria":
+            # Filter by news with a majority of bad votes.
+            queryset = queryset.annotate(
+                bad_count=Count("votos", filter=Q(votos__opinion="mala"))
+            ).filter(bad_count__gt=F("votos__count") / 2)
         # You can add additional filter conditions here as the filter bar grows.
         return queryset
 
