@@ -29,6 +29,7 @@ class Noticia(models.Model):
         ],
     )
     resumen = models.TextField(blank=True, null=True)
+    markdown = models.TextField(blank=True, null=True)
     agregado_por = models.ForeignKey(User, on_delete=models.CASCADE)
     fecha_agregado = models.DateTimeField(auto_now_add=True)
 

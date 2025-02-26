@@ -17,10 +17,12 @@ requests = "^2.32.3"
 bs4 = "^0.0.2"
 django-allauth = "^65.4.1"
 dotenv = "^0.9.9"
+litellm = "^1.61.16"
 
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
+files-to-prompt = "^0.6"
 
 [build-system]
 requires = ["poetry-core"]
