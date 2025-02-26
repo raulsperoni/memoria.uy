@@ -2,16 +2,20 @@ from typing import Optional, Literal, Union
 from pydantic import BaseModel, Field
 from litellm import completion
 from bs4 import BeautifulSoup
+import requests
 import logging
 
 # litellm._turn_on_debug()
 logger = logging.getLogger(__name__)
 
-MODELS_PRIORITY_JSON = {"openrouter/mistralai/mistral-saba": 1, "openai/o3-mini": 2}
+MODELS_PRIORITY_JSON = {
+    "openrouter/mistralai/mistral-saba": 1,
+    "openrouter/openai/o3-mini": 2,
+}
 
 MODELS_PRIORITY_MD = {
     "openrouter/google/gemini-2.0-flash-lite-001": 1,
-    "openai/o3-mini": 2,
+    "openrouter/openai/o3-mini": 2,
 }
 
 
@@ -193,3 +197,43 @@ def parse_noticia_markdown(
                     continue
         logger.error(f"Error parsing the article: {e}")
         return None
+
+
+BAD_TITLES = ["la diaria"]
+
+BAD_URLS = ["https://ladiaria.com.uy/static/meta/la-diaria-1000x1000.png"]
+
+
+def parse_from_meta_tags(url):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/92.0.4515.107 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com/",
+        }
+
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Extract Open Graph meta tags
+        og_title = soup.find("meta", property="og:title")
+        og_image = soup.find("meta", property="og:image")
+
+        title = None
+        if og_title and og_title["content"] not in BAD_TITLES:
+            title = og_title["content"]
+
+        original_image = None
+        if og_image and og_image["content"] not in BAD_URLS:
+            og_image_parts = og_image["content"].split("https")
+            original_image = "https" + og_image_parts[-1]
+
+        logger.info(f"Title: {title}")
+        logger.info(f"Image: {original_image}")
+        return title, original_image
+
+    except Exception as e:
+        logger.error(f"Error getting title from meta tags: {e}")
+    return None, None

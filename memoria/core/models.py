@@ -2,10 +2,9 @@
 
 from django.db import models
 from django.contrib.auth.models import User
-from core import archive
+from core import parse
+from core import archive_ph as archive
 import logging
-from bs4 import BeautifulSoup
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -38,57 +37,38 @@ class Noticia(models.Model):
             return self.titulo
         return self.enlace
 
-    def get_title_from_meta_tags(self):
-        try:
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/90.0.4430.93 Safari/537.36"
-                )
-            }
-
-            response = requests.get(self.enlace, headers=headers)
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            # Extract Open Graph meta tags
-            og_title = soup.find("meta", property="og:title")
-            og_image = soup.find("meta", property="og:image")
-
-            title = og_title["content"] if og_title else "No title found"
-            image = og_image["content"] if og_image else "No image found"
-            logger.warning(f"Title: {title}, Image: {image}")
+    def update_title_image_from_original_url(self):
+        title, image_url = parse.parse_from_meta_tags(self.enlace)
+        if title:
             self.titulo = title
-            self.archivo_imagen = image
+        if image_url:
+            self.archivo_imagen = image_url
+        self.save()
 
-        except Exception as e:
-            logger.error(f"Error getting title from meta tags: {e}")
+    def update_title_image_from_archive(self):
+        if self.archivo_url:
+            title, image_url = parse.parse_from_meta_tags(self.archivo_url)
+            if title:
+                self.titulo = title
+            if image_url:
+                self.archivo_imagen = image_url
+            self.save()
+        else:
+            self.update_title_image_from_original_url()
 
-    def get_archive(self):
+    def find_archived(self):
         try:
-            archive_url, archive_metadata, html = archive.capture(self.enlace)
-            self.archivo_url = archive_url
-            self.archivo_imagen = archive_metadata.get("screenshot_url")
-            self.archivo_fecha = archive_metadata.get("archive_date")
-            self.titulo = archive_metadata.get("title")
-            logger.info(f"Archived {self.enlace} to {archive_url}")
-            from core.tasks import parse
+            self.archivo_url, html = archive.get_latest_snapshot(self.enlace)
+            self.save()
+            if not self.markdown:
+                # Enrich the markdown content asynchronously
+                from core.tasks import enrich_markdown
 
-            parse.delay(self.id, html)
-        except archive.ArchiveInProgress as e:
-            logger.warning(e)
-        except archive.ArchiveFailure as e:
-            logger.error(e)
-        except Exception as e:
-            logger.error(
-                f"Error archiving {self.enlace if 'noticia' in locals() else ''}: {e}"
-            )
-
-    def save(self, *args, **kwargs):
-        # Save the object first so we have an ID
-        if not self.archivo_url:
-            self.get_archive()
-        super().save(*args, **kwargs)
+                enrich_markdown.delay(self.id, html)
+            return self.archivo_url
+        except (archive.ArchiveNotFound, archive.ArchiveInProgress) as e:
+            logger.error(f"Error finding archived URL: {e}")
+            return None
 
 
 class Voto(models.Model):

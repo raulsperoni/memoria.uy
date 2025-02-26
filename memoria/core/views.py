@@ -86,29 +86,28 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
         try:
             # Try to retrieve an existing Noticia with this enlace.
             noticia = Noticia.objects.get(enlace=enlace)
-            # Refresh its archive data.
-            noticia.get_archive()
-            noticia.save()
+            noticia.update_title_image_from_archive()
             # Update or create the vote for the current user.
             Voto.objects.update_or_create(
                 usuario=self.request.user,
                 noticia=noticia,
                 defaults={"opinion": vote_opinion},
             )
+            noticia.find_archived()
         except Noticia.DoesNotExist:
             # Create a new Noticia if it doesn't exist.
             noticia = Noticia(
                 agregado_por=self.request.user,
                 enlace=enlace,
             )
-            noticia.get_title_from_meta_tags()
-            noticia.get_archive()
             noticia.save()
+            noticia.update_title_image_from_original_url()
             Voto.objects.create(
                 usuario=self.request.user,
                 noticia=noticia,
                 opinion=vote_opinion,
             )
+            noticia.find_archived()
 
         # For HTMX requests, re-render the entire timeline fragment (form and timeline).
         if self.request.headers.get("HX-Request"):
@@ -125,9 +124,7 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
 class RefreshNoticiaView(LoginRequiredMixin, View):
     def post(self, request, pk):
         noticia = get_object_or_404(Noticia, pk=pk)
-        noticia.get_archive()
-        noticia.save(
-            update_fields=["archivo_url", "archivo_fecha", "archivo_imagen", "titulo"]
-        )
+        noticia.find_archived()
+        noticia.update_title_image_from_archive()
         # Render the updated timeline item fragment.
         return render(request, "noticias/timeline_item.html", {"noticia": noticia})

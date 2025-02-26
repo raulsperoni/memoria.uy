@@ -38,6 +38,14 @@
   <div class="p-4">
     <!-- Title placed below the metadata bar -->
     <h3 class="text-xl font-bold mb-2">{{ noticia.titulo }}</h3>
+
+    <!-- If not noticia.archivo_url, we explain that url is not present in the wayback machine and provide a link for the user to save it there https://web.archive.org/save/{article}-->
+    {% if not noticia.archivo_url %}
+      <p class="text-red-500">Lamentablemente la noticia no está en Archive.org y no podemos analizarla en profundidad. Podes solicitar su archivado en el siguiente enlace: <a href="https://web.archive.org/save/{{ noticia.enlace }}" target="_blank" class="text-blue-500 hover:underline">Archivar en Wayback Machine</a></p>
+      
+    {% endif %}
+
+    
     
     {% if noticia.resumen %}
       <p class="mb-2">{{ noticia.resumen }}</p>
@@ -62,6 +70,14 @@
         </div>
       </div>
     {% endif %}
+
+    <!-- Collapsible debug section -->
+    <details class="mb-2">
+      <summary class="text-sm text-gray-700">Debug</summary>
+      {{ noticia.archivo_url }}
+      {{ noticia.markdown }}
+      {{ noticia.entidades.all }}
+    </details>
     
     
   </div>
