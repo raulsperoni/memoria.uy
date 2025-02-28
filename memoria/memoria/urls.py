@@ -17,7 +17,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from core.views import NewsTimelineView, VoteView, NoticiaCreateView, RefreshNoticiaView
+from core.views import (
+    NewsTimelineView,
+    VoteView,
+    NoticiaCreateView,
+    RefreshNoticiaView,
+    DeleteNoticiaView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -28,6 +34,11 @@ urlpatterns = [
         "noticias/<int:pk>/refresh/",
         RefreshNoticiaView.as_view(),
         name="noticia-refresh",
+    ),
+    path(
+        "noticias/<int:pk>/delete/",
+        DeleteNoticiaView.as_view(),
+        name="noticia-delete",
     ),
     path("accounts/", include("allauth.urls")),
 ]

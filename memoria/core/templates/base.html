@@ -10,6 +10,32 @@
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
 </head>
 <body class="bg-gray-100 text-gray-900 antialiased">
+  <!-- Navigation Bar -->
+  <nav class="bg-white shadow-md">
+    <div class="container mx-auto px-4">
+      <div class="flex justify-between items-center h-16">
+        <!-- Logo/Brand -->
+        <div class="flex items-center">
+          <a href="{% url 'timeline' %}" class="text-xl font-bold text-gray-800">Memoria.uy</a>
+        </div>
+        
+        <!-- Auth Links -->
+        <div class="flex items-center space-x-4">
+          {% if user.is_authenticated %}
+            <span class="text-gray-700">{{ user.username }}</span>
+            {% if user.is_staff %}
+              <a href="{% url 'admin:index' %}" class="text-blue-600 hover:text-blue-800">Admin</a>
+            {% endif %}
+            <a href="{% url 'account_logout' %}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">Logout</a>
+          {% else %}
+            <a href="{% url 'account_login' %}" class="text-gray-700 hover:text-gray-900">Login</a>
+            <a href="{% url 'account_signup' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium">Sign Up</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
   <div class="container mx-auto px-4 py-8">
     {% block content %}{% endblock %}
   </div>

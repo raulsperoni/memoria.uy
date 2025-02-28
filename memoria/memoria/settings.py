@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
     "rest_framework",
     "core",
 ]
@@ -42,7 +43,10 @@ ROOT_URLCONF = "memoria.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [
+            BASE_DIR / "templates",
+            os.path.join(BASE_DIR, "memoria", "templates"),
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -55,6 +59,7 @@ TEMPLATES = [
         },
     },
 ]
+TEMPLATE_DEBUG = True
 
 WSGI_APPLICATION = "memoria.wsgi.application"
 

@@ -15,7 +15,7 @@ psycopg2-binary = "^2.9.10"
 supabase = "^2.13.0"
 requests = "^2.32.3"
 bs4 = "^0.0.2"
-django-allauth = "^65.4.1"
+django-allauth = {extras = ["socialaccount"], version = "^65.4.1"}
 dotenv = "^0.9.9"
 litellm = "^1.61.16"
 

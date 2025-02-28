@@ -128,3 +128,11 @@ class RefreshNoticiaView(LoginRequiredMixin, View):
         noticia.update_title_image_from_archive()
         # Render the updated timeline item fragment.
         return render(request, "noticias/timeline_item.html", {"noticia": noticia})
+
+
+class DeleteNoticiaView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        noticia = get_object_or_404(Noticia, pk=pk)
+        noticia.delete()
+        # Redirect to the main timeline page after deletion
+        return redirect(reverse_lazy("timeline"))
