@@ -1,32 +1,42 @@
 {# templates/noticias/timeline_fragment.html #}
 
-<div id="timeline-container" class="max-w-2xl mx-auto">
-  <div class="bg-white shadow rounded p-6">
-    <h2 class="text-2xl font-semibold mb-2">Para resistir el archivo hay que tener Memoria</h2>
-    <p class="text-gray-600 mb-4">
+<div id="timeline-container" class="max-w-3xl mx-auto">
+  <!-- News Entry Form -->
+  <div class="bg-white shadow-lg rounded-lg p-6 border-l-4 border-memoria-blue mb-8">
+    <h2 class="text-2xl font-headline font-bold mb-2 text-memoria-dark">Para resistir el archivo hay que tener Memoria</h2>
+    <p class="text-gray-600 mb-6">
       Llevá un registro de las noticias y cómo te hacen sentir, dentro de 4 años lo podés necesitar.
     </p>
     <form method="post" action="{% url 'noticia-create' %}"
           hx-post="{% url 'noticia-create' %}" hx-target="#timeline-container" hx-swap="outerHTML">
       {% csrf_token %}
       <!-- URL Input Field -->
-      <div class="mb-4">
+      <div class="mb-5">
         {{ form.enlace }}
       </div>
       <!-- Voting Buttons -->
       <div class="mb-4">
-        <p class="text-gray-700 mb-2">Guardar noticia como:</p>
-        <div class="flex flex-col md:flex-row gap-2">
+        <p class="text-gray-700 mb-3 font-semibold">Guardar noticia como:</p>
+        <div class="flex flex-col sm:flex-row gap-2">
           <button type="submit" name="opinion" value="buena"
-            class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-green-300 text-gray-700">
+            class="flex-1 px-4 py-3 rounded-md text-sm font-medium border-2 border-green-200 bg-green-50 hover:bg-green-200 text-green-800 transition-colors duration-200 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+            </svg>
             Buena noticia
           </button>
           <button type="submit" name="opinion" value="mala"
-            class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-red-300 text-gray-700">
+            class="flex-1 px-4 py-3 rounded-md text-sm font-medium border-2 border-red-200 bg-red-50 hover:bg-red-200 text-red-800 transition-colors duration-200 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.105-1.79l-.05-.025A4 4 0 0011.055 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z" />
+            </svg>
             Mala noticia
           </button>
           <button type="submit" name="opinion" value="neutral"
-            class="flex-1 px-4 py-2 rounded text-sm bg-gray-200 hover:bg-yellow-300 text-gray-700">
+            class="flex-1 px-4 py-3 rounded-md text-sm font-medium border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-200 text-yellow-800 transition-colors duration-200 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
             Ni buena ni mala
           </button>
         </div>
@@ -41,70 +51,138 @@
     </form>
   </div>
  
-
-  <!-- Filter bar -->
-  <div class="p-1 my-2">
-    <!-- Quick Filters: "Todas" and Opinion Filters -->
-    <div class="my-4 flex flex-wrap gap-2 items-center">
-      <!-- Todas Button -->
-      <button hx-get="{% url 'timeline' %}?filter=todas" 
-              hx-target="#timeline-items" 
-              hx-swap="innerHTML" 
-              class="px-4 py-2 bg-gray-500 text-white rounded">
-        Todas
+  <!-- Redesigned Filter bar -->
+  <div x-data="{ openFilters: false, audience: 'mi', advancedFilter: '', entity: '' }" class="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
+    <!-- Filter header -->
+    <div class="bg-gray-100 p-4 flex justify-between items-center">
+      <h3 class="font-semibold text-gray-800 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-memoria-blue" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+        </svg>
+        Filtrar noticias
+      </h3>
+      <button @click="openFilters = !openFilters" class="text-gray-500 hover:text-memoria-blue">
+        <span x-show="!openFilters">Mostrar filtros</span>
+        <span x-show="openFilters">Ocultar filtros</span>
       </button>
-
-      <!-- Opinion Filter with Audience Dropdown -->
-      <div x-data="{ audience: 'mi' }" class="flex items-center gap-2">
-        <select x-model="audience" class="px-2 py-1 border rounded">
-          {% if user.is_authenticated %}
-            <option value="mi">Para mí</option>
-          {% endif %}
-          <option value="mayoria">Para la mayoría</option>
-        </select>
-        <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience" 
-                hx-target="#timeline-items" 
-                hx-swap="innerHTML" 
-                class="px-4 py-2 bg-green-500 text-white rounded">
-          Buenas
-        </button>
-        <button x-bind:hx-get="'{% url 'timeline' %}?filter=mala_' + audience" 
-                hx-target="#timeline-items" 
-                hx-swap="innerHTML" 
-                class="px-4 py-2 bg-red-500 text-white rounded">
-          Malas
-        </button>
+    </div>
+    
+    <!-- Filter options (collapsible) -->
+    <div x-show="openFilters" x-transition class="p-4 border-t border-gray-200">
+      <div class="space-y-6">
+        <!-- Basic filters -->
+        <div>
+          <h4 class="font-medium text-sm text-gray-500 mb-2">FILTRO BÁSICO</h4>
+          <div class="flex flex-wrap gap-2">
+            <button hx-get="{% url 'timeline' %}?filter=todas" 
+                    hx-target="#timeline-items" 
+                    hx-swap="innerHTML" 
+                    class="px-4 py-2 bg-memoria-dark hover:bg-black text-white rounded-md text-sm font-medium">
+              Todas las noticias
+            </button>
+          </div>
+        </div>
+        
+        <!-- Opinion filters -->
+        <div>
+          <h4 class="font-medium text-sm text-gray-500 mb-2">FILTRO POR OPINIÓN</h4>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <!-- Audience selector -->
+            <div class="bg-gray-100 rounded-md p-2">
+              <span class="text-sm text-gray-700 mr-2">Perspectiva:</span>
+              <div class="mt-1 flex rounded-md shadow-sm">
+                <button @click="audience = 'mi'" 
+                        :class="{'bg-memoria-yellow text-black': audience === 'mi', 'bg-gray-200 text-gray-700': audience !== 'mi'}"
+                        class="px-3 py-1 rounded-l-md text-sm font-medium">
+                  Mi opinión
+                </button>
+                <button @click="audience = 'mayoria'" 
+                        :class="{'bg-memoria-yellow text-black': audience === 'mayoria', 'bg-gray-200 text-gray-700': audience !== 'mayoria'}"
+                        class="px-3 py-1 rounded-r-md text-sm font-medium">
+                  Mayoría
+                </button>
+              </div>
+            </div>
+            
+            <!-- Opinion type buttons -->
+            <div class="flex flex-1 gap-2">
+              <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience" 
+                      hx-target="#timeline-items" 
+                      hx-swap="innerHTML" 
+                      class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium">
+                <span class="flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+                  </svg>
+                  Buenas
+                </span>
+              </button>
+              <button x-bind:hx-get="'{% url 'timeline' %}?filter=mala_' + audience" 
+                      hx-target="#timeline-items" 
+                      hx-swap="innerHTML" 
+                      class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium">
+                <span class="flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.105-1.79l-.05-.025A4 4 0 0011.055 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z" />
+                  </svg>
+                  Malas
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Entity filters -->
+        <div>
+          <h4 class="font-medium text-sm text-gray-500 mb-2">FILTRO POR ENTIDAD</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="md:col-span-1">
+              <label class="block text-sm text-gray-700 mb-1">Tipo de mención:</label>
+              <select x-model="advancedFilter" class="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-memoria-blue focus:border-memoria-blue">
+                <option value="">Seleccione tipo</option>
+                <option value="mencionan_a">Cualquier mención</option>
+                <option value="mencionan_positiva">Mención positiva</option>
+                <option value="mencionan_negativa">Mención negativa</option>
+              </select>
+            </div>
+            <div class="md:col-span-1">
+              <label class="block text-sm text-gray-700 mb-1">Entidad mencionada:</label>
+              <select x-model="entity" class="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-memoria-blue focus:border-memoria-blue">
+                <option value="">Seleccione entidad</option>
+                {% for entidad in entidades %}
+                  <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="md:col-span-1 flex items-end">
+              <button x-bind:hx-get="'{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity"
+                      hx-target="#timeline-items"
+                      hx-swap="innerHTML"
+                      :disabled="advancedFilter === '' || entity === ''"
+                      :class="{'opacity-50 cursor-not-allowed': advancedFilter === '' || entity === ''}"
+                      class="w-full px-4 py-2 bg-memoria-blue hover:bg-blue-700 text-white rounded-md text-sm font-medium">
+                Aplicar filtro
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Active filters indicator (shows when filters are applied) -->
+      <div class="mt-4 pt-4 border-t border-gray-200">
+        <h4 class="font-medium text-sm text-gray-500 mb-2">FILTROS ACTIVOS</h4>
+        <div class="flex flex-wrap gap-2" id="active-filters">
+          <!-- This would be populated dynamically based on active filters -->
+          <div class="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-sm">
+            <span>Sin filtros activos</span>
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Compact Advanced Filter: Two dropdowns and a single apply button -->
-    <div x-data="{ advancedFilter: '', entity: '' }" class="my-4 flex items-center gap-2">
-      <select x-model="advancedFilter" class="px-2 py-1 border rounded">
-        <option value="">None</option>
-        <option value="mencionan_a">Mencionan a</option>
-        <option value="mencionan_positiva">Mencionan positivamente a</option>
-        <option value="mencionan_negativa">Mencionan negativamente a</option>
-      </select>
-      <select x-model="entity" class="px-2 py-1 border rounded">
-        <option value="">Seleccione entidad</option>
-        {% for entidad in entidades %}
-          <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
-        {% endfor %}
-      </select>
-      <button x-bind:hx-get="'{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity"
-              hx-target="#timeline-items"
-              hx-swap="innerHTML"
-              :disabled="advancedFilter === '' || entity === ''"
-              class="px-4 py-2 bg-indigo-500 text-white rounded">
-        Aplicar
-      </button>
-    </div>
-
-
-
+  </div>
 
   <!-- Timeline Items -->
-  <div id="timeline-items" class="timeline mt-6">
+  <div id="timeline-items" class="timeline">
     {% include "noticias/timeline_items.html" %}
   </div>
 </div>

@@ -3,42 +3,142 @@
 <head>
   <meta charset="utf-8">
   <title>Memoria.uy</title>
-  <!-- Tailwind CSS via CDN for quick prototyping -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-  <!--Apline.js-->
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'memoria-blue': '#0B3954',
+            'memoria-red': '#FF6B6B',
+            'memoria-yellow': '#FFD166',
+            'memoria-dark': '#2E2E3A',
+            'memoria-light': '#F4F1DE'
+          },
+          fontFamily: {
+            'headline': ['"Playfair Display"', 'serif'],
+            'body': ['"Source Sans Pro"', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .newspaper-bg {
+      background-image: 
+        linear-gradient(rgba(244, 241, 222, 0.97), rgba(244, 241, 222, 0.97)),
+        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%232E2E3A' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+    
+    .timeline-marker {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 107, 107, 0.1),
+        rgba(255, 107, 107, 0.1) 5px,
+        rgba(255, 107, 107, 0.2) 5px,
+        rgba(255, 107, 107, 0.2) 10px
+      );
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900 antialiased">
+
+<body class="font-body newspaper-bg text-memoria-dark antialiased">
+  <!-- Top Banner -->
+  <div class="bg-memoria-blue text-white py-1 px-4">
+    <div class="container mx-auto text-center text-xs tracking-wider">
+      ARCHIVO DE NOTICIAS GUBERNAMENTALES - MEMORIA COLECTIVA
+    </div>
+  </div>
+  
   <!-- Navigation Bar -->
-  <nav class="bg-white shadow-md">
+  <header class="bg-white border-b-4 border-memoria-red shadow-md sticky top-0 z-50">
     <div class="container mx-auto px-4">
-      <div class="flex justify-between items-center h-16">
+      <div class="flex justify-between items-center h-20">
         <!-- Logo/Brand -->
         <div class="flex items-center">
-          
-          <h1><a href="{% url 'timeline' %}" class="text-xl font-bold text-gray-800">Memoria.uy</a></h1>
+          <div class="flex flex-col">
+            <h1 class="font-headline text-2xl md:text-3xl font-bold text-memoria-blue">
+              <a href="{% url 'timeline' %}" class="flex items-center">
+                <span class="transform -rotate-3 inline-block mr-1">📰</span>
+                <span class="underline decoration-memoria-yellow decoration-4">Memoria.uy</span>
+              </a>
+            </h1>
+            <p class="text-xs italic text-gray-600">Para resistir el archivo hay que tener Memoria</p>
+          </div>
         </div>
         
         <!-- Auth Links -->
         <div class="flex items-center space-x-4">
           {% if user.is_authenticated %}
-            <span class="text-gray-700">{{ user.username }}</span>
-            {% if user.is_staff %}
-              <a href="{% url 'admin:index' %}" class="text-blue-600 hover:text-blue-800">Admin</a>
-            {% endif %}
-            <a href="{% url 'account_logout' %}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">Salir</a>
+            <div class="flex items-center bg-memoria-light rounded-full px-3 py-1 border border-gray-300">
+              <span class="font-medium text-memoria-dark">{{ user.username }}</span>
+              {% if user.is_staff %}
+                <a href="{% url 'admin:index' %}" class="ml-2 text-memoria-blue hover:underline">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                  </svg>
+                </a>
+              {% endif %}
+            </div>
+            <a href="{% url 'account_logout' %}" class="bg-gradient-to-r from-memoria-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transform hover:scale-105 transition-transform duration-200">
+              Salir
+            </a>
           {% else %}
-            <a href="{% url 'account_login' %}" class="text-gray-700 hover:text-gray-900">Entrar</a>
-            <a href="{% url 'account_signup' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium">Registrarse</a>
+            <a href="{% url 'account_login' %}" class="text-memoria-blue border-b-2 border-transparent hover:border-memoria-blue transition-colors duration-200">Entrar</a>
+            <a href="{% url 'account_signup' %}" class="bg-gradient-to-r from-memoria-blue to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg transform hover:scale-105 transition-transform duration-200">
+              Registrarse
+            </a>
           {% endif %}
         </div>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <div class="container mx-auto px-4 py-8">
-    {% block content %}{% endblock %}
+  <!-- Left Timeline Marker -->
+  <div class="fixed left-0 top-0 bottom-0 w-3 timeline-marker hidden md:block"></div>
+  
+  <!-- Main Content -->
+  <div class="container mx-auto px-4 py-8 md:pl-8">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-lg p-6 relative">
+      <!-- Decorative Corner -->
+      <div class="absolute -top-2 -left-2 w-8 h-8 bg-memoria-yellow rounded-br-lg"></div>
+      
+      {% block content %}{% endblock %}
+    </div>
   </div>
+  
+  <!-- Footer -->
+  <footer class="bg-memoria-dark text-white py-6 mt-12">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0">
+          <h3 class="font-headline text-xl">Memoria.uy</h3>
+          <p class="text-sm text-gray-400">Preservando la historia política para un mejor futuro</p>
+        </div>
+        <div class="flex space-x-4">
+          <a href="#" class="hover:text-memoria-yellow">Acerca de</a>
+          <a href="#" class="hover:text-memoria-yellow">Contacto</a>
+          <a href="#" class="hover:text-memoria-yellow">Términos</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Floating button to add new item - visible for staff only -->
+  {% if user.is_staff %}
+  <div class="fixed bottom-8 right-8">
+    <button class="bg-memoria-yellow text-memoria-dark h-16 w-16 rounded-full shadow-xl flex items-center justify-center hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-memoria-yellow focus:ring-opacity-50 transform hover:scale-110 transition-transform duration-200">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+      </svg>
+    </button>
+  </div>
+  {% endif %}
 </body>
 </html>
