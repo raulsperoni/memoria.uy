@@ -10,11 +10,19 @@ logger = logging.getLogger(__name__)
 
 
 class Noticia(models.Model):
-    titulo = models.CharField(max_length=255, null=True)
     enlace = models.URLField(unique=True)
+
+    meta_titulo = models.CharField(max_length=255, blank=True, null=True)
+    meta_imagen = models.URLField(blank=True, null=True)
+
+    archivo_titulo = models.CharField(max_length=255, blank=True, null=True)
     archivo_url = models.URLField(blank=True, null=True)
     archivo_fecha = models.DateTimeField(blank=True, null=True)
     archivo_imagen = models.URLField(blank=True, null=True)
+
+    markdown = models.TextField(blank=True, null=True)
+
+    titulo = models.CharField(max_length=255, blank=True, null=True)
     fuente = models.CharField(max_length=255, null=True)
     categoria = models.CharField(
         max_length=100,
@@ -28,7 +36,7 @@ class Noticia(models.Model):
         ],
     )
     resumen = models.TextField(blank=True, null=True)
-    markdown = models.TextField(blank=True, null=True)
+
     agregado_por = models.ForeignKey(User, on_delete=models.CASCADE)
     fecha_agregado = models.DateTimeField(auto_now_add=True)
 
@@ -37,19 +45,27 @@ class Noticia(models.Model):
             return self.titulo
         return self.enlace
 
+    @property
+    def mostrar_titulo(self):
+        return self.titulo or self.archivo_titulo or self.meta_titulo
+
+    @property
+    def mostrar_imagen(self):
+        return self.meta_imagen or self.archivo_imagen
+
     def update_title_image_from_original_url(self):
         title, image_url = parse.parse_from_meta_tags(self.enlace)
         if title:
-            self.titulo = title
+            self.meta_titulo = title
         if image_url:
-            self.archivo_imagen = image_url
+            self.meta_imagen = image_url
         self.save()
 
     def update_title_image_from_archive(self):
         if self.archivo_url:
             title, image_url = parse.parse_from_meta_tags(self.archivo_url)
             if title:
-                self.titulo = title
+                self.archivo_titulo = title
             if image_url:
                 self.archivo_imagen = image_url
             self.save()
@@ -65,6 +81,7 @@ class Noticia(models.Model):
                 from core.tasks import enrich_markdown
 
                 enrich_markdown.delay(self.id, html)
+            self.update_title_image_from_archive()
             return self.archivo_url
         except (archive.ArchiveNotFound, archive.ArchiveInProgress) as e:
             logger.error(f"Error finding archived URL: {e}")

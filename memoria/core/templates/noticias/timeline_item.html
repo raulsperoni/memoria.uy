@@ -1,8 +1,8 @@
 {# templates/noticias/timeline_item.html #}
 
 <div class="timeline-item bg-white shadow rounded overflow-hidden mb-4" id="noticia-{{ noticia.pk }}">
-  {% if noticia.archivo_imagen %}
-    <img src="{{ noticia.archivo_imagen }}" alt="Screenshot" class="w-full object-cover">
+  {% if noticia.mostrar_imagen %}
+    <img src="{{ noticia.mostrar_imagen }}" alt="Screenshot" class="w-full object-cover">
   {% endif %}
   <!-- Metadata Bar with Refresh Button -->
   <div class="bg-gray-100 px-4 py-2 flex items-center text-sm text-gray-700">
@@ -37,7 +37,7 @@
   </div>
   <div class="p-4">
     <!-- Title placed below the metadata bar -->
-    <h3 class="text-xl font-bold mb-2">{{ noticia.titulo }}</h3>
+    <h3 class="text-xl font-bold mb-2">{{ noticia.mostrar_titulo }}</h3>
 
     <!-- If not noticia.archivo_url, we explain that url is not present in the wayback machine and provide a link for the user to save it there https://web.archive.org/save/{article}-->
     {% if not noticia.archivo_url %}
@@ -74,9 +74,16 @@
     <!-- Collapsible debug section -->
     <details class="mb-2">
       <summary class="text-sm text-gray-700">Debug</summary>
-      {{ noticia.archivo_url }}
-      {{ noticia.markdown }}
-      {{ noticia.entidades.all }}
+      <p>id {{ noticia.pk }}</p>
+      <p>meta_titulo {{ noticia.meta_titulo }}</p>
+      <p>meta_imagen {{ noticia.meta_imagen }}</p>
+
+      <p>archivo_titulo {{ noticia.archivo_titulo}}</p>
+      <p>archivo_imagen {{ noticia.archivo_imagen}}</p>
+      <p>archivo_url {{ noticia.archivo_url }}</p>
+
+      <p>markdown {{ noticia.markdown }}</p>
+      <p>entidades {{ noticia.entidades.all|length }}</p>
     </details>
     
     

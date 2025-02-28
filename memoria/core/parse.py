@@ -115,8 +115,8 @@ def parse_noticia(
                 {
                     "role": "user",
                     "content": f"""From the crawled content, metadata about the news article should be extracted.
-                    The metadata should include the title, source, category, author, and entities mentioned in the article.
-                    The entities should include the name, type, and sentiment of each entity.
+                    The metadata should include the title (titulo), source (fuente), category (categoria), author (autor), summary (resumen) and entities (entidades) mentioned in the article.
+                    The entities should include the name (nombre), type (tipo), and sentiment (sentimiento) of each entity.
                     The Markdown content to parse is as follows:
                 
                 {markdown}""",
@@ -226,9 +226,21 @@ def parse_from_meta_tags(url):
             title = og_title["content"]
 
         original_image = None
-        if og_image and og_image["content"] not in BAD_URLS:
-            og_image_parts = og_image["content"].split("https")
-            original_image = "https" + og_image_parts[-1]
+
+        if og_image:
+            original_image = og_image["content"]
+            if original_image not in BAD_URLS:
+                try:
+                    image_response = requests.get(original_image)
+                    if image_response.status_code != 200:
+                        original_image = None
+                        logger.error(
+                            f"Error getting image from meta tags: {original_image}"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error getting image from meta tags: {original_image} {e}"
+                    )
 
         logger.info(f"Title: {title}")
         logger.info(f"Image: {original_image}")
