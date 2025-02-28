@@ -51,7 +51,9 @@ class Noticia(models.Model):
 
     @property
     def mostrar_imagen(self):
-        return self.meta_imagen or self.archivo_imagen
+        if self.meta_imagen and "meta/la-diaria-1000x1000" not in self.meta_imagen:
+            return self.meta_imagen or self.archivo_imagen
+        return self.archivo_imagen or self.meta_imagen
 
     def update_title_image_from_original_url(self):
         title, image_url = parse.parse_from_meta_tags(self.enlace)
