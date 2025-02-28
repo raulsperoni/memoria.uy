@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <title>Memoria.uy</title>
@@ -16,7 +16,8 @@
       <div class="flex justify-between items-center h-16">
         <!-- Logo/Brand -->
         <div class="flex items-center">
-          <a href="{% url 'timeline' %}" class="text-xl font-bold text-gray-800">Memoria.uy</a>
+          
+          <h1><a href="{% url 'timeline' %}" class="text-xl font-bold text-gray-800">Memoria.uy</a></h1>
         </div>
         
         <!-- Auth Links -->
@@ -26,10 +27,10 @@
             {% if user.is_staff %}
               <a href="{% url 'admin:index' %}" class="text-blue-600 hover:text-blue-800">Admin</a>
             {% endif %}
-            <a href="{% url 'account_logout' %}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">Logout</a>
+            <a href="{% url 'account_logout' %}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">Salir</a>
           {% else %}
-            <a href="{% url 'account_login' %}" class="text-gray-700 hover:text-gray-900">Login</a>
-            <a href="{% url 'account_signup' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium">Sign Up</a>
+            <a href="{% url 'account_login' %}" class="text-gray-700 hover:text-gray-900">Entrar</a>
+            <a href="{% url 'account_signup' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium">Registrarse</a>
           {% endif %}
         </div>
       </div>
