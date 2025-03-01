@@ -18,6 +18,48 @@ class NewsTimelineView(ListView):
     ordering = ["-fecha_agregado"]
     paginate_by = 10  # Adjust the number as needed
 
+    def get_filter_description(self):
+        """
+        Maps the applied filters to natural language descriptions.
+        Returns a string describing the current filter in natural language.
+        """
+        filter_param = self.request.GET.get("filter")
+        entidad_id = self.request.GET.get("entidad")
+        
+        # Default description when no filters are applied
+        if not filter_param or filter_param == "todas":
+            return "Estás viendo todas las noticias"
+            
+        # User opinion filters
+        if filter_param == "buena_mi" and self.request.user.is_authenticated:
+            return "Estás viendo solo las noticias que marcaste como buenas"
+        elif filter_param == "mala_mi" and self.request.user.is_authenticated:
+            return "Estás viendo solo las noticias que marcaste como malas"
+            
+        # Majority opinion filters
+        elif filter_param == "buena_mayoria":
+            return "Estás viendo las noticias que la mayoría considera buenas"
+        elif filter_param == "mala_mayoria":
+            return "Estás viendo las noticias que la mayoría considera malas"
+            
+        # Entity filters
+        elif filter_param.startswith("mencionan_") and entidad_id:
+            try:
+                from core.models import Entidad
+                entidad = Entidad.objects.get(id=entidad_id)
+                
+                if filter_param == "mencionan_a":
+                    return f"Estás viendo las noticias que mencionan a {entidad.nombre}"
+                elif filter_param == "mencionan_positiva":
+                    return f"Estás viendo las noticias que mencionan positivamente a {entidad.nombre}"
+                elif filter_param == "mencionan_negativa":
+                    return f"Estás viendo las noticias que mencionan negativamente a {entidad.nombre}"
+            except (Entidad.DoesNotExist, ValueError):
+                return "Estás viendo noticias filtradas por entidad"
+                
+        # Default for unknown filters
+        return "Estás viendo noticias filtradas"
+
     def get_queryset(self):
         queryset = super().get_queryset()
         filter_param = self.request.GET.get("filter")
@@ -49,12 +91,21 @@ class NewsTimelineView(ListView):
         # Only include the form in the initial full-page load.
         if not self.request.headers.get("HX-Request"):
             context["form"] = NoticiaForm()
+        
+        # Add filter description to context
+        context["filter_description"] = self.get_filter_description()
         return context
 
     def render_to_response(self, context, **response_kwargs):
         # If the request is via HTMX, return just the list items partial.
         if self.request.headers.get("HX-Request"):
             self.template_name = "noticias/timeline_items.html"
+            
+            # When loading just the items via HTMX, we need to update the active filters section too
+            if self.request.headers.get("HX-Target") == "timeline-items":
+                # Add an HX-Trigger to update the active filters
+                response_kwargs.setdefault("headers", {})
+                response_kwargs["headers"]["HX-Trigger"] = '{"updateActiveFilters": {"description": "' + context["filter_description"] + '"}}'                
         return super().render_to_response(context, **response_kwargs)
 
 

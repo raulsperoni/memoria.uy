@@ -18,6 +18,7 @@ bs4 = "^0.0.2"
 django-allauth = {extras = ["socialaccount"], version = "^65.4.1"}
 dotenv = "^0.9.9"
 litellm = "^1.61.16"
+django-browser-reload = "^1.18.0"
 
 
 [tool.poetry.group.dev.dependencies]

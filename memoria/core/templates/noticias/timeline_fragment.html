@@ -172,9 +172,12 @@
       <div class="mt-4 pt-4 border-t border-gray-200">
         <h4 class="font-medium text-sm text-gray-500 mb-2">FILTROS ACTIVOS</h4>
         <div class="flex flex-wrap gap-2" id="active-filters">
-          <!-- This would be populated dynamically based on active filters -->
-          <div class="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-sm">
-            <span>Sin filtros activos</span>
+          <!-- Display the filter description -->
+          <div class="inline-flex items-center px-3 py-2 rounded-md bg-memoria-yellow text-memoria-dark text-sm font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+            </svg>
+            <span>{{ filter_description|default:"Sin filtros activos" }}</span>
           </div>
         </div>
       </div>
@@ -186,3 +189,17 @@
     {% include "noticias/timeline_items.html" %}
   </div>
 </div>
+
+<!-- JavaScript to update filter description dynamically -->
+<script>
+  document.addEventListener('htmx:afterSwap', function(event) {
+    // Listen for the custom event from the server
+    document.body.addEventListener('updateActiveFilters', function(event) {
+      const filterDescription = event.detail.description;
+      const activeFiltersContainer = document.querySelector('#active-filters span');
+      if (activeFiltersContainer) {
+        activeFiltersContainer.textContent = filterDescription;
+      }
+    });
+  });
+</script>
