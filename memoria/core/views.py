@@ -9,7 +9,10 @@ from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
 from django.db.models import Count, Q, F
+import time
+import logging
 
+logger = logging.getLogger(__name__)    
 
 class NewsTimelineView(ListView):
     model = Noticia
@@ -17,6 +20,8 @@ class NewsTimelineView(ListView):
     context_object_name = "noticias"
     ordering = ["-fecha_agregado"]
     paginate_by = 10  # Adjust the number as needed
+
+
 
     def get_filter_description(self):
         """
@@ -134,6 +139,7 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         vote_opinion = form.cleaned_data.get("opinion")
         enlace = form.cleaned_data.get("enlace")
+        
         try:
             # Try to retrieve an existing Noticia with this enlace.
             noticia = Noticia.objects.get(enlace=enlace)
@@ -164,11 +170,18 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
         if self.request.headers.get("HX-Request"):
             noticias = Noticia.objects.all().order_by("-fecha_agregado")
             # Pass a fresh form instance so the fields are cleared.
-            return render(
+            response = render(
                 self.request,
                 "noticias/timeline_fragment.html",
-                {"noticias": noticias, "form": self.get_form_class()()},
+                {
+                    "noticias": noticias, 
+                    "form": self.get_form_class()(),
+                    "filter_description": "Estás viendo todas las noticias"
+                },
             )
+            # Add HTMX response headers
+            response["HX-Trigger"] = '{"noticiaCreated": {"message": "Noticia guardada exitosamente"}}'
+            return response
         return redirect(self.success_url)
 
 
