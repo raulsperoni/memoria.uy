@@ -4,7 +4,7 @@ from django.views.generic import ListView, View, FormView
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponseBadRequest
 from django.contrib.auth.mixins import LoginRequiredMixin
-from core.models import Noticia, Voto
+from core.models import Noticia, Voto, Entidad
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
@@ -67,7 +67,26 @@ class NewsTimelineView(ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        filter_param = self.request.GET.get("filter")
+        
+        # Get parameters from different possible sources
+        filter_param = self.request.GET.get("filter", "")
+        entidad_id = self.request.GET.get("entidad", "")
+        
+        # Try to get from POST if not in GET
+        if not filter_param and "filter" in self.request.POST:
+            filter_param = self.request.POST.get("filter")
+        if not entidad_id and "entidad" in self.request.POST:
+            entidad_id = self.request.POST.get("entidad")
+            
+        # Check if entity is in the path parameters
+        if not entidad_id and hasattr(self.request, "resolver_match") and self.request.resolver_match:
+            entidad_id = self.request.resolver_match.kwargs.get("entidad", "")
+        
+        # Debug logging for parameters
+        print(f"Filter: {filter_param}, Entity ID: {entidad_id}")
+        print(f"GET params: {dict(self.request.GET.items())}")
+        print(f"POST params: {dict(self.request.POST.items())}")
+        
         if filter_param == "buena_mi" and self.request.user.is_authenticated:
             # Filter by good news by this user.
             queryset = queryset.filter(
@@ -88,7 +107,24 @@ class NewsTimelineView(ListView):
             queryset = queryset.annotate(
                 bad_count=Count("votos", filter=Q(votos__opinion="mala"))
             ).filter(bad_count__gt=F("votos__count") / 2)
-        # You can add additional filter conditions here as the filter bar grows.
+        # Entity filters
+        elif filter_param == "mencionan_a" and entidad_id:
+            # Filter by news that mention the entity
+            queryset = queryset.filter(
+                entidades__entidad__pk=entidad_id
+            )
+        elif filter_param == "mencionan_positiva" and entidad_id:
+            # Filter by news that mention the entity positively
+            queryset = queryset.filter(
+                entidades__entidad__pk=entidad_id,
+                entidades__sentimiento="positivo"
+            )
+        elif filter_param == "mencionan_negativa" and entidad_id:
+            # Filter by news that mention the entity negatively
+            queryset = queryset.filter(
+                entidades__entidad__pk=entidad_id,
+                entidades__sentimiento="negativo"
+            )
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -99,6 +135,7 @@ class NewsTimelineView(ListView):
         
         # Add filter description to context
         context["filter_description"] = self.get_filter_description()
+        context["entidades"] = Entidad.objects.all()
         return context
 
     def render_to_response(self, context, **response_kwargs):
