@@ -2,6 +2,8 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from core.models import Noticia, Entidad, NoticiaEntidad
 from core import parse
+from core import archive_ph as archive
+from datetime import datetime
 
 logger = get_task_logger(__name__)
 
@@ -34,6 +36,13 @@ def enrich_content(noticia_id):
             noticia.fuente = articulo.fuente
             noticia.categoria = articulo.categoria if articulo.categoria else "otros"
             noticia.resumen = articulo.resumen
+            if articulo.fecha:
+                try:
+                    noticia.fecha_noticia = datetime.fromisoformat(articulo.fecha)
+                except (ValueError, TypeError):
+                    logger.warning(
+                        f"Could not parse date {articulo.fecha} for {noticia.enlace}"
+                    )
             noticia.save()
             logger.info(f"Enriched {noticia.enlace} with content")
             if articulo.entidades:
@@ -53,3 +62,40 @@ def enrich_content(noticia_id):
     else:
         logger.error(f"No markdown content for {noticia.enlace}")
     return noticia_id
+
+
+@shared_task(bind=True, max_retries=3)
+def find_archived(self, noticia_id):
+    """Async task to retry finding archived URL when archive is in progress.
+    This task is called after the first synchronous attempt fails with ArchiveInProgress.
+    """
+    try:
+        noticia = Noticia.objects.get(id=noticia_id)
+        noticia.archivo_url, html = archive.get_latest_snapshot(noticia.enlace)
+        noticia.archivo_fecha = datetime.now()
+        noticia.save()
+        if not noticia.markdown:
+            enrich_markdown.delay(noticia.id, html)
+        elif not noticia.resumen:
+            enrich_content.delay(noticia.id)
+        noticia.update_title_image_from_archive()
+        logger.info(
+            f"Successfully archived URL for noticia {noticia_id} on retry #{self.request.retries+1}"
+        )
+        return noticia.archivo_url
+    except archive.ArchiveInProgress as e:
+        retry_count = self.request.retries
+        if retry_count < 2:  # We'll do a total of 3 attempts (0, 1, 2)
+            logger.info(
+                f"Archive still in progress for noticia {noticia_id}, retry {retry_count+1}/3 in 3 minutes"
+            )
+            # Retry in 3 minutes (180 seconds)
+            raise self.retry(exc=e, countdown=180)
+        else:
+            logger.warning(
+                f"Archive still in progress after 3 attempts for noticia {noticia_id}, giving up"
+            )
+            return None
+    except Exception as e:
+        logger.error(f"Error in find_archived task for noticia {noticia_id}: {e}")
+        return None

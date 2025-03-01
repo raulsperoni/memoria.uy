@@ -2,10 +2,11 @@ from typing import Optional, Literal, Union
 from pydantic import BaseModel, Field
 from litellm import completion
 from bs4 import BeautifulSoup
+from datetime import datetime
 import requests
 import logging
-
-# litellm._turn_on_debug()
+#import litellm
+#litellm._turn_on_debug()
 logger = logging.getLogger(__name__)
 
 MODELS_PRIORITY_JSON = {
@@ -67,33 +68,9 @@ class Articulo(BaseModel):
         Literal["politica", "economia", "seguridad", "salud", "educacion", "otros"]
     ] = Field(None, description="The category of the article.")
     autor: Optional[str] = Field(None, description="The author of the article.")
+    fecha: Optional[str] = Field(None, description="The date of the article in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)")
     resumen: Optional[str] = Field(None, description="A brief summary of the article.")
     entidades: Optional[list[EntidadNombrada]] = Field(None, alias="entidades")
-
-    def json_example(self):
-        return """
-            {
-                "articulo": {
-                    "titulo": "Gobierno electo le ofreció 34 cargos a la oposición y la coalición se reunirá para hacer una contrapropuesta",
-                    "fuente": "La Diaria",
-                    "categoria": "politica",
-                    "autor": "Pedro Gonzalez",
-                    "resumen": "El gobierno electo ha ofrecido 34 cargos a la oposición, con la expectativa de que hagan una contrapropuesta conjunta.",
-                    "entidades": [
-                        {
-                            "nombre": "Gobierno electo",
-                            "tipo": "organizacion",
-                            "sentimiento": "neutral"
-                        },
-                        {
-                            "nombre": "Coalición",
-                            "tipo": "organizacion",
-                            "sentimiento": "positivo"
-                        }
-                    ]
-                }
-            }
-            """
 
 
 def parse_noticia(
@@ -105,17 +82,17 @@ def parse_noticia(
     try:
         response = completion(
             model=current_model,
-            caching=True,
+            caching=False,
             response_format=Articulo,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful html parser designed to output JSON.",
+                    "content": "You are a helpful markdown parser designed to output JSON.",
                 },
                 {
                     "role": "user",
                     "content": f"""From the crawled content, metadata about the news article should be extracted.
-                    The metadata should include the title (titulo), source (fuente), category (categoria), author (autor), summary (resumen) and entities (entidades) mentioned in the article.
+                    The metadata should include the title (titulo), source (fuente), category (categoria), author (autor), summary (resumen), date (fecha) and entities (entidades) mentioned in the article.
                     The entities should include the name (nombre), type (tipo), and sentiment (sentimiento) of each entity.
                     The Markdown content to parse is as follows:
                 
@@ -161,7 +138,7 @@ def parse_noticia_markdown(
                     "content": """
                     You are a helpful html parser designed to output a markdown version of the news article. 
                     There could be other content in the creawled HTML, but you should only output the main article.
-                    The markdown should include the title, source, author, and main content of the article.
+                    The markdown should include the title, source, author, date and main content of the article.
                     Everything else should be ignored. 
                     Markdown subtitles should be in spanish, article language should be respected.
                     No html tags should be present in the markdown output.
@@ -220,6 +197,9 @@ def parse_from_meta_tags(url):
         # Extract Open Graph meta tags
         og_title = soup.find("meta", property="og:title")
         og_image = soup.find("meta", property="og:image")
+
+        print(f"OG title: {og_title} from {url}")
+        print(f"OG image: {og_image} from {url}")
 
         title = None
         if og_title and og_title["content"] not in BAD_TITLES:

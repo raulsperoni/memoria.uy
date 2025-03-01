@@ -12,7 +12,8 @@ from django.db.models import Count, Q, F
 import time
 import logging
 
-logger = logging.getLogger(__name__)    
+logger = logging.getLogger(__name__)
+
 
 class NewsTimelineView(ListView):
     model = Noticia
@@ -21,8 +22,6 @@ class NewsTimelineView(ListView):
     ordering = ["-fecha_agregado"]
     paginate_by = 10  # Adjust the number as needed
 
-
-
     def get_filter_description(self):
         """
         Maps the applied filters to natural language descriptions.
@@ -30,29 +29,30 @@ class NewsTimelineView(ListView):
         """
         filter_param = self.request.GET.get("filter")
         entidad_id = self.request.GET.get("entidad")
-        
+
         # Default description when no filters are applied
         if not filter_param or filter_param == "todas":
             return "Estás viendo todas las noticias"
-            
+
         # User opinion filters
         if filter_param == "buena_mi" and self.request.user.is_authenticated:
             return "Estás viendo solo las noticias que marcaste como buenas"
         elif filter_param == "mala_mi" and self.request.user.is_authenticated:
             return "Estás viendo solo las noticias que marcaste como malas"
-            
+
         # Majority opinion filters
         elif filter_param == "buena_mayoria":
             return "Estás viendo las noticias que la mayoría considera buenas"
         elif filter_param == "mala_mayoria":
             return "Estás viendo las noticias que la mayoría considera malas"
-            
+
         # Entity filters
         elif filter_param.startswith("mencionan_") and entidad_id:
             try:
                 from core.models import Entidad
+
                 entidad = Entidad.objects.get(id=entidad_id)
-                
+
                 if filter_param == "mencionan_a":
                     return f"Estás viendo las noticias que mencionan a {entidad.nombre}"
                 elif filter_param == "mencionan_positiva":
@@ -61,32 +61,31 @@ class NewsTimelineView(ListView):
                     return f"Estás viendo las noticias que mencionan negativamente a {entidad.nombre}"
             except (Entidad.DoesNotExist, ValueError):
                 return "Estás viendo noticias filtradas por entidad"
-                
+
         # Default for unknown filters
         return "Estás viendo noticias filtradas"
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        
+
         # Get parameters from different possible sources
         filter_param = self.request.GET.get("filter", "")
         entidad_id = self.request.GET.get("entidad", "")
-        
+
         # Try to get from POST if not in GET
         if not filter_param and "filter" in self.request.POST:
             filter_param = self.request.POST.get("filter")
         if not entidad_id and "entidad" in self.request.POST:
             entidad_id = self.request.POST.get("entidad")
-            
+
         # Check if entity is in the path parameters
-        if not entidad_id and hasattr(self.request, "resolver_match") and self.request.resolver_match:
+        if (
+            not entidad_id
+            and hasattr(self.request, "resolver_match")
+            and self.request.resolver_match
+        ):
             entidad_id = self.request.resolver_match.kwargs.get("entidad", "")
-        
-        # Debug logging for parameters
-        print(f"Filter: {filter_param}, Entity ID: {entidad_id}")
-        print(f"GET params: {dict(self.request.GET.items())}")
-        print(f"POST params: {dict(self.request.POST.items())}")
-        
+
         if filter_param == "buena_mi" and self.request.user.is_authenticated:
             # Filter by good news by this user.
             queryset = queryset.filter(
@@ -110,20 +109,16 @@ class NewsTimelineView(ListView):
         # Entity filters
         elif filter_param == "mencionan_a" and entidad_id:
             # Filter by news that mention the entity
-            queryset = queryset.filter(
-                entidades__entidad__pk=entidad_id
-            )
+            queryset = queryset.filter(entidades__entidad__pk=entidad_id)
         elif filter_param == "mencionan_positiva" and entidad_id:
             # Filter by news that mention the entity positively
             queryset = queryset.filter(
-                entidades__entidad__pk=entidad_id,
-                entidades__sentimiento="positivo"
+                entidades__entidad__pk=entidad_id, entidades__sentimiento="positivo"
             )
         elif filter_param == "mencionan_negativa" and entidad_id:
             # Filter by news that mention the entity negatively
             queryset = queryset.filter(
-                entidades__entidad__pk=entidad_id,
-                entidades__sentimiento="negativo"
+                entidades__entidad__pk=entidad_id, entidades__sentimiento="negativo"
             )
         return queryset
 
@@ -132,7 +127,7 @@ class NewsTimelineView(ListView):
         # Only include the form in the initial full-page load.
         if not self.request.headers.get("HX-Request"):
             context["form"] = NoticiaForm()
-        
+
         # Add filter description to context
         context["filter_description"] = self.get_filter_description()
         context["entidades"] = Entidad.objects.all()
@@ -142,12 +137,16 @@ class NewsTimelineView(ListView):
         # If the request is via HTMX, return just the list items partial.
         if self.request.headers.get("HX-Request"):
             self.template_name = "noticias/timeline_items.html"
-            
+
             # When loading just the items via HTMX, we need to update the active filters section too
             if self.request.headers.get("HX-Target") == "timeline-items":
                 # Add an HX-Trigger to update the active filters
                 response_kwargs.setdefault("headers", {})
-                response_kwargs["headers"]["HX-Trigger"] = '{"updateActiveFilters": {"description": "' + context["filter_description"] + '"}}'                
+                response_kwargs["headers"]["HX-Trigger"] = (
+                    '{"updateActiveFilters": {"description": "'
+                    + context["filter_description"]
+                    + '"}}'
+                )
         return super().render_to_response(context, **response_kwargs)
 
 
@@ -176,7 +175,7 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         vote_opinion = form.cleaned_data.get("opinion")
         enlace = form.cleaned_data.get("enlace")
-        
+
         try:
             # Try to retrieve an existing Noticia with this enlace.
             noticia = Noticia.objects.get(enlace=enlace)
@@ -211,13 +210,15 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
                 self.request,
                 "noticias/timeline_fragment.html",
                 {
-                    "noticias": noticias, 
+                    "noticias": noticias,
                     "form": self.get_form_class()(),
-                    "filter_description": "Estás viendo todas las noticias"
+                    "filter_description": "Estás viendo todas las noticias",
                 },
             )
             # Add HTMX response headers
-            response["HX-Trigger"] = '{"noticiaCreated": {"message": "Noticia guardada exitosamente"}}'
+            response["HX-Trigger"] = (
+                '{"noticiaCreated": {"message": "Noticia guardada exitosamente"}}'
+            )
             return response
         return redirect(self.success_url)
 

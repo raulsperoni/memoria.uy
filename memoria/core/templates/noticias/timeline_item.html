@@ -1,6 +1,15 @@
 {# templates/noticias/timeline_item.html #}
 
-<div class="timeline-item bg-white shadow rounded overflow-hidden mb-4" id="noticia-{{ noticia.pk }}">
+<div class="timeline-item bg-white shadow rounded overflow-hidden mb-4 relative" id="noticia-{{ noticia.pk }}">
+  <!-- Add the refresh overlay for just this news item -->
+  <div id="refresh-indicator-{{ noticia.pk }}" class="htmx-indicator absolute top-0 left-0 right-0 bottom-0 bg-white bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-20 transition-opacity duration-300 ease-in-out">
+    <div class="text-center transform transition-transform duration-300 ease-in-out scale-100">
+      <div class="ai-thinking-animation mb-3">
+        <span></span><span></span><span></span>
+      </div>
+      <p class="text-memoria-blue font-medium animate-pulse">Analizando la noticia...</p>
+    </div>
+  </div>
   {% if noticia.mostrar_imagen %}
     <img src="{{ noticia.mostrar_imagen }}" alt="Screenshot" class="w-full object-cover">
   {% endif %}
@@ -32,6 +41,7 @@
       hx-target="#noticia-{{ noticia.pk }}" 
       hx-swap="outerHTML"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-indicator="#refresh-indicator-{{ noticia.pk }}"
       class="ml-auto text-gray-700 hover:text-gray-900">
       ✨
     </button>
@@ -51,7 +61,7 @@
 
     <!-- If not noticia.archivo_url, we explain that url is not present in the wayback machine and provide a link for the user to save it there https://web.archive.org/save/{article}-->
     {% if not noticia.archivo_url %}
-      <p class="text-red-500">Lamentablemente la noticia no está en Archive.org y no podemos analizarla en profundidad. Podes solicitar su archivado en el siguiente enlace: <a href="https://web.archive.org/save/{{ noticia.enlace }}" target="_blank" class="text-blue-500 hover:underline">Archivar en Wayback Machine</a></p>
+      <p class="text-red-500">Lamentablemente la noticia no está en Archive.today y no podemos analizarla en profundidad. Podes solicitar su archivado en el siguiente enlace: <a href="https://archive.ph/{{ noticia.enlace }}" target="_blank" class="text-blue-500 hover:underline">Archivar</a></p>
       
     {% endif %}
 
@@ -102,3 +112,45 @@
     {% include "noticias/vote_area.html" %}
   </div>
 </div>
+
+
+
+<!-- Add CSS for the AI-like animation -->
+<style>
+  /* AI thinking animation */
+  .ai-thinking-animation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+  }
+  
+  .ai-thinking-animation span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin: 0 4px;
+    background-color: #3B82F6;
+    border-radius: 50%;
+    animation: ai-thinking 1.4s infinite ease-in-out both;
+  }
+  
+  .ai-thinking-animation span:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+  
+  .ai-thinking-animation span:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+  
+  @keyframes ai-thinking {
+    0%, 80%, 100% { 
+      transform: scale(0.4);
+      opacity: 0.2;
+    }
+    40% { 
+      transform: scale(1.0);
+      opacity: 1;
+    }
+  }
+</style>

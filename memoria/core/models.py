@@ -3,6 +3,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from core import parse
+from datetime import datetime
 from core import archive_ph as archive
 import logging
 
@@ -14,6 +15,7 @@ class Noticia(models.Model):
 
     meta_titulo = models.CharField(max_length=255, blank=True, null=True)
     meta_imagen = models.URLField(blank=True, null=True)
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
 
     archivo_titulo = models.CharField(max_length=255, blank=True, null=True)
     archivo_url = models.URLField(blank=True, null=True)
@@ -36,9 +38,9 @@ class Noticia(models.Model):
         ],
     )
     resumen = models.TextField(blank=True, null=True)
+    fecha_noticia = models.DateTimeField(blank=True, null=True)
 
     agregado_por = models.ForeignKey(User, on_delete=models.CASCADE)
-    fecha_agregado = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         if self.titulo:
@@ -47,7 +49,7 @@ class Noticia(models.Model):
 
     @property
     def mostrar_titulo(self):
-        return self.titulo or self.archivo_titulo or self.meta_titulo
+        return self.titulo or self.archivo_titulo or self.meta_titulo or self.enlace
 
     @property
     def mostrar_imagen(self):
@@ -76,16 +78,31 @@ class Noticia(models.Model):
 
     def find_archived(self):
         try:
+            # First attempt synchronously
             self.archivo_url, html = archive.get_latest_snapshot(self.enlace)
+            self.archivo_fecha = datetime.now()
             self.save()
             if not self.markdown:
                 # Enrich the markdown content asynchronously
                 from core.tasks import enrich_markdown
 
                 enrich_markdown.delay(self.id, html)
+            elif not self.resumen:
+                from core.tasks import enrich_content
+
+                enrich_content.delay(self.id)
             self.update_title_image_from_archive()
             return self.archivo_url
-        except (archive.ArchiveNotFound, archive.ArchiveInProgress) as e:
+        except archive.ArchiveInProgress as e:
+            # If archive is in progress, schedule async task with retries
+            logger.info(
+                f"Archive in progress for {self.enlace}, scheduling async retries"
+            )
+            from core.tasks import find_archived as find_archived_task
+
+            find_archived_task.delay(self.id)
+            return None
+        except Exception as e:
             logger.error(f"Error finding archived URL: {e}")
             return None
 
