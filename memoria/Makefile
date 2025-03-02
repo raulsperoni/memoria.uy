@@ -1,4 +1,4 @@
-.PHONY: build up down logs shell migrate makemigrations collectstatic createsuperuser test clean tailwind-install tailwind-start tailwind-build tailwind-watch
+.PHONY: build up down logs shell migrate makemigrations collectstatic createsuperuser test test-cov clean tailwind-install tailwind-start tailwind-build tailwind-watch
 
 # Docker-compose commands
 build:
@@ -31,7 +31,10 @@ createsuperuser:
 
 # Testing
 test:
-	docker-compose exec web python manage.py test
+	docker-compose exec web pytest
+
+test-cov:
+	docker-compose exec web pytest --cov=. --cov-report=term
 
 # Cleaning
 clean:

@@ -25,6 +25,9 @@ django-tailwind = {extras = ["reload"], version = "^3.8.0"}
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
 files-to-prompt = "^0.6"
+pytest = "^8.0.0"
+pytest-django = "^4.7.0"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,4 +1,4 @@
-.PHONY: runserver migrate makemigrations collectstatic tailwind-install tailwind-start tailwind-build tailwind-watch dev
+.PHONY: runserver runserver-reload migrate makemigrations collectstatic tailwind-install tailwind-start tailwind-build tailwind-watch dev test test-cov
 
 # Django commands
 runserver:
@@ -30,7 +30,6 @@ tailwind-watch:
 dev: migrate
 	@echo "Starting development server with Tailwind CSS watching for changes..."
 	@echo "Open a new terminal and run 'make -f Makefile.local tailwind-start' to start the Tailwind CSS development server"
-	poetry run python manage.py runserver
 
 # Initial setup
 setup:
@@ -38,3 +37,13 @@ setup:
 	poetry run python manage.py migrate
 	poetry run python manage.py tailwind install
 	@echo "Setup complete! Run 'make -f Makefile.local dev' to start development"
+
+# Testing
+test:
+	@echo "Running tests with pytest..."
+	poetry run pytest
+
+test-cov:
+	@echo "Running tests with coverage report..."
+	poetry run pytest --cov=. --cov-report=html
+	open htmlcov/index.html

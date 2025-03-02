@@ -1,5 +1,55 @@
+# Project-specific directories
 .data/
 broker/
 control/
 *.txt
 .vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node modules (for Tailwind)
+node_modules/
+npm-debug.log
+
+# Deployment
+.DS_Store
+*.pem
+
+# Static files collected
+static/
+!theme/static/
+!theme/static_src/

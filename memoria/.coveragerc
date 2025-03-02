@@ -1,0 +1,31 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests/*
+    */venv/*
+    */virtualenv/*
+    */env/*
+    */manage.py
+    */wsgi.py
+    */asgi.py
+    */settings.py
+    */urls.py
+    */admin.py
+    */__init__.py
+    */apps.py
+    */conftest.py
+    */nb.ipynb
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError
+    except ImportError
+    def setUp
+    def tearDown
