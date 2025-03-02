@@ -25,6 +25,8 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "rest_framework",
+    "tailwind",
+    "theme",
     "core",
 ]
 
@@ -132,3 +134,7 @@ ACCOUNT_ADAPTER = "memoria.adapter.CustomAccountAdapter"
 # A custom variable we created to tell the CustomAccountAdapter whether to
 # allow signups.
 ACCOUNT_ALLOW_SIGNUPS = False
+
+TAILWIND_APP_NAME = "theme"
+
+INTERNAL_IPS = ["127.0.0.1"]

@@ -30,3 +30,59 @@ To run Django commands using Poetry, follow these steps:
     ```
 
 Make sure you have all the necessary dependencies installed in your Poetry environment before running these commands.
+
+# Working with Tailwind CSS
+
+This project uses [django-tailwind](https://django-tailwind.readthedocs.io/) for integrating Tailwind CSS with Django. The Tailwind configuration is in the `theme` app.
+
+## Using Make Commands
+
+We've added several make commands to simplify working with Tailwind CSS:
+
+### For Docker-based Development (Makefile)
+
+```sh
+# Install Tailwind CSS dependencies
+make tailwind-install
+
+# Start the Tailwind CSS development server
+make tailwind-start
+
+# Build Tailwind CSS for production
+make tailwind-build
+
+# Watch for changes in Tailwind CSS files
+make tailwind-watch
+```
+
+### For Local Development (Makefile.local)
+
+```sh
+# Install Tailwind CSS dependencies
+make -f Makefile.local tailwind-install
+
+# Start the Tailwind CSS development server
+make -f Makefile.local tailwind-start
+
+# Build Tailwind CSS for production
+make -f Makefile.local tailwind-build
+
+# Watch for changes in Tailwind CSS files
+make -f Makefile.local tailwind-watch
+
+# Start both Django server and Tailwind CSS (in separate terminals)
+make -f Makefile.local dev
+```
+
+## Tailwind CSS Configuration
+
+The Tailwind CSS configuration is located in:
+- `theme/static_src/tailwind.config.js` - Main configuration file
+- `theme/static_src/src/styles.css` - CSS file with Tailwind directives and custom styles
+
+## Development Workflow
+
+1. Start the Django development server: `make -f Makefile.local runserver`
+2. In a separate terminal, start the Tailwind CSS watcher: `make -f Makefile.local tailwind-start`
+3. Make changes to your HTML templates using Tailwind CSS classes
+4. For custom styles or Tailwind configuration changes, edit the files in the `theme` app

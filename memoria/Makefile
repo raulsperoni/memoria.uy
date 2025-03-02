@@ -1,4 +1,4 @@
-.PHONY: build up down logs shell migrate makemigrations collectstatic createsuperuser test clean
+.PHONY: build up down logs shell migrate makemigrations collectstatic createsuperuser test clean tailwind-install tailwind-start tailwind-build tailwind-watch
 
 # Docker-compose commands
 build:
@@ -39,8 +39,21 @@ clean:
 	find . -type d -name __pycache__ -exec rm -r {} +
 	find . -type f -name "*.pyc" -delete
 
+# Tailwind CSS commands
+tailwind-install:
+	poetry run python manage.py tailwind install
+
+tailwind-start:
+	poetry run python manage.py tailwind start
+
+tailwind-build:
+	poetry run python manage.py tailwind build
+
+tailwind-watch:
+	poetry run python manage.py tailwind watch
+
 # Full deployment
-deploy: build up migrate collectstatic
+deploy: build up migrate collectstatic tailwind-build
 	@echo "Deployment complete!"
 
 # Restart services
