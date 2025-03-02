@@ -109,6 +109,14 @@ LOGGING = {
     "disable_existing_loggers": False,  # retain the default loggers
 }
 
+# Cache configuration for task locking
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
+}
+
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`

@@ -4,11 +4,57 @@ from core.models import Noticia, Entidad, NoticiaEntidad
 from core import parse
 from core import archive_ph as archive
 from datetime import datetime
+from django.core.cache import cache
+from functools import wraps
 
 logger = get_task_logger(__name__)
 
 
+def task_lock(timeout=60 * 10):
+    """
+    Decorator that prevents a task from being executed concurrently.
+    Uses Django's cache to create a lock based on the task name and arguments.
+    
+    Args:
+        timeout: Lock timeout in seconds (default: 10 minutes)
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Create a unique lock key based on the task name and arguments
+            task_name = func.__name__
+            # For tasks with an ID parameter, use it as part of the lock key
+            lock_args = []
+            for arg in args:
+                if isinstance(arg, (int, str)):
+                    lock_args.append(str(arg))
+            
+            lock_kwargs = []
+            for key, value in kwargs.items():
+                if isinstance(value, (int, str)):
+                    lock_kwargs.append(f"{key}:{value}")
+            
+            lock_key = f"task_lock:{task_name}:{':'.join(lock_args)}:{':'.join(lock_kwargs)}"
+            
+            # Try to acquire the lock
+            acquired = cache.add(lock_key, "locked", timeout)
+            
+            if acquired:
+                try:
+                    # Execute the task
+                    return func(*args, **kwargs)
+                finally:
+                    # Release the lock
+                    cache.delete(lock_key)
+            else:
+                logger.info(f"Task {task_name} with args {args} and kwargs {kwargs} is already running. Skipping.")
+                return None
+        return wrapper
+    return decorator
+
+
 @shared_task
+@task_lock()
 def enrich_markdown(noticia_id, html):
     noticia = Noticia.objects.get(id=noticia_id)
     if noticia.archivo_url:
@@ -27,6 +73,7 @@ def enrich_markdown(noticia_id, html):
 
 
 @shared_task
+@task_lock()
 def enrich_content(noticia_id):
     noticia = Noticia.objects.get(id=noticia_id)
     if noticia.markdown:
@@ -65,6 +112,7 @@ def enrich_content(noticia_id):
 
 
 @shared_task(bind=True, max_retries=3)
+@task_lock()
 def find_archived(self, noticia_id):
     """Async task to retry finding archived URL when archive is in progress.
     This task is called after the first synchronous attempt fails with ArchiveInProgress.

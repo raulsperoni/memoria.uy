@@ -57,6 +57,10 @@ class Noticia(models.Model):
             return self.meta_imagen or self.archivo_imagen
         return self.archivo_imagen or self.meta_imagen
 
+    @property
+    def mostrar_fecha(self):
+        return self.fecha_noticia or self.archivo_fecha or self.fecha_agregado
+
     def update_title_image_from_original_url(self):
         title, image_url = parse.parse_from_meta_tags(self.enlace)
         if title:

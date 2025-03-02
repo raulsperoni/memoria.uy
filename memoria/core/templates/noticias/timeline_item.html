@@ -29,9 +29,9 @@
         <span class="mx-2">|</span>
         <span>Categoria: {{ noticia.get_categoria_display }}</span>
       {% endif %}
-      {% if noticia.archivo_fecha %}
+      {% if noticia.mostrar_fecha %}
         <span class="mx-2">|</span>
-        <span>Fecha: {{ noticia.archivo_fecha }}</span>
+        <span>Fecha: {{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}
     </div>
     {% if user.is_staff %}
