@@ -43,12 +43,11 @@ class TestAuthentication:
     
     def test_login(self, client, user):
         """Test that a user can log in."""
-        login_url = reverse('admin:login')
-        response = client.post(
-            login_url,
-            {'username': 'testuser', 'password': 'testpassword123'},
-            follow=True
-        )
+        logged_in = client.login(username='testuser', password='testpassword123')
+        assert logged_in
+        
+        # Visit a page that requires authentication
+        response = client.get(reverse('timeline'))
         assert response.status_code == 200
         assert '_auth_user_id' in client.session
         assert int(client.session['_auth_user_id']) == user.pk

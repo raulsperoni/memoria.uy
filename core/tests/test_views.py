@@ -7,7 +7,7 @@ class TestViews:
     
     def test_homepage_authenticated(self, authenticated_client):
         """Test that authenticated users can access the homepage."""
-        url = reverse('home')
+        url = reverse('timeline')
         response = authenticated_client.get(url)
         assert response.status_code == 200
     
