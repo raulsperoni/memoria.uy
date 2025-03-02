@@ -92,38 +92,24 @@ jobs:
             git pull
           fi
           
-          # Create .env file from GitHub secrets
-          echo "Creating .env file..."
-          cat > .env << 'EOF'
-# Django settings
-SECRET_KEY=${DJANGO_SECRET_KEY}
-DEBUG=False
-ALLOWED_HOSTS=memoria.uy,www.memoria.uy
-
-# Database settings
-SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
-
-# Redis settings (for Celery)
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/0
-
-# Email settings
-EMAIL_HOST=${EMAIL_HOST}
-EMAIL_PORT=${EMAIL_PORT}
-EMAIL_HOST_USER=${EMAIL_HOST_USER}
-EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
-EMAIL_USE_TLS=True
-DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
-
-# AllAuth settings
-ACCOUNT_ALLOW_SIGNUPS=False
-
-# API Keys
-OPENAI_API_KEY=${OPENAI_API_KEY}
-OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-OR_SITE_URL=memoria.uy
-OR_APP_NAME=memoria.uy
-EOF
+          # Create .env file from .env.example and replace variables
+          echo "Creating .env file from .env.example..."
+          cp .env.example .env
+          
+          # Replace variables in .env file
+          sed -i "s/SECRET_KEY=.*/SECRET_KEY=${DJANGO_SECRET_KEY}/g" .env
+          sed -i "s/DEBUG=.*/DEBUG=False/g" .env
+          sed -i "s/SUPABASE_DATABASE_URL=.*/SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}/g" .env
+          
+          # Email settings
+          sed -i "s/EMAIL_HOST=.*/EMAIL_HOST=${EMAIL_HOST}/g" .env
+          sed -i "s/EMAIL_PORT=.*/EMAIL_PORT=${EMAIL_PORT}/g" .env
+          sed -i "s/EMAIL_HOST_USER=.*/EMAIL_HOST_USER=${EMAIL_HOST_USER}/g" .env
+          sed -i "s/EMAIL_HOST_PASSWORD=.*/EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}/g" .env
+          sed -i "s/DEFAULT_FROM_EMAIL=.*/DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}/g" .env
+          
+          # API Keys
+          sed -i "s/OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=${OPENROUTER_API_KEY}/g" .env
           
           # Deploy the application
           sudo docker compose down
