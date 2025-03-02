@@ -48,6 +48,17 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: digitalocean
+    # Define the secrets needed for deployment
+    env:
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+      DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     
     steps:
     - name: Debug secrets
@@ -66,11 +77,63 @@ jobs:
         username: ${{ secrets.DIGITALOCEAN_USERNAME }}
         key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
         port: 22
+        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENAI_API_KEY,OPENROUTER_API_KEY
         script: |
+          # Create project directory if it doesn't exist
+          sudo mkdir -p /var/www/memoria.uy
           cd /var/www/memoria.uy
-          git pull
-          docker-compose down
-          docker-compose up -d --build
-          docker-compose exec -T web python manage.py migrate
-          docker-compose exec -T web make tailwind-build
-          docker-compose exec -T web python manage.py collectstatic --noinput
+          
+          # Check if it's a git repository, if not clone it
+          if [ ! -d ".git" ]; then
+            echo "Initializing git repository..."
+            git clone https://github.com/raulsperoni/memoria.uy.git .
+          else
+            echo "Pulling latest changes..."
+            git pull
+          fi
+          
+          # Create .env file from GitHub secrets
+          echo "Creating .env file..."
+          cat > .env << 'EOF'
+# Django settings
+SECRET_KEY=${DJANGO_SECRET_KEY}
+DEBUG=False
+ALLOWED_HOSTS=memoria.uy,www.memoria.uy
+
+# Database settings
+SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
+
+# Redis settings (for Celery)
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Email settings
+EMAIL_HOST=${EMAIL_HOST}
+EMAIL_PORT=${EMAIL_PORT}
+EMAIL_HOST_USER=${EMAIL_HOST_USER}
+EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+
+# AllAuth settings
+ACCOUNT_ALLOW_SIGNUPS=False
+
+# API Keys
+OPENAI_API_KEY=${OPENAI_API_KEY}
+OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+OR_SITE_URL=memoria.uy
+OR_APP_NAME=memoria.uy
+EOF
+          
+          # Deploy the application
+          sudo docker compose down
+          sudo docker compose up -d --build
+          
+          # Wait for the containers to be ready
+          echo "Waiting for containers to be ready..."
+          sleep 10
+          
+          # Run migrations and collect static files
+          sudo docker compose exec -T web python manage.py migrate
+          sudo docker compose exec -T web make tailwind-build
+          sudo docker compose exec -T web python manage.py collectstatic --noinput
