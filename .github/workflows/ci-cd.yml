@@ -148,9 +148,6 @@ jobs:
           
           # API Keys
           sed -i "s/OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=${OPENROUTER_API_KEY}/g" .env
-
-          # Debug .env
-          cat .env
           
           # Deploy the application
           sudo docker compose down
@@ -160,7 +157,7 @@ jobs:
           echo "Waiting for containers to be ready..."
           
           # Check if web container is healthy
-          MAX_RETRIES=5
+          MAX_RETRIES=10
           RETRY_INTERVAL=5
           RETRY_COUNT=0
           

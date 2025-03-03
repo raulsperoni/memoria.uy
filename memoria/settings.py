@@ -95,7 +95,8 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# In development, Django will also look in these directories for static files
+# Django Tailwind generates CSS in theme/static
+# This ensures Django can find static files in both development and production
 STATICFILES_DIRS = [
     BASE_DIR / "theme" / "static",
 ]
