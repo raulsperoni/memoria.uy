@@ -91,15 +91,11 @@ TIME_ZONE = "America/Montevideo"
 USE_I18N = True
 USE_TZ = True
 
-# Static files configuration
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/4.1/howto/static-files/
 
-# Django Tailwind generates CSS in theme/static
-# This ensures Django can find static files in both development and production
-STATICFILES_DIRS = [
-    BASE_DIR / "theme" / "static",
-]
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Media files configuration
 MEDIA_URL = "/media/"
@@ -149,8 +145,7 @@ ACCOUNT_ALLOW_SIGNUPS = False
 
 TAILWIND_APP_NAME = "theme"
 
-# Set NPM binary path for Tailwind CSS
-NPM_BIN_PATH = "/usr/bin/npm"
+
 
 INTERNAL_IPS = ["127.0.0.1"]
 
