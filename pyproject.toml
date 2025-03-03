@@ -21,6 +21,7 @@ litellm = "^1.61.16"
 django-browser-reload = "^1.18.0"
 django-tailwind = {extras = ["reload"], version = "^3.8.0"}
 python-dotenv = "^1.0.1"
+gunicorn = "^23.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
