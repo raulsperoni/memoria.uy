@@ -53,3 +53,6 @@ npm-debug.log
 static/
 !theme/static/
 !theme/static_src/
+celerybeat-schedule
+control/celery.pidbox.exchange
+control/celery.pidbox.exchange
