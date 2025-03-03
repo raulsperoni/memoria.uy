@@ -13,6 +13,8 @@ DEBUG = os.getenv("DEBUG", "True") == "True"
 SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL", "")
 
 ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = ["https://memoria.uy"]
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
