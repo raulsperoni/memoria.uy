@@ -37,6 +37,7 @@ EXPOSE 8000
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
 if [ "$1" = "web" ]; then\n\
+    python manage.py tailwind build\n\
     python manage.py collectstatic --noinput\n\
     python manage.py migrate\n\
     gunicorn memoria.wsgi:application --bind 0.0.0.0:8000\n\

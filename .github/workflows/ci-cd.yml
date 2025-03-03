@@ -157,8 +157,8 @@ jobs:
           echo "Waiting for containers to be ready..."
           
           # Check if web container is healthy
-          MAX_RETRIES=10
-          RETRY_INTERVAL=5
+          MAX_RETRIES=15
+          RETRY_INTERVAL=10
           RETRY_COUNT=0
           
           until [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ] || sudo docker compose ps web | grep -q "(healthy)"; do
@@ -174,8 +174,3 @@ jobs:
           fi
           
           echo "All containers are healthy!"
-          
-          # Run migrations and collect static files
-          sudo docker compose exec -T web python manage.py migrate
-          sudo docker compose exec -T web make tailwind-build
-          sudo docker compose exec -T web python manage.py collectstatic --noinput
