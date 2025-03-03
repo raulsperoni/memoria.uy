@@ -2,7 +2,7 @@
 
 # Django commands
 runserver:
-	poetry run python manage.py runserver
+	DEBUG=True poetry run python manage.py runserver
 
 migrate:
 	poetry run python manage.py migrate
@@ -22,6 +22,8 @@ tailwind-start:
 
 tailwind-build:
 	poetry run python manage.py tailwind build
+	# Make sure the static files are collected for development
+	poetry run python manage.py collectstatic --noinput
 
 tailwind-watch:
 	poetry run python manage.py tailwind watch

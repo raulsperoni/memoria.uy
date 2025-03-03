@@ -91,14 +91,16 @@ TIME_ZONE = "America/Montevideo"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+# Static files configuration
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Add static files directories for development
+# In development, Django will also look in these directories for static files
 STATICFILES_DIRS = [
     BASE_DIR / "theme" / "static",
 ]
 
+# Media files configuration
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
