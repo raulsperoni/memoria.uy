@@ -56,3 +56,5 @@ static/
 celerybeat-schedule
 control/celery.pidbox.exchange
 control/celery.pidbox.exchange
+
+staticfiles/

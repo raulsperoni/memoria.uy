@@ -85,7 +85,7 @@ jobs:
         fi
         
         echo "Checking environment variables..."
-        echo "SUPABASE_DATABASE_URL env var: ${SUPABASE_DATABASE_URL:0:5}..." # Print first 5 chars for security
+        echo "SUPABASE_DATABASE_URL env var: ${SUPABASE_DATABASE_URL:0:25}..." # Print first 5 chars for security
         echo "DEBUG env var: $DEBUG"
         
         # Check if env vars are being properly passed
@@ -101,7 +101,6 @@ jobs:
         key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
         port: 22
         envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENROUTER_API_KEY,DEBUG
-        environment: ${{ toJSON(env) }}
         script: |
           # Create project directory if it doesn't exist
           sudo mkdir -p /var/www/memoria.uy
@@ -136,7 +135,7 @@ jobs:
           if [ -z "$SUPABASE_DATABASE_URL" ]; then
             echo "ERROR: SUPABASE_DATABASE_URL is empty on the server"
           else
-            echo "SUPABASE_DATABASE_URL is set (first 5 chars): ${SUPABASE_DATABASE_URL:0:5}..."
+            echo "SUPABASE_DATABASE_URL is set (first 5 chars): ${SUPABASE_DATABASE_URL:0:25}..."
             sed -i "s|SUPABASE_DATABASE_URL=.*|SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}|g" .env
           fi
           

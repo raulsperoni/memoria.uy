@@ -27,8 +27,8 @@ tailwind-watch:
 	poetry run python manage.py tailwind watch
 
 # Development setup
-dev: migrate
-	@echo "Starting development server with Tailwind CSS watching for changes..."
+dev: migrate tailwind-build
+	@echo "Starting development server with Tailwind CSS..."
 	@echo "Open a new terminal and run 'make -f Makefile.local tailwind-start' to start the Tailwind CSS development server"
 
 # Initial setup

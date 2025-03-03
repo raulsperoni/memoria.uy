@@ -93,6 +93,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Add static files directories for development
+STATICFILES_DIRS = [
+    BASE_DIR / "theme" / "static",
+]
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
