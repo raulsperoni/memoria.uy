@@ -76,6 +76,13 @@ jobs:
         else
           echo "DEBUG is not set"
         fi
+
+        echo "Checking if SUPABASE_DATABASE_URL secret exists..."
+        if [ -n "${{ secrets.SUPABASE_DATABASE_URL }}" ]; then
+          echo "SUPABASE_DATABASE_URL is set"
+        else
+          echo "SUPABASE_DATABASE_URL is not set"
+        fi
         
     - name: Deploy to DigitalOcean
       uses: appleboy/ssh-action@master
