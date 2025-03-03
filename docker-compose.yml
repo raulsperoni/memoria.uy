@@ -12,6 +12,15 @@ services:
       timeout: 3s
       retries: 5
 
+  debig:
+    build: .
+    command: cat .env
+    volumes:
+      - .:/app
+    env_file:
+      - ./.env
+    restart: always
+
   web:
     build: .
     command: web
