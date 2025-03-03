@@ -50,15 +50,15 @@ jobs:
     environment: digitalocean
     # Define the secrets needed for deployment
     env:
-      DJANGO_SECRET_KEY: ${{ vars.DJANGO_SECRET_KEY }}
-      SUPABASE_DATABASE_URL: ${{ vars.SUPABASE_DATABASE_URL }}
-      EMAIL_HOST: ${{ vars.EMAIL_HOST }}
-      EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-      EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
-      EMAIL_HOST_PASSWORD: ${{ vars.EMAIL_HOST_PASSWORD }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
       DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
-      OPENROUTER_API_KEY: ${{ vars.OPENROUTER_API_KEY }}
-      DEBUG: ${{ vars.DEBUG }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DEBUG: ${{ secrets.DEBUG }}
     
     steps:
     - name: Debug secrets
@@ -117,6 +117,9 @@ jobs:
           
           # API Keys
           sed -i "s/OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=${OPENROUTER_API_KEY}/g" .env
+
+          # Debug .env
+          cat .env
           
           # Deploy the application
           sudo docker compose down
