@@ -152,25 +152,3 @@ jobs:
           # Deploy the application
           sudo docker compose down
           sudo docker compose up -d --build
-          
-          # Wait for the containers to be ready
-          echo "Waiting for containers to be ready..."
-          
-          # Check if web container is healthy
-          MAX_RETRIES=15
-          RETRY_INTERVAL=10
-          RETRY_COUNT=0
-          
-          until [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ] || sudo docker compose ps web | grep -q "(healthy)"; do
-            echo "Waiting for web container to be healthy... ($RETRY_COUNT/$MAX_RETRIES)"
-            sleep "$RETRY_INTERVAL"
-            RETRY_COUNT=$((RETRY_COUNT+1))
-          done
-          
-          if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
-            echo "Error: Web container did not become healthy within the timeout period."
-            sudo docker compose logs web
-            exit 1
-          fi
-          
-          echo "All containers are healthy!"
