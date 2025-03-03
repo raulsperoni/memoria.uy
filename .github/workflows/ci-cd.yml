@@ -50,16 +50,15 @@ jobs:
     environment: digitalocean
     # Define the secrets needed for deployment
     env:
-      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-      SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
-      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
-      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
-      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+      DJANGO_SECRET_KEY: ${{ vars.DJANGO_SECRET_KEY }}
+      SUPABASE_DATABASE_URL: ${{ vars.SUPABASE_DATABASE_URL }}
+      EMAIL_HOST: ${{ vars.EMAIL_HOST }}
+      EMAIL_PORT: ${{ vars.EMAIL_PORT }}
+      EMAIL_HOST_USER: ${{ vars.EMAIL_HOST_USER }}
+      EMAIL_HOST_PASSWORD: ${{ vars.EMAIL_HOST_PASSWORD }}
       DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      DEBUG: ${{ secrets.DEBUG }}
+      OPENROUTER_API_KEY: ${{ vars.OPENROUTER_API_KEY }}
+      DEBUG: ${{ vars.DEBUG }}
     
     steps:
     - name: Debug secrets
@@ -127,7 +126,7 @@ jobs:
           echo "Waiting for containers to be ready..."
           
           # Check if web container is healthy
-          MAX_RETRIES=30
+          MAX_RETRIES=5
           RETRY_INTERVAL=5
           RETRY_COUNT=0
           
