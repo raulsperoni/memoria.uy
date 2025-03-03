@@ -24,6 +24,7 @@ from core.views import (
     RefreshNoticiaView,
     DeleteNoticiaView,
 )
+from memoria.views import health_check
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -42,4 +43,5 @@ urlpatterns = [
     ),
     path("accounts/", include("allauth.urls")),
     path("__reload__/", include("django_browser_reload.urls")),
+    path("health/", health_check, name="health_check"),
 ]

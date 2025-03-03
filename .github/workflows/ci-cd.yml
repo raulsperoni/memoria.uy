@@ -59,6 +59,7 @@ jobs:
       DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DEBUG: ${{ secrets.DEBUG }}
     
     steps:
     - name: Debug secrets
@@ -70,6 +71,13 @@ jobs:
           echo "DIGITALOCEAN_HOST is not set"
         fi
         
+        echo "Checking if DEBUG secret exists..."
+        if [ -n "${{ secrets.DEBUG }}" ]; then
+          echo "DEBUG is set"
+        else
+          echo "DEBUG is not set"
+        fi
+        
     - name: Deploy to DigitalOcean
       uses: appleboy/ssh-action@master
       with:
@@ -77,7 +85,7 @@ jobs:
         username: ${{ secrets.DIGITALOCEAN_USERNAME }}
         key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
         port: 22
-        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENAI_API_KEY,OPENROUTER_API_KEY
+        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENAI_API_KEY,OPENROUTER_API_KEY, DEBUG
         script: |
           # Create project directory if it doesn't exist
           sudo mkdir -p /var/www/memoria.uy
@@ -98,7 +106,7 @@ jobs:
           
           # Replace variables in .env file
           sed -i "s/SECRET_KEY=.*/SECRET_KEY=${DJANGO_SECRET_KEY}/g" .env
-          sed -i "s/DEBUG=.*/DEBUG=False/g" .env
+          sed -i "s/DEBUG=.*/DEBUG=${DEBUG}/g" .env
           sed -i "s/SUPABASE_DATABASE_URL=.*/SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}/g" .env
           
           # Email settings
@@ -117,7 +125,25 @@ jobs:
           
           # Wait for the containers to be ready
           echo "Waiting for containers to be ready..."
-          sleep 10
+          
+          # Check if web container is healthy
+          MAX_RETRIES=30
+          RETRY_INTERVAL=5
+          RETRY_COUNT=0
+          
+          until [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ] || sudo docker compose ps web | grep -q "(healthy)"; do
+            echo "Waiting for web container to be healthy... ($RETRY_COUNT/$MAX_RETRIES)"
+            sleep "$RETRY_INTERVAL"
+            RETRY_COUNT=$((RETRY_COUNT+1))
+          done
+          
+          if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+            echo "Error: Web container did not become healthy within the timeout period."
+            sudo docker compose logs web
+            exit 1
+          fi
+          
+          echo "All containers are healthy!"
           
           # Run migrations and collect static files
           sudo docker compose exec -T web python manage.py migrate
