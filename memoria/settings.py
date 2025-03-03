@@ -68,12 +68,14 @@ TEMPLATE_DEBUG = True
 WSGI_APPLICATION = "memoria.wsgi.application"
 
 # Get database URL based on environment
-default_db_url = f"sqlite:///{BASE_DIR / 'db.sqlite3'}" if DEBUG else os.getenv("SUPABASE_DATABASE_URL")
+default_db_url = (
+    f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+    if DEBUG
+    else os.getenv("SUPABASE_DATABASE_URL")
+)
 
 # Configure the database
-DATABASES = {
-    "default": dj_database_url.config(default=default_db_url)
-}
+DATABASES = {"default": dj_database_url.config(default=default_db_url)}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
