@@ -61,7 +61,7 @@ jobs:
       DEBUG: ${{ secrets.DEBUG }}
     
     steps:
-    - name: Debug secrets
+    - name: Debug secrets and environment variables
       run: |
         echo "Checking if DIGITALOCEAN_HOST secret exists..."
         if [ -n "${{ secrets.DIGITALOCEAN_HOST }}" ]; then
@@ -84,6 +84,15 @@ jobs:
           echo "SUPABASE_DATABASE_URL is not set"
         fi
         
+        echo "Checking environment variables..."
+        echo "SUPABASE_DATABASE_URL env var: ${SUPABASE_DATABASE_URL:0:5}..." # Print first 5 chars for security
+        echo "DEBUG env var: $DEBUG"
+        
+        # Check if env vars are being properly passed
+        if [ -z "$SUPABASE_DATABASE_URL" ]; then
+          echo "ERROR: SUPABASE_DATABASE_URL environment variable is empty"
+        fi
+        
     - name: Deploy to DigitalOcean
       uses: appleboy/ssh-action@master
       with:
@@ -91,7 +100,8 @@ jobs:
         username: ${{ secrets.DIGITALOCEAN_USERNAME }}
         key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
         port: 22
-        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENAI_API_KEY,OPENROUTER_API_KEY,DEBUG
+        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENROUTER_API_KEY,DEBUG
+        environment: ${{ toJSON(env) }}
         script: |
           # Create project directory if it doesn't exist
           sudo mkdir -p /var/www/memoria.uy
@@ -106,14 +116,29 @@ jobs:
             git pull
           fi
           
+          # Debug environment variables on the server
+          echo "Server-side environment variable check:"
+          echo "SUPABASE_DATABASE_URL length: ${#SUPABASE_DATABASE_URL}"
+          echo "DEBUG value: $DEBUG"
+          
           # Create .env file from .env.example and replace variables
           echo "Creating .env file from .env.example..."
           cp .env.example .env
           
-          # Replace variables in .env file
+          # Replace variables in .env file with explicit error checking
+          echo "Setting SECRET_KEY in .env"
           sed -i "s/SECRET_KEY=.*/SECRET_KEY=${DJANGO_SECRET_KEY}/g" .env
+          
+          echo "Setting DEBUG in .env"
           sed -i "s/DEBUG=.*/DEBUG=${DEBUG}/g" .env
-          sed -i "s/SUPABASE_DATABASE_URL=.*/SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}/g" .env
+          
+          echo "Setting SUPABASE_DATABASE_URL in .env"
+          if [ -z "$SUPABASE_DATABASE_URL" ]; then
+            echo "ERROR: SUPABASE_DATABASE_URL is empty on the server"
+          else
+            echo "SUPABASE_DATABASE_URL is set (first 5 chars): ${SUPABASE_DATABASE_URL:0:5}..."
+            sed -i "s|SUPABASE_DATABASE_URL=.*|SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}|g" .env
+          fi
           
           # Email settings
           sed -i "s/EMAIL_HOST=.*/EMAIL_HOST=${EMAIL_HOST}/g" .env
