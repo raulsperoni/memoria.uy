@@ -1,3 +1,9 @@
+./__init__.py
+---
+# This file is intentionally left empty to make the directory a Python package
+
+
+---
 ./manage.py
 ---
 #!/usr/bin/env python
@@ -44,13 +50,23 @@ psycopg2-binary = "^2.9.10"
 supabase = "^2.13.0"
 requests = "^2.32.3"
 bs4 = "^0.0.2"
-django-allauth = "^65.4.1"
+django-allauth = {extras = ["socialaccount"], version = "^65.4.1"}
 dotenv = "^0.9.9"
+litellm = "^1.61.16"
+django-browser-reload = "^1.18.0"
+django-tailwind = {extras = ["reload"], version = "^3.8.0"}
+python-dotenv = "^1.0.1"
+gunicorn = "^23.0.0"
+redis = "^5.2.1"
+django-debug-toolbar = "^5.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
 files-to-prompt = "^0.6"
+pytest = "^8.0.0"
+pytest-django = "^4.7.0"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -86,11 +102,55 @@ class CoreConfig(AppConfig):
 
 
 ---
-./core/archive.py
+./core/archive_org.py
+---
+import requests
+
+
+class ArchiveNotFound(Exception):
+    pass
+
+
+def get_latest_snapshot(original_url):
+    """
+    Given a URL, query the Wayback Machine API for the closest snapshot.
+    """
+    api_endpoint = "https://archive.org/wayback/available"
+    params = {"url": original_url}
+    response = requests.get(api_endpoint, params=params)
+    try:
+        data = response.json()
+    except ValueError:
+        raise ArchiveNotFound(f"Invalid JSON response for {original_url}")
+    snapshots = data.get("archived_snapshots", {})
+    # If a "closest" snapshot exists, return its URL
+    if "closest" in snapshots:
+        url = snapshots["closest"]["url"]
+        html = fetch_snapshot(url)
+        return url, html
+
+    raise ArchiveNotFound(f"No snapshots found for {original_url}")
+
+
+def fetch_snapshot(archived_url):
+    try:
+        response = requests.get(archived_url)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 404:
+            raise ArchiveNotFound(f"Snapshot not found at {archived_url}")
+        else:
+            raise e
+    if response.status_code == 404:
+        raise ArchiveNotFound(f"Snapshot not found at {archived_url}")
+    return response.text
+
+
+---
+./core/archive_ph.py
 ---
 import requests
 import re
-from bs4 import BeautifulSoup
 
 
 ARCHIVE_PH_SUBMIT_URL = "https://archive.ph/submit/"
@@ -100,11 +160,11 @@ class ArchiveInProgress(Exception):
     pass
 
 
-class ArchiveFailure(Exception):
+class ArchiveNotFound(Exception):
     pass
 
 
-def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
+def get_latest_snapshot(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
     """
     Capture the given URL using archive.ph.
     Returns the final archive URL or raises an Exception.
@@ -121,7 +181,7 @@ def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
         archive_url = response.headers["Location"]
         if archive_url == "https://archive.ph/wip":
             raise ArchiveInProgress(f"Archiving in progress for {url}")
-        return archive_url, get_archive_details(response.text), response.text
+        return archive_url, response.text
 
     # Otherwise, try to extract the archive URL from the HTML using regex.
     match = re.search(r"(https?://archive\.ph/\w+)", response.text)
@@ -129,49 +189,52 @@ def capture(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
         archive_url = match.group(1)
         if archive_url == "https://archive.ph/wip":
             raise ArchiveInProgress(f"Archiving in progress for {url}")
-        return archive_url, get_archive_details(response.text), response.text
+        return archive_url, response.text
 
-    raise ArchiveFailure(
+    raise ArchiveNotFound(
         f"Failed to capture {url} via archive.ph (status: {response.status_code})"
     )
 
 
-def get_archive_details(html):
-    """
-    Given an archive.ph URL, fetch the page and parse:
-      - page title (from the <title> tag),
-      - archive date (from a meta tag if available),
-      - screenshot URL (from og:image meta tag)
-    Returns a dict with these details.
-    """
+---
+./core/conftest.py
+---
+import pytest
+from django.contrib.auth.models import User
+from django.test import Client
 
-    soup = BeautifulSoup(html, "html.parser")
+@pytest.fixture
+def client():
+    """Return a Django test client instance."""
+    return Client()
 
-    # Parse the page title.
-    page_title = soup.title.string.strip() if soup.title else None
+@pytest.fixture
+def admin_client():
+    """Return a Django test client instance with admin user logged in."""
+    client = Client()
+    admin_user = User.objects.create_superuser(
+        username='admin',
+        email='admin@example.com',
+        password='adminpassword123'
+    )
+    client.login(username='admin', password='adminpassword123')
+    return client
 
-    # Try to get archive date from a meta tag (this may vary depending on archive.ph's HTML).
-    archive_date = None
-    meta_date = soup.find("meta", attrs={"property": "article:published_time"})
-    if meta_date and meta_date.get("content"):
-        archive_date = meta_date["content"]
+@pytest.fixture
+def user():
+    """Create and return a regular user."""
+    return User.objects.create_user(
+        username='testuser',
+        email='test@example.com',
+        password='testpassword123'
+    )
 
-    # Parse screenshot URL from the Open Graph image meta tag.
-    screenshot_url = None
-    meta_img = soup.find("meta", attrs={"property": "og:image"})
-    if meta_img and meta_img.get("content"):
-        screenshot_url = meta_img["content"]
-
-    url = soup.find("meta", attrs={"property": "og:url"})
-    if url and url.get("content"):
-        url = url["content"]
-
-    return {
-        "title": page_title,
-        "archive_date": archive_date,
-        "screenshot_url": screenshot_url,
-        "archive_url": url,
-    }
+@pytest.fixture
+def authenticated_client(user):
+    """Return a Django test client instance with regular user logged in."""
+    client = Client()
+    client.login(username='testuser', password='testpassword123')
+    return client
 
 
 ---
@@ -208,20 +271,29 @@ class NoticiaForm(forms.Form):
 
 from django.db import models
 from django.contrib.auth.models import User
-from core import archive
+from core import parse
+from datetime import datetime
+from core import archive_ph as archive
 import logging
-from bs4 import BeautifulSoup
-import requests
 
 logger = logging.getLogger(__name__)
 
 
 class Noticia(models.Model):
-    titulo = models.CharField(max_length=255, null=True)
     enlace = models.URLField(unique=True)
+
+    meta_titulo = models.CharField(max_length=255, blank=True, null=True)
+    meta_imagen = models.URLField(blank=True, null=True)
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
+
+    archivo_titulo = models.CharField(max_length=255, blank=True, null=True)
     archivo_url = models.URLField(blank=True, null=True)
     archivo_fecha = models.DateTimeField(blank=True, null=True)
     archivo_imagen = models.URLField(blank=True, null=True)
+
+    markdown = models.TextField(blank=True, null=True)
+
+    titulo = models.CharField(max_length=255, blank=True, null=True)
     fuente = models.CharField(max_length=255, null=True)
     categoria = models.CharField(
         max_length=100,
@@ -235,65 +307,77 @@ class Noticia(models.Model):
         ],
     )
     resumen = models.TextField(blank=True, null=True)
+    fecha_noticia = models.DateTimeField(blank=True, null=True)
+
     agregado_por = models.ForeignKey(User, on_delete=models.CASCADE)
-    fecha_agregado = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         if self.titulo:
             return self.titulo
         return self.enlace
 
-    def get_title_from_meta_tags(self):
+    @property
+    def mostrar_titulo(self):
+        return self.titulo or self.archivo_titulo or self.meta_titulo or self.enlace
+
+    @property
+    def mostrar_imagen(self):
+        if self.meta_imagen and "meta/la-diaria-1000x1000" not in self.meta_imagen:
+            return self.meta_imagen or self.archivo_imagen
+        return self.archivo_imagen or self.meta_imagen
+
+    @property
+    def mostrar_fecha(self):
+        return self.fecha_noticia or self.archivo_fecha or self.fecha_agregado
+
+    def update_title_image_from_original_url(self):
+        title, image_url = parse.parse_from_meta_tags(self.enlace)
+        if title:
+            self.meta_titulo = title
+        if image_url:
+            self.meta_imagen = image_url
+        self.save()
+
+    def update_title_image_from_archive(self):
+        if self.archivo_url:
+            title, image_url = parse.parse_from_meta_tags(self.archivo_url)
+            if title:
+                self.archivo_titulo = title
+            if image_url:
+                self.archivo_imagen = image_url
+            self.save()
+        else:
+            self.update_title_image_from_original_url()
+
+    def find_archived(self):
         try:
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/90.0.4430.93 Safari/537.36"
-                )
-            }
+            # First attempt synchronously
+            self.archivo_url, html = archive.get_latest_snapshot(self.enlace)
+            self.archivo_fecha = datetime.now()
+            self.save()
+            if not self.markdown:
+                # Enrich the markdown content asynchronously
+                from core.tasks import enrich_markdown
 
-            response = requests.get(self.enlace, headers=headers)
-            soup = BeautifulSoup(response.text, "html.parser")
+                enrich_markdown.delay(self.id, html)
+            elif not self.resumen:
+                from core.tasks import enrich_content
 
-            # Extract Open Graph meta tags
-            og_title = soup.find("meta", property="og:title")
-            og_image = soup.find("meta", property="og:image")
-
-            title = og_title["content"] if og_title else "No title found"
-            image = og_image["content"] if og_image else "No image found"
-            logger.warning(f"Title: {title}, Image: {image}")
-            self.titulo = title
-            self.archivo_imagen = image
-
-        except Exception as e:
-            logger.error(f"Error getting title from meta tags: {e}")
-
-    def get_archive(self):
-        try:
-            archive_url, archive_metadata, html = archive.capture(self.enlace)
-            self.archivo_url = archive_url
-            self.archivo_imagen = archive_metadata.get("screenshot_url")
-            self.archivo_fecha = archive_metadata.get("archive_date")
-            self.titulo = archive_metadata.get("title")
-            logger.info(f"Archived {self.enlace} to {archive_url}")
-            from core.tasks import parse
-
-            parse.delay(self.id, html)
+                enrich_content.delay(self.id)
+            self.update_title_image_from_archive()
+            return self.archivo_url
         except archive.ArchiveInProgress as e:
-            logger.warning(e)
-        except archive.ArchiveFailure as e:
-            logger.error(e)
-        except Exception as e:
-            logger.error(
-                f"Error archiving {self.enlace if 'noticia' in locals() else ''}: {e}"
+            # If archive is in progress, schedule async task with retries
+            logger.info(
+                f"Archive in progress for {self.enlace}, scheduling async retries"
             )
+            from core.tasks import find_archived as find_archived_task
 
-    def save(self, *args, **kwargs):
-        # Save the object first so we have an ID
-        if not self.archivo_url:
-            self.get_archive()
-        super().save(*args, **kwargs)
+            find_archived_task.delay(self.id)
+            return None
+        except Exception as e:
+            logger.error(f"Error finding archived URL: {e}")
+            return None
 
 
 class Voto(models.Model):
@@ -360,10 +444,22 @@ from typing import Optional, Literal, Union
 from pydantic import BaseModel, Field
 from litellm import completion
 from bs4 import BeautifulSoup
+from datetime import datetime
+import requests
 import logging
-
-# litellm._turn_on_debug()
+#import litellm
+#litellm._turn_on_debug()
 logger = logging.getLogger(__name__)
+
+MODELS_PRIORITY_JSON = {
+    "openrouter/mistralai/mistral-saba": 1,
+    "openrouter/openai/o3-mini": 2,
+}
+
+MODELS_PRIORITY_MD = {
+    "openrouter/google/gemini-2.0-flash-lite-001": 1,
+    "openrouter/openai/o3-mini": 2,
+}
 
 
 def remove_unnecessary_tags(html):
@@ -414,42 +510,167 @@ class Articulo(BaseModel):
         Literal["politica", "economia", "seguridad", "salud", "educacion", "otros"]
     ] = Field(None, description="The category of the article.")
     autor: Optional[str] = Field(None, description="The author of the article.")
+    fecha: Optional[str] = Field(None, description="The date of the article in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)")
     resumen: Optional[str] = Field(None, description="A brief summary of the article.")
     entidades: Optional[list[EntidadNombrada]] = Field(None, alias="entidades")
 
 
-def parse_noticia(html) -> Union[Articulo, None]:
+def parse_noticia(
+    markdown: str, current_model="openrouter/openai/o3-mini"
+) -> Union[Articulo, None]:
+    """
+    Return the parsed article from the given HTML content.
+    """
+    try:
+        response = completion(
+            model=current_model,
+            caching=False,
+            response_format=Articulo,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful markdown parser designed to output JSON.",
+                },
+                {
+                    "role": "user",
+                    "content": f"""From the crawled content, metadata about the news article should be extracted.
+                    The metadata should include the title (titulo), source (fuente), category (categoria), author (autor), summary (resumen), date (fecha) and entities (entidades) mentioned in the article.
+                    The entities should include the name (nombre), type (tipo), and sentiment (sentimiento) of each entity.
+                    The Markdown content to parse is as follows:
+                
+                {markdown}""",
+                },
+            ],
+        )
+        article_data = response.choices[0].message.content
+        return Articulo.parse_raw(article_data)
+    except Exception as e:
+        # Choose the next model in the priority list, if not available raise
+        # Use priority order, don't repeat models
+        for model, priority in MODELS_PRIORITY_JSON.items():
+            if (
+                model != current_model
+                and priority > MODELS_PRIORITY_JSON[current_model]
+            ):
+                try:
+                    return parse_noticia(markdown, model)
+                except Exception as e:
+                    logger.error(f"Error parsing the article: {e}")
+                    continue
+
+        logger.error(f"Error parsing the article: {e}")
+        return None
+
+
+def parse_noticia_markdown(
+    html: str,
+    title: str,
+    current_model: str = "openrouter/google/gemini-2.0-flash-lite-001",
+) -> Union[str, None]:
     """
     Return the parsed article from the given HTML content.
     """
     try:
         clean_html = remove_unnecessary_tags(html)
         response = completion(
-            model="openrouter/openai/o3-mini",  # "",
-            caching=True,
-            response_format=Articulo,
+            model=current_model,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful html parser designed to output JSON.",
+                    "content": """
+                    You are a helpful html parser designed to output a markdown version of the news article. 
+                    There could be other content in the creawled HTML, but you should only output the main article.
+                    The markdown should include the title, source, author, date and main content of the article.
+                    Everything else should be ignored. 
+                    Markdown subtitles should be in spanish, article language should be respected.
+                    No html tags should be present in the markdown output.
+                    """,
                 },
                 {
                     "role": "user",
-                    "content": f"""From the crawled content, metadata about the news article should be extracted.
-                The metadata should include the title, source, category, author, and entities mentioned in the article.
-                The entities should include the name, type, and sentiment of each entity.
-                The HTML content to parse is as follows:
+                    "content": f"""
+                    The HTML content to parse is as follows:
                 
-                {clean_html}""",
+                    {clean_html}
+
+                    The title of the article we are interested in is:
+                    {title}
+
+                    The markdown version of the article is:
+                    """,
                 },
             ],
         )
-        article_data = response.choices[0].message.content
-        logger.debug(article_data)
-        return Articulo.parse_raw(article_data)
+        article_md = response.choices[0].message.content
+
+        return article_md
     except Exception as e:
+        # Choose the next model in the priority list, if not available raise
+        # Use priority order, don't repeat models
+        for model, priority in MODELS_PRIORITY_MD.items():
+            if model != current_model and priority > MODELS_PRIORITY_MD[current_model]:
+                try:
+                    return parse_noticia_markdown(html, title, model)
+                except Exception as e:
+                    logger.error(f"Error parsing the article: {e}")
+                    continue
         logger.error(f"Error parsing the article: {e}")
         return None
+
+
+BAD_TITLES = ["la diaria"]
+
+BAD_URLS = ["https://ladiaria.com.uy/static/meta/la-diaria-1000x1000.png"]
+
+
+def parse_from_meta_tags(url):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/92.0.4515.107 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com/",
+        }
+
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Extract Open Graph meta tags
+        og_title = soup.find("meta", property="og:title")
+        og_image = soup.find("meta", property="og:image")
+
+        print(f"OG title: {og_title} from {url}")
+        print(f"OG image: {og_image} from {url}")
+
+        title = None
+        if og_title and og_title["content"] not in BAD_TITLES:
+            title = og_title["content"]
+
+        original_image = None
+
+        if og_image:
+            original_image = og_image["content"]
+            if original_image not in BAD_URLS:
+                try:
+                    image_response = requests.get(original_image)
+                    if image_response.status_code != 200:
+                        original_image = None
+                        logger.error(
+                            f"Error getting image from meta tags: {original_image}"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error getting image from meta tags: {original_image} {e}"
+                    )
+
+        logger.info(f"Title: {title}")
+        logger.info(f"Image: {original_image}")
+        return title, original_image
+
+    except Exception as e:
+        logger.error(f"Error getting title from meta tags: {e}")
+    return None, None
 
 
 ---
@@ -457,37 +678,153 @@ def parse_noticia(html) -> Union[Articulo, None]:
 ---
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from core.parse import parse_noticia
 from core.models import Noticia, Entidad, NoticiaEntidad
+from core import parse
+from core import archive_ph as archive
+from datetime import datetime
+from django.core.cache import cache
+from functools import wraps
 
 logger = get_task_logger(__name__)
 
 
+def task_lock(timeout=60 * 10):
+    """
+    Decorator that prevents a task from being executed concurrently.
+    Uses Django's cache to create a lock based on the task name and arguments.
+    
+    Args:
+        timeout: Lock timeout in seconds (default: 10 minutes)
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Create a unique lock key based on the task name and arguments
+            task_name = func.__name__
+            # For tasks with an ID parameter, use it as part of the lock key
+            lock_args = []
+            for arg in args:
+                if isinstance(arg, (int, str)):
+                    lock_args.append(str(arg))
+            
+            lock_kwargs = []
+            for key, value in kwargs.items():
+                if isinstance(value, (int, str)):
+                    lock_kwargs.append(f"{key}:{value}")
+            
+            lock_key = f"task_lock:{task_name}:{':'.join(lock_args)}:{':'.join(lock_kwargs)}"
+            
+            # Try to acquire the lock
+            acquired = cache.add(lock_key, "locked", timeout)
+            
+            if acquired:
+                try:
+                    # Execute the task
+                    return func(*args, **kwargs)
+                finally:
+                    # Release the lock
+                    cache.delete(lock_key)
+            else:
+                logger.info(f"Task {task_name} with args {args} and kwargs {kwargs} is already running. Skipping.")
+                return None
+        return wrapper
+    return decorator
+
+
 @shared_task
-def parse(noticia_id, html):
+@task_lock()
+def enrich_markdown(noticia_id, html):
     noticia = Noticia.objects.get(id=noticia_id)
-    logger.info(f"Parsing {noticia.enlace}")
-    articulo = parse_noticia(html)
-    if not articulo:
-        logger.error(f"Failed to parse {noticia.enlace}")
-        return
-    noticia.fuente = articulo.fuente
-    noticia.categoria = articulo.categoria if articulo.categoria else "otros"
-    noticia.resumen = articulo.resumen
-    noticia.save()
-    logger.info(f"Parsed {noticia.enlace}")
-    for entidad_nombrada in articulo.entidades:
-        logger.info(f"Found entity {entidad_nombrada}")
-        entidad, _ = Entidad.objects.get_or_create(
-            nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
-        )
-        NoticiaEntidad.objects.get_or_create(
-            noticia=noticia,
-            entidad=entidad,
-            defaults={"sentimiento": entidad_nombrada.sentimiento},
-        )
-    logger.info(f"Entities saved for  {noticia.enlace}")
+    if noticia.archivo_url:
+        logger.info(f"Fetching archived URL for {noticia.enlace}")
+        markdown = parse.parse_noticia_markdown(html, noticia.titulo)
+        if markdown:
+            noticia.markdown = markdown
+            noticia.save()
+            logger.info(f"Enriched {noticia.enlace} with markdown")
+            enrich_content.delay(noticia_id)
+            return noticia_id
+        logger.error(f"Failed to enrich {noticia.enlace} with markdown")
+    else:
+        logger.error(f"No archived URL for {noticia.enlace}")
     return noticia_id
+
+
+@shared_task
+@task_lock()
+def enrich_content(noticia_id):
+    noticia = Noticia.objects.get(id=noticia_id)
+    if noticia.markdown:
+        articulo = parse.parse_noticia(noticia.markdown)
+        if articulo:
+            noticia.titulo = articulo.titulo
+            noticia.fuente = articulo.fuente
+            noticia.categoria = articulo.categoria if articulo.categoria else "otros"
+            noticia.resumen = articulo.resumen
+            if articulo.fecha:
+                try:
+                    noticia.fecha_noticia = datetime.fromisoformat(articulo.fecha)
+                except (ValueError, TypeError):
+                    logger.warning(
+                        f"Could not parse date {articulo.fecha} for {noticia.enlace}"
+                    )
+            noticia.save()
+            logger.info(f"Enriched {noticia.enlace} with content")
+            if articulo.entidades:
+                for entidad_nombrada in articulo.entidades:
+                    logger.info(f"Found entity {entidad_nombrada}")
+                    entidad, _ = Entidad.objects.get_or_create(
+                        nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
+                    )
+                    NoticiaEntidad.objects.get_or_create(
+                        noticia=noticia,
+                        entidad=entidad,
+                        defaults={"sentimiento": entidad_nombrada.sentimiento},
+                    )
+                logger.info(f"Entities saved for {noticia.enlace}")
+            return noticia_id
+        logger.error(f"Failed to enrich {noticia.enlace} with content")
+    else:
+        logger.error(f"No markdown content for {noticia.enlace}")
+    return noticia_id
+
+
+@shared_task(bind=True, max_retries=3)
+@task_lock()
+def find_archived(self, noticia_id):
+    """Async task to retry finding archived URL when archive is in progress.
+    This task is called after the first synchronous attempt fails with ArchiveInProgress.
+    """
+    try:
+        noticia = Noticia.objects.get(id=noticia_id)
+        noticia.archivo_url, html = archive.get_latest_snapshot(noticia.enlace)
+        noticia.archivo_fecha = datetime.now()
+        noticia.save()
+        if not noticia.markdown:
+            enrich_markdown.delay(noticia.id, html)
+        elif not noticia.resumen:
+            enrich_content.delay(noticia.id)
+        noticia.update_title_image_from_archive()
+        logger.info(
+            f"Successfully archived URL for noticia {noticia_id} on retry #{self.request.retries+1}"
+        )
+        return noticia.archivo_url
+    except archive.ArchiveInProgress as e:
+        retry_count = self.request.retries
+        if retry_count < 2:  # We'll do a total of 3 attempts (0, 1, 2)
+            logger.info(
+                f"Archive still in progress for noticia {noticia_id}, retry {retry_count+1}/3 in 3 minutes"
+            )
+            # Retry in 3 minutes (180 seconds)
+            raise self.retry(exc=e, countdown=180)
+        else:
+            logger.warning(
+                f"Archive still in progress after 3 attempts for noticia {noticia_id}, giving up"
+            )
+            return None
+    except Exception as e:
+        logger.error(f"Error in find_archived task for noticia {noticia_id}: {e}")
+        return None
 
 
 ---
@@ -507,11 +844,15 @@ from django.views.generic import ListView, View, FormView
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponseBadRequest
 from django.contrib.auth.mixins import LoginRequiredMixin
-from core.models import Noticia, Voto
+from core.models import Noticia, Voto, Entidad
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
 from django.db.models import Count, Q, F
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NewsTimelineView(ListView):
@@ -521,9 +862,70 @@ class NewsTimelineView(ListView):
     ordering = ["-fecha_agregado"]
     paginate_by = 10  # Adjust the number as needed
 
+    def get_filter_description(self):
+        """
+        Maps the applied filters to natural language descriptions.
+        Returns a string describing the current filter in natural language.
+        """
+        filter_param = self.request.GET.get("filter")
+        entidad_id = self.request.GET.get("entidad")
+
+        # Default description when no filters are applied
+        if not filter_param or filter_param == "todas":
+            return "Estás viendo todas las noticias"
+
+        # User opinion filters
+        if filter_param == "buena_mi" and self.request.user.is_authenticated:
+            return "Estás viendo solo las noticias que marcaste como buenas"
+        elif filter_param == "mala_mi" and self.request.user.is_authenticated:
+            return "Estás viendo solo las noticias que marcaste como malas"
+
+        # Majority opinion filters
+        elif filter_param == "buena_mayoria":
+            return "Estás viendo las noticias que la mayoría considera buenas"
+        elif filter_param == "mala_mayoria":
+            return "Estás viendo las noticias que la mayoría considera malas"
+
+        # Entity filters
+        elif filter_param.startswith("mencionan_") and entidad_id:
+            try:
+                from core.models import Entidad
+
+                entidad = Entidad.objects.get(id=entidad_id)
+
+                if filter_param == "mencionan_a":
+                    return f"Estás viendo las noticias que mencionan a {entidad.nombre}"
+                elif filter_param == "mencionan_positiva":
+                    return f"Estás viendo las noticias que mencionan positivamente a {entidad.nombre}"
+                elif filter_param == "mencionan_negativa":
+                    return f"Estás viendo las noticias que mencionan negativamente a {entidad.nombre}"
+            except (Entidad.DoesNotExist, ValueError):
+                return "Estás viendo noticias filtradas por entidad"
+
+        # Default for unknown filters
+        return "Estás viendo noticias filtradas"
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        filter_param = self.request.GET.get("filter")
+
+        # Get parameters from different possible sources
+        filter_param = self.request.GET.get("filter", "")
+        entidad_id = self.request.GET.get("entidad", "")
+
+        # Try to get from POST if not in GET
+        if not filter_param and "filter" in self.request.POST:
+            filter_param = self.request.POST.get("filter")
+        if not entidad_id and "entidad" in self.request.POST:
+            entidad_id = self.request.POST.get("entidad")
+
+        # Check if entity is in the path parameters
+        if (
+            not entidad_id
+            and hasattr(self.request, "resolver_match")
+            and self.request.resolver_match
+        ):
+            entidad_id = self.request.resolver_match.kwargs.get("entidad", "")
+
         if filter_param == "buena_mi" and self.request.user.is_authenticated:
             # Filter by good news by this user.
             queryset = queryset.filter(
@@ -544,7 +946,20 @@ class NewsTimelineView(ListView):
             queryset = queryset.annotate(
                 bad_count=Count("votos", filter=Q(votos__opinion="mala"))
             ).filter(bad_count__gt=F("votos__count") / 2)
-        # You can add additional filter conditions here as the filter bar grows.
+        # Entity filters
+        elif filter_param == "mencionan_a" and entidad_id:
+            # Filter by news that mention the entity
+            queryset = queryset.filter(entidades__entidad__pk=entidad_id)
+        elif filter_param == "mencionan_positiva" and entidad_id:
+            # Filter by news that mention the entity positively
+            queryset = queryset.filter(
+                entidades__entidad__pk=entidad_id, entidades__sentimiento="positivo"
+            )
+        elif filter_param == "mencionan_negativa" and entidad_id:
+            # Filter by news that mention the entity negatively
+            queryset = queryset.filter(
+                entidades__entidad__pk=entidad_id, entidades__sentimiento="negativo"
+            )
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -552,12 +967,26 @@ class NewsTimelineView(ListView):
         # Only include the form in the initial full-page load.
         if not self.request.headers.get("HX-Request"):
             context["form"] = NoticiaForm()
+
+        # Add filter description to context
+        context["filter_description"] = self.get_filter_description()
+        context["entidades"] = Entidad.objects.all()
         return context
 
     def render_to_response(self, context, **response_kwargs):
         # If the request is via HTMX, return just the list items partial.
         if self.request.headers.get("HX-Request"):
             self.template_name = "noticias/timeline_items.html"
+
+            # When loading just the items via HTMX, we need to update the active filters section too
+            if self.request.headers.get("HX-Target") == "timeline-items":
+                # Add an HX-Trigger to update the active filters
+                response_kwargs.setdefault("headers", {})
+                response_kwargs["headers"]["HX-Trigger"] = (
+                    '{"updateActiveFilters": {"description": "'
+                    + context["filter_description"]
+                    + '"}}'
+                )
         return super().render_to_response(context, **response_kwargs)
 
 
@@ -586,54 +1015,69 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         vote_opinion = form.cleaned_data.get("opinion")
         enlace = form.cleaned_data.get("enlace")
+
         try:
             # Try to retrieve an existing Noticia with this enlace.
             noticia = Noticia.objects.get(enlace=enlace)
-            # Refresh its archive data.
-            noticia.get_archive()
-            noticia.save()
+            noticia.update_title_image_from_archive()
             # Update or create the vote for the current user.
             Voto.objects.update_or_create(
                 usuario=self.request.user,
                 noticia=noticia,
                 defaults={"opinion": vote_opinion},
             )
+            noticia.find_archived()
         except Noticia.DoesNotExist:
             # Create a new Noticia if it doesn't exist.
             noticia = Noticia(
                 agregado_por=self.request.user,
                 enlace=enlace,
             )
-            noticia.get_title_from_meta_tags()
-            noticia.get_archive()
             noticia.save()
+            noticia.update_title_image_from_original_url()
             Voto.objects.create(
                 usuario=self.request.user,
                 noticia=noticia,
                 opinion=vote_opinion,
             )
+            noticia.find_archived()
 
         # For HTMX requests, re-render the entire timeline fragment (form and timeline).
         if self.request.headers.get("HX-Request"):
             noticias = Noticia.objects.all().order_by("-fecha_agregado")
             # Pass a fresh form instance so the fields are cleared.
-            return render(
+            response = render(
                 self.request,
                 "noticias/timeline_fragment.html",
-                {"noticias": noticias, "form": self.get_form_class()()},
+                {
+                    "noticias": noticias,
+                    "form": self.get_form_class()(),
+                    "filter_description": "Estás viendo todas las noticias",
+                },
             )
+            # Add HTMX response headers
+            response["HX-Trigger"] = (
+                '{"noticiaCreated": {"message": "Noticia guardada exitosamente"}}'
+            )
+            return response
         return redirect(self.success_url)
 
 
 class RefreshNoticiaView(LoginRequiredMixin, View):
     def post(self, request, pk):
         noticia = get_object_or_404(Noticia, pk=pk)
-        noticia.get_archive()
-        noticia.save(
-            update_fields=["archivo_url", "archivo_fecha", "archivo_imagen", "titulo"]
-        )
+        noticia.find_archived()
+        noticia.update_title_image_from_archive()
         # Render the updated timeline item fragment.
         return render(request, "noticias/timeline_item.html", {"noticia": noticia})
+
+
+class DeleteNoticiaView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        noticia = get_object_or_404(Noticia, pk=pk)
+        noticia.delete()
+        # Redirect to the main timeline page after deletion
+        return redirect(reverse_lazy("timeline"))
 
 
 ---
@@ -753,6 +1197,203 @@ class Migration(migrations.Migration):
             ],
             options={
                 "unique_together": {("usuario", "noticia")},
+            },
+        ),
+    ]
+
+
+---
+./core/migrations/0001_squashed_0006_noticia_archivo_titulo_noticia_meta_imagen_and_more.py
+---
+# Generated by Django 5.1.6 on 2025-02-28 20:25
+
+import django.db.models.deletion
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    replaces = [
+        ("core", "0001_initial"),
+        ("core", "0002_noticia_archivo_fecha_noticia_archivo_imagen"),
+        ("core", "0003_remove_noticia_fecha_publicacion_and_more"),
+        ("core", "0004_entidad_noticia_resumen_alter_noticia_categoria_and_more"),
+        ("core", "0005_noticia_markdown"),
+        ("core", "0006_noticia_archivo_titulo_noticia_meta_imagen_and_more"),
+    ]
+
+    initial = True
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="Noticia",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("titulo", models.CharField(blank=True, max_length=255, null=True)),
+                ("enlace", models.URLField(unique=True)),
+                ("archivo_url", models.URLField(blank=True, null=True)),
+                ("fuente", models.CharField(max_length=255, null=True)),
+                (
+                    "categoria",
+                    models.CharField(
+                        choices=[
+                            ("politica", "Política"),
+                            ("economia", "Economía"),
+                            ("seguridad", "Seguridad"),
+                            ("salud", "Salud"),
+                            ("educacion", "Educación"),
+                            ("otros", "Otros"),
+                        ],
+                        max_length=100,
+                    ),
+                ),
+                ("fecha_agregado", models.DateTimeField(auto_now_add=True)),
+                (
+                    "agregado_por",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                ("archivo_fecha", models.DateTimeField(blank=True, null=True)),
+                ("archivo_imagen", models.URLField(blank=True, null=True)),
+                ("resumen", models.TextField(blank=True, null=True)),
+                ("markdown", models.TextField(blank=True, null=True)),
+                (
+                    "archivo_titulo",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("meta_imagen", models.URLField(blank=True, null=True)),
+                (
+                    "meta_titulo",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+            ],
+        ),
+        migrations.CreateModel(
+            name="Voto",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "opinion",
+                    models.CharField(
+                        choices=[
+                            ("buena", "Buena noticia"),
+                            ("mala", "Mala noticia"),
+                            ("neutral", "Neutral"),
+                        ],
+                        max_length=10,
+                    ),
+                ),
+                ("fecha_voto", models.DateTimeField(auto_now_add=True)),
+                (
+                    "noticia",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="votos",
+                        to="core.noticia",
+                    ),
+                ),
+                (
+                    "usuario",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "unique_together": {("usuario", "noticia")},
+            },
+        ),
+        migrations.CreateModel(
+            name="Entidad",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=255)),
+                (
+                    "tipo",
+                    models.CharField(
+                        choices=[
+                            ("persona", "Persona"),
+                            ("organizacion", "Organización"),
+                            ("lugar", "Lugar"),
+                            ("otro", "Otro"),
+                        ],
+                        max_length=100,
+                    ),
+                ),
+            ],
+        ),
+        migrations.CreateModel(
+            name="NoticiaEntidad",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "sentimiento",
+                    models.CharField(
+                        choices=[
+                            ("positivo", "Positivo"),
+                            ("negativo", "Negativo"),
+                            ("neutral", "Neutral"),
+                        ],
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "entidad",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="core.entidad"
+                    ),
+                ),
+                (
+                    "noticia",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="entidades",
+                        to="core.noticia",
+                    ),
+                ),
+            ],
+            options={
+                "unique_together": [("noticia", "entidad")],
             },
         ),
     ]
@@ -923,8 +1564,228 @@ class Migration(migrations.Migration):
 
 
 ---
+./core/migrations/0005_noticia_markdown.py
+---
+# Generated by Django 5.1.6 on 2025-02-26 14:09
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("core", "0004_entidad_noticia_resumen_alter_noticia_categoria_and_more"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="noticia",
+            name="markdown",
+            field=models.TextField(blank=True, null=True),
+        ),
+    ]
+
+
+---
+./core/migrations/0006_noticia_archivo_titulo_noticia_meta_imagen_and_more.py
+---
+# Generated by Django 5.1.6 on 2025-02-28 20:22
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("core", "0005_noticia_markdown"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="noticia",
+            name="archivo_titulo",
+            field=models.CharField(blank=True, max_length=255, null=True),
+        ),
+        migrations.AddField(
+            model_name="noticia",
+            name="meta_imagen",
+            field=models.URLField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="noticia",
+            name="meta_titulo",
+            field=models.CharField(blank=True, max_length=255, null=True),
+        ),
+        migrations.AlterField(
+            model_name="noticia",
+            name="titulo",
+            field=models.CharField(blank=True, max_length=255, null=True),
+        ),
+    ]
+
+
+---
+./core/migrations/0007_noticia_fecha_noticia.py
+---
+# Generated by Django 5.1.6 on 2025-03-01 12:37
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        (
+            "core",
+            "0001_squashed_0006_noticia_archivo_titulo_noticia_meta_imagen_and_more",
+        ),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="noticia",
+            name="fecha_noticia",
+            field=models.DateTimeField(blank=True, null=True),
+        ),
+    ]
+
+
+---
 ./core/migrations/__init__.py
 ---
+
+
+---
+./core/tests/__init__.py
+---
+
+
+
+---
+./core/tests/test_basic.py
+---
+import pytest
+from django.urls import reverse
+from django.test import Client
+
+@pytest.fixture
+def client():
+    return Client()
+
+@pytest.mark.django_db
+def test_homepage_status(client):
+    """Test that the homepage returns a 200 status code."""
+    url = reverse('timeline')
+    response = client.get(url)
+    assert response.status_code == 200
+
+def test_admin_login_page(client):
+    """Test that the admin login page is accessible."""
+    url = reverse('admin:login')
+    response = client.get(url)
+    assert response.status_code == 200
+
+
+---
+./core/tests/test_models.py
+---
+import pytest
+from django.contrib.auth.models import User
+from django.urls import reverse
+
+@pytest.mark.django_db
+class TestUserModel:
+    """Test cases for the User model."""
+    
+    @pytest.fixture
+    def user(self):
+        """Create and return a test user."""
+        return User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpassword123'
+        )
+    
+    def test_user_creation(self, user):
+        """Test that a user can be created."""
+        assert user.username == 'testuser'
+        assert user.email == 'test@example.com'
+        assert user.check_password('testpassword123')
+        assert user.is_active
+        assert not user.is_staff
+        assert not user.is_superuser
+    
+    def test_user_str(self, user):
+        """Test the string representation of a user."""
+        assert str(user) == 'testuser'
+
+@pytest.mark.django_db
+class TestAuthentication:
+    """Test cases for authentication functionality."""
+    
+    @pytest.fixture
+    def user(self):
+        """Create and return a test user."""
+        return User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpassword123'
+        )
+    
+    def test_login(self, client, user):
+        """Test that a user can log in."""
+        logged_in = client.login(username='testuser', password='testpassword123')
+        assert logged_in
+        
+        # Visit a page that requires authentication
+        response = client.get(reverse('timeline'))
+        assert response.status_code == 200
+        assert '_auth_user_id' in client.session
+        assert int(client.session['_auth_user_id']) == user.pk
+
+
+---
+./core/tests/test_views.py
+---
+import pytest
+from django.urls import reverse
+
+@pytest.mark.django_db
+class TestViews:
+    """Test cases for views."""
+    
+    def test_homepage_authenticated(self, authenticated_client):
+        """Test that authenticated users can access the homepage."""
+        url = reverse('timeline')
+        response = authenticated_client.get(url)
+        assert response.status_code == 200
+    
+    def test_admin_access(self, admin_client):
+        """Test that admin users can access the admin page."""
+        url = reverse('admin:index')
+        response = admin_client.get(url)
+        assert response.status_code == 200
+    
+    def test_admin_access_denied(self, authenticated_client):
+        """Test that regular users cannot access the admin page."""
+        url = reverse('admin:index')
+        response = authenticated_client.get(url)
+        assert response.status_code == 302  # Redirect to login page
+
+
+---
+./theme/__init__.py
+---
+
+
+---
+./theme/apps.py
+---
+from django.apps import AppConfig
+
+
+class ThemeConfig(AppConfig):
+    name = 'theme'
 
 
 ---
@@ -935,6 +1796,24 @@ class Migration(migrations.Migration):
 from .celery import app as celery_app
 
 __all__ = ("celery_app",)
+
+
+---
+./memoria/adapter.py
+---
+from django.conf import settings
+
+from allauth.account.adapter import DefaultAccountAdapter
+
+
+class CustomAccountAdapter(DefaultAccountAdapter):
+    def is_open_for_signup(self, request):
+        """
+        Whether to allow sign ups.
+        """
+        allow_signups = super(CustomAccountAdapter, self).is_open_for_signup(request)
+        # Override with setting, otherwise default to super.
+        return getattr(settings, "ACCOUNT_ALLOW_SIGNUPS", allow_signups)
 
 
 ---
@@ -965,14 +1844,30 @@ import os
 from celery import Celery
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "memoria.settings")
-app = Celery(
-    "memoria",
-    broker_url="filesystem://",
-    broker_transport_options={
+
+# Default to filesystem broker for local development
+use_redis = os.getenv('USE_REDIS_BROKER', 'False').lower() == 'true'
+
+if use_redis:
+    # Use Redis as broker when specified
+    broker_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+    result_backend = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+    broker_transport_options = None
+else:
+    # Use filesystem as broker by default
+    broker_url = "filesystem://"
+    result_backend = None
+    broker_transport_options = {
         "data_folder_in": "./.data/broker",
         "data_folder_out": "./.data/broker/",
         "data_folder_processed": "./.data/broker/processed",
-    },
+    }
+
+app = Celery(
+    "memoria",
+    broker_url=broker_url,
+    result_backend=result_backend,
+    broker_transport_options=broker_transport_options,
     result_persistent=False,
     task_serializer="json",
     result_serializer="json",
@@ -981,9 +1876,52 @@ app = Celery(
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
-for f in ["./broker/out", "./broker/processed"]:
-    if not os.path.exists(f):
-        os.makedirs(f)
+# Ensure broker directories exist when using filesystem
+if not use_redis:
+    for f in ["./.data/broker", "./.data/broker/out", "./.data/broker/processed"]:
+        if not os.path.exists(f):
+            os.makedirs(f, exist_ok=True)
+
+
+---
+./memoria/conftest.py
+---
+import pytest
+from django.contrib.auth.models import User
+from django.test import Client
+
+@pytest.fixture
+def client():
+    """Return a Django test client instance."""
+    return Client()
+
+@pytest.fixture
+def admin_client():
+    """Return a Django test client instance with admin user logged in."""
+    client = Client()
+    admin_user = User.objects.create_superuser(
+        username='admin',
+        email='admin@example.com',
+        password='adminpassword123'
+    )
+    client.login(username='admin', password='adminpassword123')
+    return client
+
+@pytest.fixture
+def user():
+    """Create and return a regular user."""
+    return User.objects.create_user(
+        username='testuser',
+        email='test@example.com',
+        password='testpassword123'
+    )
+
+@pytest.fixture
+def authenticated_client(user):
+    """Return a Django test client instance with regular user logged in."""
+    client = Client()
+    client.login(username='testuser', password='testpassword123')
+    return client
 
 
 ---
@@ -1011,9 +1949,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "debug_toolbar",
+    "django_browser_reload",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
     "rest_framework",
+    "tailwind",
+    "theme",
     "core",
 ]
 
@@ -1026,6 +1969,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = "memoria.urls"
@@ -1033,7 +1978,10 @@ ROOT_URLCONF = "memoria.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [
+            BASE_DIR / "templates",
+            os.path.join(BASE_DIR, "memoria", "templates"),
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -1046,16 +1994,19 @@ TEMPLATES = [
         },
     },
 ]
+TEMPLATE_DEBUG = True
 
 WSGI_APPLICATION = "memoria.wsgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
-        if DEBUG
-        else os.getenv("SUPABASE_DATABASE_URL")
-    )
-}
+# Get database URL based on environment
+default_db_url = (
+    f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+    if DEBUG
+    else os.getenv("SUPABASE_DATABASE_URL")
+)
+
+# Configure the database
+DATABASES = {"default": dj_database_url.config(default=default_db_url)}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -1071,7 +2022,13 @@ TIME_ZONE = "America/Montevideo"
 USE_I18N = True
 USE_TZ = True
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/4.1/howto/static-files/
+
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Media files configuration
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -1093,6 +2050,14 @@ LOGGING = {
     "disable_existing_loggers": False,  # retain the default loggers
 }
 
+# Cache configuration for task locking
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
+    }
+}
+
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
@@ -1100,6 +2065,41 @@ AUTHENTICATION_BACKENDS = [
     # `allauth` specific authentication methods, such as login by email
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/"
+ACCOUNT_ADAPTER = "memoria.adapter.CustomAccountAdapter"
+
+# A custom variable we created to tell the CustomAccountAdapter whether to
+# allow signups.
+ACCOUNT_ALLOW_SIGNUPS = False
+
+TAILWIND_APP_NAME = "theme"
+
+
+
+INTERNAL_IPS = ["127.0.0.1"]
+
+# Celery Configuration
+USE_REDIS_BROKER = os.getenv('USE_REDIS_BROKER', 'False').lower() == 'true'
+
+if USE_REDIS_BROKER:
+    CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+    CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+else:
+    CELERY_BROKER_URL = "filesystem://"
+    CELERY_BROKER_TRANSPORT_OPTIONS = {
+        "data_folder_in": "./.data/broker",
+        "data_folder_out": "./.data/broker/",
+        "data_folder_processed": "./.data/broker/processed",
+    }
+    # No result backend for filesystem broker
+    CELERY_RESULT_BACKEND = None
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
 
 
 ---
@@ -1122,9 +2122,20 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
+from debug_toolbar.toolbar import debug_toolbar_urls
+
 from django.contrib import admin
 from django.urls import path, include
-from core.views import NewsTimelineView, VoteView, NoticiaCreateView, RefreshNoticiaView
+from core.views import (
+    NewsTimelineView,
+    VoteView,
+    NoticiaCreateView,
+    RefreshNoticiaView,
+    DeleteNoticiaView,
+)
+from memoria.views import health_check
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -1136,8 +2147,28 @@ urlpatterns = [
         RefreshNoticiaView.as_view(),
         name="noticia-refresh",
     ),
+    path(
+        "noticias/<int:pk>/delete/",
+        DeleteNoticiaView.as_view(),
+        name="noticia-delete",
+    ),
     path("accounts/", include("allauth.urls")),
-]
+    path("__reload__/", include("django_browser_reload.urls")),
+    path("health/", health_check, name="health_check"),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + debug_toolbar_urls()
+
+
+---
+./memoria/views.py
+---
+from django.http import JsonResponse
+
+def health_check(request):
+    """
+    Simple health check endpoint for Docker healthcheck.
+    Returns a 200 OK response to indicate the service is healthy.
+    """
+    return JsonResponse({"status": "healthy"})
 
 
 ---

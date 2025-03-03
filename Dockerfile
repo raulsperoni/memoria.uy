@@ -52,6 +52,7 @@ RUN mkdir -p /app/theme/static
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
 if [ "$1" = "web" ]; then\n\
+    python manage.py tailwind install\n\
     python manage.py tailwind build\n\
     python manage.py collectstatic --noinput\n\
     python manage.py migrate\n\

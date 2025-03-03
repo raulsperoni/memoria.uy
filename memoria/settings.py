@@ -10,6 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-key")
 DEBUG = os.getenv("DEBUG", "True") == "True"
+SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL", "")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -72,8 +73,8 @@ WSGI_APPLICATION = "memoria.wsgi.application"
 # Get database URL based on environment
 default_db_url = (
     f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
-    if DEBUG
-    else os.getenv("SUPABASE_DATABASE_URL")
+    if SUPABASE_DATABASE_URL == ""
+    else SUPABASE_DATABASE_URL
 )
 
 # Configure the database
