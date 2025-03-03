@@ -50,7 +50,7 @@ jobs:
     environment: digitalocean
     # Define the secrets needed for deployment
     env:
-      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      DJANGO_SECRET_KEY: ${{ secrets.SECRET_KEY }}
       SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
       EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
       EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
@@ -84,7 +84,7 @@ jobs:
         username: ${{ secrets.DIGITALOCEAN_USERNAME }}
         key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
         port: 22
-        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENAI_API_KEY,OPENROUTER_API_KEY, DEBUG
+        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENAI_API_KEY,OPENROUTER_API_KEY,DEBUG
         script: |
           # Create project directory if it doesn't exist
           sudo mkdir -p /var/www/memoria.uy
