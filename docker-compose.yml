@@ -43,26 +43,22 @@ services:
       - .:/app
     env_file:
       - ./.env
-    environment:
-      - USE_REDIS_BROKER=true
     depends_on:
       redis:
         condition: service_healthy
     restart: always
 
-  celery_beat:
-    build: .
-    command: beat
-    volumes:
-      - .:/app
-    env_file:
-      - ./.env
-    environment:
-      - USE_REDIS_BROKER=true
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: always
+  # celery_beat:
+  #   build: .
+  #   command: beat
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - ./.env
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   restart: always
 
   nginx:
     image: nginx:1.21-alpine

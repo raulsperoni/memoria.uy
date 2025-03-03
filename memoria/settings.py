@@ -155,20 +155,9 @@ TAILWIND_APP_NAME = "theme"
 INTERNAL_IPS = ["127.0.0.1"]
 
 # Celery Configuration
-USE_REDIS_BROKER = os.getenv('USE_REDIS_BROKER', 'False').lower() == 'true'
-
-if USE_REDIS_BROKER:
-    CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-    CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-else:
-    CELERY_BROKER_URL = "filesystem://"
-    CELERY_BROKER_TRANSPORT_OPTIONS = {
-        "data_folder_in": "./.data/broker",
-        "data_folder_out": "./.data/broker/",
-        "data_folder_processed": "./.data/broker/processed",
-    }
-    # No result backend for filesystem broker
-    CELERY_RESULT_BACKEND = None
+# Using Redis as broker and result backend
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
