@@ -149,4 +149,7 @@ ACCOUNT_ALLOW_SIGNUPS = False
 
 TAILWIND_APP_NAME = "theme"
 
+# Set NPM binary path for Tailwind CSS
+NPM_BIN_PATH = "/usr/bin/npm"
+
 INTERNAL_IPS = ["127.0.0.1"]

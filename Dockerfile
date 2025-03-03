@@ -12,6 +12,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     libpq-dev \
+    gnupg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update \
+    && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,8 +39,14 @@ RUN poetry install --no-interaction --no-ansi --no-root --with dev
 # Copy project
 COPY . .
 
+# Install Tailwind dependencies
+RUN cd /app/theme/static_src && npm install
+
 # Expose port
 EXPOSE 8000
+
+# Create theme/static directory if it doesn't exist
+RUN mkdir -p /app/theme/static
 
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
