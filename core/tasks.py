@@ -6,6 +6,7 @@ from core import archive_ph as archive
 from datetime import datetime
 from django.core.cache import cache
 from functools import wraps
+from core import url_requests
 
 logger = get_task_logger(__name__)
 
@@ -147,3 +148,32 @@ def find_archived(self, noticia_id):
     except Exception as e:
         logger.error(f"Error in find_archived task for noticia {noticia_id}: {e}")
         return None
+
+
+@shared_task
+@task_lock(timeout=60 * 30)  # 30 minutes lock to avoid concurrent runs
+def refresh_proxy_list(max_proxies: int = 20, test_url: str = "https://www.google.com"):
+    """
+    Periodically refresh and validate the proxy list.
+    This task should be scheduled to run at regular intervals.
+    
+    Args:
+        max_proxies: Maximum number of proxies to validate and store
+        test_url: URL to test the proxies against
+        
+    Returns:
+        Number of working proxies found
+    """
+    logger.info("Starting proxy list refresh task")
+    
+    # First, clear the existing proxy cache to fetch fresh proxies
+    url_requests.clear_proxy_cache()
+    
+    # Get and validate proxies
+    working_proxies = url_requests.get_validated_proxies(max_proxies=max_proxies, test_url=test_url)
+    
+    # Update the proxy list in the url_requests module
+    url_requests.update_proxy_list(working_proxies)
+    
+    logger.info(f"Proxy list refresh completed. Found {len(working_proxies)} working proxies")
+    return len(working_proxies)

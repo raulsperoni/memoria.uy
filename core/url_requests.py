@@ -56,7 +56,7 @@ def get_random_user_agent() -> str:
 def get_random_proxy() -> Optional[Dict[str, str]]:
     """Return a random proxy from the list if available."""
     if not FREE_PROXIES:
-        return None
+        update_proxy_list([])
     
     proxy = random.choice(FREE_PROXIES)
     return {
@@ -258,7 +258,9 @@ def update_proxy_list(proxies: List[str]) -> None:
         proxies: List of proxy URLs in format "http://ip:port" or "https://ip:port"
     """
     global FREE_PROXIES
-    FREE_PROXIES = fetch_free_proxies()
+    if not proxies:
+        proxies = fetch_free_proxies()
+    FREE_PROXIES = proxies
 
 
 @lru_cache(maxsize=1, typed=False)
@@ -272,28 +274,52 @@ def fetch_free_proxies() -> List[str]:
         List of proxy URLs
     """
     logger.info("Fetching fresh list of free proxies")
-    url = "https://free-proxy-list.net/"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
     proxies = []
     
-    # The proxy table is now a regular table with class 'table table-striped table-bordered'
-    # Find the table in the fpl-list div
-    table_div = soup.find("div", {"class": "fpl-list"})
-    if table_div:
-        table = table_div.find("table", {"class": "table"})
-        if table:
-            # Get all rows except the header row
-            rows = table.find_all("tr")[1:] if table.find_all("tr") else []
-            for row in rows:
-                cells = row.find_all("td")
-                if len(cells) >= 2:
-                    ip = cells[0].text.strip()
-                    port = cells[1].text.strip()
-                    # Skip invalid IPs like 0.0.0.0 or 127.0.0.x
+    # Source 1: free-proxy-list.net
+    try:
+        url = "https://free-proxy-list.net/"
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # The proxy table is now a regular table with class 'table table-striped table-bordered'
+        # Find the table in the fpl-list div
+        table_div = soup.find("div", {"class": "fpl-list"})
+        if table_div:
+            table = table_div.find("table", {"class": "table"})
+            if table:
+                # Get all rows except the header row
+                rows = table.find_all("tr")[1:] if table.find_all("tr") else []
+                for row in rows:
+                    cells = row.find_all("td")
+                    if len(cells) >= 2:
+                        ip = cells[0].text.strip()
+                        port = cells[1].text.strip()
+                        # Skip invalid IPs like 0.0.0.0 or 127.0.0.x
+                        if ip.startswith("0.0.0.0") or ip.startswith("127.0.0."):
+                            continue
+                        proxies.append(f"http://{ip}:{port}")
+    except Exception as e:
+        logger.error(f"Error fetching proxies from free-proxy-list.net: {str(e)}")
+    
+    # Source 2: geonode.com free proxy list
+    try:
+        url = "https://proxylist.geonode.com/api/proxy-list?limit=100&page=1&sort_by=lastChecked&sort_type=desc"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        
+        if 'data' in data and isinstance(data['data'], list):
+            for proxy in data['data']:
+                if 'ip' in proxy and 'port' in proxy:
+                    ip = proxy['ip']
+                    port = proxy['port']
+                    # Skip invalid IPs
                     if ip.startswith("0.0.0.0") or ip.startswith("127.0.0."):
                         continue
-                    proxies.append(f"{ip}:{port}")
+                    protocol = proxy.get('protocols', ['http'])[0].lower()
+                    proxies.append(f"{protocol}://{ip}:{port}")
+    except Exception as e:
+        logger.error(f"Error fetching proxies from geonode.com: {str(e)}")
     
     logger.info(f"Found {len(proxies)} free proxies")
     return proxies
@@ -306,3 +332,64 @@ def clear_proxy_cache():
     """
     fetch_free_proxies.cache_clear()
     logger.info("Proxy cache cleared")
+
+
+def validate_proxy(proxy: str, test_url: str = "https://www.google.com", timeout: int = 5) -> bool:
+    """
+    Test if a proxy is working by making a request to a test URL.
+    
+    Args:
+        proxy: Proxy URL in format "http://ip:port" or "https://ip:port"
+        test_url: URL to test the proxy against
+        timeout: Request timeout in seconds
+        
+    Returns:
+        True if the proxy is working, False otherwise
+    """
+    proxies = {
+        "http": proxy,
+        "https": proxy
+    }
+    
+    try:
+        response = requests.get(
+            test_url,
+            proxies=proxies,
+            timeout=timeout,
+            headers={"User-Agent": get_random_user_agent()}
+        )
+        return response.status_code < 400
+    except Exception as e:
+        logger.debug(f"Proxy {proxy} failed validation: {str(e)}")
+        return False
+
+
+def get_validated_proxies(max_proxies: int = 10, test_url: str = "https://www.google.com") -> List[str]:
+    """
+    Get a list of validated working proxies.
+    
+    Args:
+        max_proxies: Maximum number of proxies to validate and return
+        test_url: URL to test the proxies against
+        
+    Returns:
+        List of working proxy URLs
+    """
+    all_proxies = fetch_free_proxies()
+    working_proxies = []
+    
+    # Shuffle the proxies to avoid always testing the same ones
+    import random
+    random.shuffle(all_proxies)
+    
+    # Test proxies until we have enough working ones or run out of proxies
+    for proxy in all_proxies:
+        if len(working_proxies) >= max_proxies:
+            break
+            
+        if validate_proxy(proxy, test_url):
+            working_proxies.append(proxy)
+            logger.info(f"Found working proxy: {proxy}")
+    
+    logger.info(f"Validated {len(working_proxies)} working proxies out of {len(all_proxies)} total")
+    return working_proxies
