@@ -221,6 +221,34 @@ class NoticiaCreateView(LoginRequiredMixin, FormView):
             )
             return response
         return redirect(self.success_url)
+        
+    def form_invalid(self, form):
+        # For HTMX requests, return the form with errors and trigger an error notification
+        if self.request.headers.get("HX-Request"):
+            # Get the first error message from the form
+            errors = form.errors
+            error_message = next(iter(errors.values()))[0] if errors else "Ha ocurrido un error al procesar el formulario"
+            
+            # Log the error for debugging
+            logger.error(f"Form validation error: {errors}")
+            
+            # Render the form with errors
+            response = render(
+                self.request,
+                self.template_name,
+                {
+                    "form": form,
+                    "filter_description": "Estás viendo todas las noticias",
+                    "noticias": Noticia.objects.all().order_by("-fecha_agregado"),
+                },
+            )
+            
+            # Add HTMX trigger for error notification
+            response["HX-Trigger"] = f'{{"noticiaError": {{"message": "{error_message}"}}}}'
+            return response
+            
+        # For non-HTMX requests, use the default behavior
+        return super().form_invalid(form)
 
 
 class RefreshNoticiaView(LoginRequiredMixin, View):

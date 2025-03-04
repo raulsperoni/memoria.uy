@@ -1,4 +1,5 @@
-import requests
+from core.url_requests import get
+import requests.exceptions
 
 
 class ArchiveNotFound(Exception):
@@ -11,7 +12,7 @@ def get_latest_snapshot(original_url):
     """
     api_endpoint = "https://archive.org/wayback/available"
     params = {"url": original_url}
-    response = requests.get(api_endpoint, params=params)
+    response = get(api_endpoint, params=params, rotate_user_agent=True, retry_on_failure=True)
     try:
         data = response.json()
     except ValueError:
@@ -28,7 +29,7 @@ def get_latest_snapshot(original_url):
 
 def fetch_snapshot(archived_url):
     try:
-        response = requests.get(archived_url)
+        response = get(archived_url, rotate_user_agent=True, retry_on_failure=True)
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
         if response.status_code == 404:

@@ -3,10 +3,11 @@ from pydantic import BaseModel, Field
 from litellm import completion
 from bs4 import BeautifulSoup
 from datetime import datetime
-import requests
+from core.url_requests import get
 import logging
-#import litellm
-#litellm._turn_on_debug()
+
+# import litellm
+# litellm._turn_on_debug()
 logger = logging.getLogger(__name__)
 
 MODELS_PRIORITY_JSON = {
@@ -68,7 +69,10 @@ class Articulo(BaseModel):
         Literal["politica", "economia", "seguridad", "salud", "educacion", "otros"]
     ] = Field(None, description="The category of the article.")
     autor: Optional[str] = Field(None, description="The author of the article.")
-    fecha: Optional[str] = Field(None, description="The date of the article in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)")
+    fecha: Optional[str] = Field(
+        None,
+        description="The date of the article in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+    )
     resumen: Optional[str] = Field(None, description="A brief summary of the article.")
     entidades: Optional[list[EntidadNombrada]] = Field(None, alias="entidades")
 
@@ -191,7 +195,7 @@ def parse_from_meta_tags(url):
             "Referer": "https://www.google.com/",
         }
 
-        response = requests.get(url, headers=headers)
+        response = get(url, headers=headers, rotate_user_agent=True, retry_on_failure=True)
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Extract Open Graph meta tags
@@ -211,7 +215,7 @@ def parse_from_meta_tags(url):
             original_image = og_image["content"]
             if original_image not in BAD_URLS:
                 try:
-                    image_response = requests.get(original_image)
+                    image_response = get(original_image, rotate_user_agent=True, retry_on_failure=True)
                     if image_response.status_code != 200:
                         original_image = None
                         logger.error(

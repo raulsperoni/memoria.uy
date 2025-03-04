@@ -299,9 +299,57 @@
     });
   });
   
+  // General HTMX error handler
+  document.addEventListener('htmx:responseError', function(event) {
+    let errorMessage = 'Ha ocurrido un error en la solicitud';
+    
+    // Try to extract more specific error information if available
+    try {
+      const xhr = event.detail.xhr;
+      if (xhr.status === 400 || xhr.status === 500) {
+        // Try to parse JSON response if available
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response.error) {
+            errorMessage = response.error;
+          }
+        } catch (e) {
+          // If not JSON or no error field, use status text
+          errorMessage = `Error ${xhr.status}: ${xhr.statusText || 'Error en el servidor'}`;
+        }
+      } else if (xhr.status === 404) {
+        errorMessage = 'El recurso solicitado no fue encontrado';
+      } else if (xhr.status === 403) {
+        errorMessage = 'No tienes permiso para realizar esta acción';
+      } else if (xhr.status === 429) {
+        errorMessage = 'Demasiadas solicitudes. Por favor, intenta más tarde';
+      }
+    } catch (e) {
+      console.error('Error processing HTMX error:', e);
+    }
+    
+    // Show the error notification
+    showNotification(errorMessage, 'error');
+  });
+  
+  // Handle network errors (when the request fails completely)
+  document.addEventListener('htmx:sendError', function(event) {
+    showNotification('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.', 'error');
+  });
+  
+  // Handle timeout errors
+  document.addEventListener('htmx:timeout', function(event) {
+    showNotification('La solicitud ha tomado demasiado tiempo en responder. Por favor, intenta nuevamente.', 'error');
+  });
+  
   // Listen for noticia created event
   document.body.addEventListener('noticiaCreated', function(event) {
     showNotification(event.detail.message, 'success');
+  });
+  
+  // Listen for noticia error event
+  document.body.addEventListener('noticiaError', function(event) {
+    showNotification(event.detail.message, 'error');
   });
   
   // Function to show notifications

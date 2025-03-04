@@ -1,5 +1,5 @@
-import requests
 import re
+from core.url_requests import post
 
 
 ARCHIVE_PH_SUBMIT_URL = "https://archive.ph/submit/"
@@ -13,16 +13,21 @@ class ArchiveNotFound(Exception):
     pass
 
 
-def get_latest_snapshot(url, user_agent="Mozilla/5.0 (compatible; MyApp/1.0)"):
+def get_latest_snapshot(url, user_agent=None):
     """
     Capture the given URL using archive.ph.
     Returns the final archive URL or raises an Exception.
     """
-    headers = {"User-Agent": user_agent}
+    headers = {"User-Agent": user_agent} if user_agent else {}
     # Some minimal data; the archive service expects a "url" parameter.
     data = {"url": url, "submitid": "1"}
-    response = requests.post(
-        ARCHIVE_PH_SUBMIT_URL, data=data, headers=headers, timeout=30
+    response = post(
+        ARCHIVE_PH_SUBMIT_URL, 
+        data=data, 
+        headers=headers, 
+        timeout=30,
+        rotate_user_agent=True,
+        retry_on_failure=True
     )
 
     # If the response is a redirect, assume the archive URL is in the Location header.
