@@ -50,10 +50,10 @@ def save_url(original_url):
         raise ArchiveNotFound(f"Failed to save {original_url} (status: {response.status_code})")
 
 
-def get_latest_snapshot(original_url, attempt_save=True):
+def get_latest_snapshot(original_url):
     """
     Given a URL, query the Wayback Machine API for the closest snapshot.
-    If no snapshot is found and attempt_save is True, try to save the URL.
+    If no snapshot is found, try to save the URL.
     
     Args:
         original_url: The URL to find or save in the Internet Archive
@@ -79,10 +79,6 @@ def get_latest_snapshot(original_url, attempt_save=True):
         url = snapshots["closest"]["url"]
         html = fetch_snapshot(url)
         return url, html
-
-    # No snapshot found, try to save the URL if requested
-    if attempt_save:
-        return save_url(original_url)
     
     raise ArchiveNotFound(f"No snapshots found for {original_url}")
 
