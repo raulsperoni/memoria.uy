@@ -5,6 +5,9 @@ import requests.exceptions
 class ArchiveNotFound(Exception):
     pass
 
+class ArchiveInProgress(Exception):
+    pass
+
 
 def get_latest_snapshot(original_url):
     """

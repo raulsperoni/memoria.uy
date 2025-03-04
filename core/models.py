@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from core import parse
 from datetime import datetime
-from core import archive_ph as archive
+from core import archive_org as archive
 import logging
 
 logger = logging.getLogger(__name__)
