@@ -4,7 +4,8 @@ import time
 import logging
 from typing import Dict, Any, Optional, Tuple, Union, List
 from requests.exceptions import RequestException, Timeout, TooManyRedirects, ConnectionError
-
+from bs4 import BeautifulSoup
+from functools import lru_cache
 logger = logging.getLogger(__name__)
 
 # List of common user agents to rotate through
@@ -257,19 +258,51 @@ def update_proxy_list(proxies: List[str]) -> None:
         proxies: List of proxy URLs in format "http://ip:port" or "https://ip:port"
     """
     global FREE_PROXIES
-    FREE_PROXIES = proxies
+    FREE_PROXIES = fetch_free_proxies()
 
 
+@lru_cache(maxsize=1, typed=False)
 def fetch_free_proxies() -> List[str]:
     """
     Fetch a list of free proxies from public sources.
-    This is a placeholder - you would need to implement the actual fetching logic.
+    Results are cached using LRU cache to avoid frequent requests to the proxy service.
+    The cache will expire after a certain time period (controlled by ttl parameter).
     
     Returns:
         List of proxy URLs
     """
-    # This is where you would implement logic to fetch free proxies
-    # For example, scraping from free proxy lists or using a free proxy API
-    # For now, we'll just return an empty list as a placeholder
-    logger.warning("fetch_free_proxies() is not implemented yet")
-    return []
+    logger.info("Fetching fresh list of free proxies")
+    url = "https://free-proxy-list.net/"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    proxies = []
+    
+    # The proxy table is now a regular table with class 'table table-striped table-bordered'
+    # Find the table in the fpl-list div
+    table_div = soup.find("div", {"class": "fpl-list"})
+    if table_div:
+        table = table_div.find("table", {"class": "table"})
+        if table:
+            # Get all rows except the header row
+            rows = table.find_all("tr")[1:] if table.find_all("tr") else []
+            for row in rows:
+                cells = row.find_all("td")
+                if len(cells) >= 2:
+                    ip = cells[0].text.strip()
+                    port = cells[1].text.strip()
+                    # Skip invalid IPs like 0.0.0.0 or 127.0.0.x
+                    if ip.startswith("0.0.0.0") or ip.startswith("127.0.0."):
+                        continue
+                    proxies.append(f"{ip}:{port}")
+    
+    logger.info(f"Found {len(proxies)} free proxies")
+    return proxies
+
+
+def clear_proxy_cache():
+    """
+    Clear the cache for fetch_free_proxies function.
+    Call this function periodically to refresh the proxy list.
+    """
+    fetch_free_proxies.cache_clear()
+    logger.info("Proxy cache cleared")
