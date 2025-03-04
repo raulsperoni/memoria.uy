@@ -2,12 +2,12 @@
 set -e
 
 echo "Installing Tailwind dependencies..."
-python manage.py tailwind install
+poetry run python manage.py tailwind install
 
 echo "Building Tailwind CSS..."
-python manage.py tailwind build
+poetry run python manage.py tailwind build
 
 echo "Collecting static files..."
-python manage.py collectstatic --noinput
+poetry run python manage.py collectstatic --noinput
 
 echo "Asset building completed successfully!"

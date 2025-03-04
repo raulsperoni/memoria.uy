@@ -2,6 +2,6 @@
 set -e
 
 echo "Running database migrations..."
-python manage.py migrate
+poetry run python manage.py migrate
 
 echo "Database migration completed successfully!"

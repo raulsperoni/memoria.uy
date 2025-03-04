@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "rest_framework",
     "tailwind",
+    "silk",
     "theme",
     "core",
 ]
@@ -45,6 +46,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django_browser_reload.middleware.BrowserReloadMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "silk.middleware.SilkyMiddleware",
 ]
 
 ROOT_URLCONF = "memoria.urls"
@@ -151,15 +153,14 @@ ACCOUNT_ALLOW_SIGNUPS = False
 TAILWIND_APP_NAME = "theme"
 
 
-
 INTERNAL_IPS = ["127.0.0.1"]
 
 # Celery Configuration
 # Using Redis as broker and result backend
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
