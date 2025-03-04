@@ -139,7 +139,7 @@ jobs:
         path: ./static-assets
     
     - name: Deploy to DigitalOcean - Git Operations and Environment Setup
-      uses: appleboy/ssh-action@master
+      uses: appleboy/ssh-action@v1.2.1
       with:
         host: ${{ secrets.DIGITALOCEAN_HOST }}
         username: ${{ secrets.DIGITALOCEAN_USERNAME }}
@@ -206,7 +206,7 @@ jobs:
         strip_components: 1
 
     - name: Complete Deployment
-      uses: appleboy/ssh-action@master
+      uses: appleboy/ssh-action@v1.2.1
       with:
         host: ${{ secrets.DIGITALOCEAN_HOST }}
         username: ${{ secrets.DIGITALOCEAN_USERNAME }}
