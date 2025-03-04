@@ -212,19 +212,56 @@ def parse_from_meta_tags(url):
         original_image = None
 
         if og_image:
-            original_image = og_image["content"]
-            if original_image not in BAD_URLS:
-                try:
-                    image_response = get(original_image, rotate_user_agent=True, retry_on_failure=True)
-                    if image_response.status_code != 200:
-                        original_image = None
-                        logger.error(
-                            f"Error getting image from meta tags: {original_image}"
-                        )
-                except Exception as e:
-                    logger.error(
-                        f"Error getting image from meta tags: {original_image} {e}"
-                    )
+            image_url = og_image["content"]
+            
+            # Check if it's an archive.org URL that contains an embedded original URL
+            # Example formats:
+            # 1. https://web.archive.org/web/20250304162934im_/https://media.elobservador.com.uy/...
+            # 2. https://web.archive.org/web/20250304162934/https://media.elobservador.com.uy/...
+            possible_urls = [image_url]
+            
+            # If it's an archive.org URL, extract the original URL
+            if "web.archive.org" in image_url:
+                # Handle /im_/ format (used for images)
+                if "/im_/" in image_url:
+                    parts = image_url.split("/im_/", 1)
+                    if len(parts) > 1:
+                        extracted_url = parts[1]
+                        possible_urls.append(extracted_url)
+                        logger.info(f"Extracted original URL from archive.org im_ format: {extracted_url}")
+                # Handle standard /web/ format
+                elif "/web/" in image_url:
+                    # Extract timestamp and URL
+                    parts = image_url.split("/web/", 1)
+                    if len(parts) > 1:
+                        # The URL might be after a timestamp like 20250304162934/
+                        timestamp_and_url = parts[1]
+                        # Find the first occurrence of http or https after /web/
+                        for protocol in ["http://", "https://"]:
+                            if protocol in timestamp_and_url:
+                                protocol_index = timestamp_and_url.find(protocol)
+                                extracted_url = timestamp_and_url[protocol_index:]
+                                possible_urls.append(extracted_url)
+                                logger.info(f"Extracted original URL from archive.org web format: {extracted_url}")
+                                break
+            
+            # Try each URL in order until one works
+            for img_url in possible_urls:
+                if img_url not in BAD_URLS:
+                    try:
+                        logger.info(f"Trying image URL: {img_url}")
+                        image_response = get(img_url, rotate_user_agent=True, retry_on_failure=True)
+                        if image_response.status_code == 200:
+                            original_image = img_url
+                            logger.info(f"Successfully retrieved image from: {img_url}")
+                            break
+                        else:
+                            logger.warning(f"Failed to retrieve image from: {img_url} (Status: {image_response.status_code})")
+                    except Exception as e:
+                        logger.warning(f"Error getting image from URL: {img_url} - {e}")
+            
+            if not original_image:
+                logger.error(f"Failed to retrieve any valid image from the possible URLs: {possible_urls}")
 
         logger.info(f"Title: {title}")
         logger.info(f"Image: {original_image}")

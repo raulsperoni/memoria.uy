@@ -145,8 +145,55 @@ def find_archived(self, noticia_id):
                 f"Archive still in progress after 3 attempts for noticia {noticia_id}, giving up"
             )
             return None
+    except archive.ArchiveNotFound as e:
+        # If no snapshot found, try to save the URL
+        logger.info(f"No snapshot found for noticia {noticia_id}, attempting to save URL")
+        save_to_archive_org.delay(noticia_id)
+        return None
     except Exception as e:
         logger.error(f"Error in find_archived task for noticia {noticia_id}: {e}")
+        return None
+
+
+@shared_task(bind=True, max_retries=3)
+@task_lock()
+def save_to_archive_org(self, noticia_id):
+    """Async task to save a URL to the Internet Archive (archive.org).
+    This task is called when no snapshot is found and we need to save the URL.
+    """
+    try:
+        noticia = Noticia.objects.get(id=noticia_id)
+        logger.info(f"Saving URL to archive.org: {noticia.enlace}")
+        
+        # Attempt to save the URL to archive.org
+        noticia.archivo_url, html = archive.save_url(noticia.enlace)
+        noticia.archivo_fecha = datetime.now()
+        noticia.save()
+        
+        # Process the saved content
+        if not noticia.markdown:
+            enrich_markdown.delay(noticia.id, html)
+        elif not noticia.resumen:
+            enrich_content.delay(noticia.id)
+        
+        noticia.update_title_image_from_archive()
+        logger.info(f"Successfully saved URL to archive.org for noticia {noticia_id}")
+        return noticia.archivo_url
+    except archive.ArchiveInProgress as e:
+        retry_count = self.request.retries
+        if retry_count < 2:  # We'll do a total of 3 attempts (0, 1, 2)
+            logger.info(
+                f"Archive save still in progress for noticia {noticia_id}, retry {retry_count+1}/3 in 5 minutes"
+            )
+            # Retry in 5 minutes (300 seconds)
+            raise self.retry(exc=e, countdown=300)
+        else:
+            logger.warning(
+                f"Archive save still in progress after 3 attempts for noticia {noticia_id}, giving up"
+            )
+            return None
+    except Exception as e:
+        logger.error(f"Error in save_to_archive_org task for noticia {noticia_id}: {e}")
         return None
 
 

@@ -106,9 +106,18 @@ class Noticia(models.Model):
 
             find_archived_task.delay(self.id)
             return None
+        except archive.ArchiveNotFound as e:
+            # If no snapshot found, try to save the URL
+            logger.info(f"No snapshot found for {self.enlace}, attempting to save URL")
+            from core.tasks import save_to_archive_org
+
+            save_to_archive_org.delay(self.id)
+            return None
         except Exception as e:
             logger.error(f"Error finding archived URL: {e}")
             return None
+            
+
 
 
 class Voto(models.Model):
