@@ -138,7 +138,7 @@ jobs:
         name: static-assets
         path: ./static-assets
     
-    - name: Deploy to DigitalOcean - Git Operations and Environment Setup
+    - name: Deploy to DigitalOcean
       uses: appleboy/ssh-action@v1.2.1
       with:
         host: ${{ secrets.DIGITALOCEAN_HOST }}
@@ -194,29 +194,12 @@ jobs:
           # API Keys
           sed -i "s/OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=${OPENROUTER_API_KEY}/g" .env
 
-    - name: Upload static assets to server
-      uses: appleboy/scp-action@v0.1.3
-      with:
-        host: ${{ secrets.DIGITALOCEAN_HOST }}
-        username: ${{ secrets.DIGITALOCEAN_USERNAME }}
-        key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
-        port: 22
-        source: ./static-assets/*
-        target: /var/www/memoria.uy/
-        strip_components: 1
-
-    - name: Complete Deployment
-      uses: appleboy/ssh-action@v1.2.1
-      with:
-        host: ${{ secrets.DIGITALOCEAN_HOST }}
-        username: ${{ secrets.DIGITALOCEAN_USERNAME }}
-        key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
-        port: 22
-        script: |
-          cd /var/www/memoria.uy
-          
-          # Deploy the application
-          sudo docker compose down
+          # Copy static assets to the appropriate destination folders
+          echo "Copying static assets to destination folders..."
+          mkdir -p staticfiles
+          cp -r static-assets/staticfiles/* staticfiles/ 2>/dev/null || true
+          mkdir -p theme/static
+          cp -r static-assets/theme/static/* theme/static/ 2>/dev/null || true
           
           # Run database migrations as a separate step
           echo "Running database migrations..."
@@ -224,3 +207,6 @@ jobs:
           
           # Start the application
           sudo docker compose up -d
+
+
+   
