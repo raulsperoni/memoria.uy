@@ -52,10 +52,6 @@ RUN mkdir -p /app/theme/static
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
 if [ "$1" = "web" ]; then\n\
-    python manage.py tailwind install\n\
-    python manage.py tailwind build\n\
-    python manage.py collectstatic --noinput\n\
-    python manage.py migrate\n\
     gunicorn memoria.wsgi:application --bind 0.0.0.0:8000\n\
 elif [ "$1" = "worker" ]; then\n\
     celery -A memoria worker --loglevel=info\n\
