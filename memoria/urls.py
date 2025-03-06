@@ -17,7 +17,6 @@ Including another URLconf
 
 from django.conf import settings
 from django.conf.urls.static import static
-from debug_toolbar.toolbar import debug_toolbar_urls
 
 from django.contrib import admin
 from django.urls import path, include
@@ -30,25 +29,25 @@ from core.views import (
 )
 from memoria.views import health_check
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("", NewsTimelineView.as_view(), name="timeline"),
-    path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
-    path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
-    path(
-        "noticias/<int:pk>/refresh/",
-        RefreshNoticiaView.as_view(),
-        name="noticia-refresh",
-    ),
-    path(
-        "noticias/<int:pk>/delete/",
-        DeleteNoticiaView.as_view(),
-        name="noticia-delete",
-    ),
-    path("accounts/", include("allauth.urls")),
-    path("__reload__/", include("django_browser_reload.urls")),
-    path("health/", health_check, name="health_check"),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + debug_toolbar_urls()
-
-urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]
-
+urlpatterns = (
+    [
+        path("admin/", admin.site.urls),
+        path("", NewsTimelineView.as_view(), name="timeline"),
+        path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
+        path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
+        path(
+            "noticias/<int:pk>/refresh/",
+            RefreshNoticiaView.as_view(),
+            name="noticia-refresh",
+        ),
+        path(
+            "noticias/<int:pk>/delete/",
+            DeleteNoticiaView.as_view(),
+            name="noticia-delete",
+        ),
+        path("accounts/", include("allauth.urls")),
+        path("__reload__/", include("django_browser_reload.urls")),
+        path("health/", health_check, name="health_check"),
+    ]
+    + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+)
