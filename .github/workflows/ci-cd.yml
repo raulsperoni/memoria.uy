@@ -204,6 +204,9 @@ jobs:
           # Run database migrations as a separate step
           echo "Running database migrations..."
           sudo docker compose run --rm web ./scripts/migrate_db.sh
+
+          # Stop the application
+          sudo docker compose down
           
           # Start the application
           sudo docker compose up -d
