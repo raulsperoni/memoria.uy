@@ -62,6 +62,9 @@ class NewsTimelineView(ListView):
             except (Entidad.DoesNotExist, ValueError):
                 return "Estás viendo noticias filtradas por entidad"
 
+        from core.tasks import refresh_proxy_list
+        refresh_proxy_list.delay()
+
         # Default for unknown filters
         return "Estás viendo noticias filtradas"
 

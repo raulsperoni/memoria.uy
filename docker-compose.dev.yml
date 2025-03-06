@@ -1,0 +1,88 @@
+services:
+
+
+  redis:
+    image: redis:6-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+
+
+  web:
+    image: memoria-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: web
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - ./.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  celery_worker:
+    image: memoria-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: worker
+    volumes:
+      - .:/app
+    env_file:
+      - ./.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  # celery_beat:
+  #   image: memoria-web
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: beat
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - ./.env
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   restart: always
+
+  nginx:
+    image: nginx:1.21-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:

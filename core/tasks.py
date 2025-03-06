@@ -2,7 +2,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from core.models import Noticia, Entidad, NoticiaEntidad
 from core import parse
-from core import archive_org as archive
+from core import archive_ph as archive
 from datetime import datetime
 from django.core.cache import cache
 from functools import wraps
