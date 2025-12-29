@@ -230,13 +230,13 @@ def refresh_proxy_list(max_proxies: int = 20, test_url: str = "https://www.googl
 @task_lock()
 def enrich_from_captured_html(noticia_id):
     """
-    Convert captured HTML to markdown using LLM.
-    This is the entry point for browser extension submissions.
+    Extract entities and metadata directly from captured HTML using LLM.
+    Single-step enrichment that replaces the old 2-phase approach.
 
     Flow:
     1. Get Noticia with captured_html
-    2. Convert HTML → Markdown using LLM
-    3. Save markdown to noticia
+    2. Extract entities, metadata, and fix missing title/image/desc in one call
+    3. Save entities and update metadata if needed
 
     Args:
         noticia_id: ID of the Noticia to enrich
@@ -245,43 +245,85 @@ def enrich_from_captured_html(noticia_id):
         noticia = Noticia.objects.get(id=noticia_id)
 
         if not noticia.captured_html:
-            logger.warning(
-                f"No captured HTML for noticia {noticia_id}"
-            )
+            logger.warning(f"No captured HTML for noticia {noticia_id}")
             return None
 
-        if noticia.markdown:
+        # Check if already processed
+        if noticia.entidades.exists():
             logger.info(
-                f"Noticia {noticia_id} already has markdown, skipping"
+                f"Noticia {noticia_id} already has entities, skipping"
             )
             return noticia_id
 
         logger.info(
-            f"Converting captured HTML to markdown for noticia {noticia_id}"
+            f"Extracting entities and metadata from HTML for noticia {noticia_id}"
         )
 
-        # Use meta_titulo as hint for LLM
-        title_hint = noticia.meta_titulo or "Article"
+        # Extract everything in one LLM call
+        articulo = parse.parse_noticia_from_html(noticia.captured_html)
 
-        # Convert HTML to markdown
-        markdown = parse.parse_noticia_markdown(
-            noticia.captured_html,
-            title_hint
-        )
-
-        if markdown:
-            noticia.markdown = markdown
-            noticia.save()
-            logger.info(
-                f"Successfully converted HTML to markdown for "
-                f"noticia {noticia_id}"
-            )
-            return noticia_id
-        else:
+        if not articulo:
             logger.error(
-                f"Failed to convert HTML to markdown for noticia {noticia_id}"
+                f"Failed to parse HTML for noticia {noticia_id}"
             )
             return None
+
+        # Update metadata if LLM found better values
+        updated = False
+        if articulo.titulo and (
+            not noticia.meta_titulo or len(noticia.meta_titulo) < 10
+        ):
+            noticia.meta_titulo = articulo.titulo
+            updated = True
+            logger.info(
+                f"Updated title for noticia {noticia_id}: {articulo.titulo}"
+            )
+
+        if articulo.imagen and not noticia.meta_imagen:
+            noticia.meta_imagen = articulo.imagen
+            updated = True
+            logger.info(
+                f"Updated image for noticia {noticia_id}: {articulo.imagen}"
+            )
+
+        if articulo.descripcion and not noticia.meta_descripcion:
+            noticia.meta_descripcion = articulo.descripcion
+            updated = True
+            logger.info(
+                f"Updated description for noticia {noticia_id}"
+            )
+
+        if updated:
+            noticia.save()
+
+        # Save entities if found
+        if articulo.entidades:
+            for entidad_nombrada in articulo.entidades:
+                logger.info(
+                    f"Found entity: {entidad_nombrada.nombre} "
+                    f"({entidad_nombrada.tipo}, "
+                    f"{entidad_nombrada.sentimiento})"
+                )
+
+                entidad, _ = Entidad.objects.get_or_create(
+                    nombre=entidad_nombrada.nombre,
+                    tipo=entidad_nombrada.tipo
+                )
+
+                NoticiaEntidad.objects.get_or_create(
+                    noticia=noticia,
+                    entidad=entidad,
+                    defaults={"sentimiento": entidad_nombrada.sentimiento}
+                )
+
+            logger.info(
+                f"Saved {len(articulo.entidades)} entities for "
+                f"noticia {noticia_id}"
+            )
+        else:
+            logger.info(f"No entities found in noticia {noticia_id}")
+
+        return noticia_id
 
     except Noticia.DoesNotExist:
         logger.error(f"Noticia {noticia_id} does not exist")
@@ -292,3 +334,5 @@ def enrich_from_captured_html(noticia_id):
             f"noticia {noticia_id}: {e}"
         )
         return None
+
+

@@ -28,13 +28,6 @@ class Noticia(models.Model):
         help_text="Full HTML captured from user's browser"
     )
 
-    # LLM-generated markdown from captured HTML
-    markdown = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Markdown version of article (generated from captured_html)"
-    )
-
     fecha_agregado = models.DateTimeField(auto_now_add=True)
 
     # Optional: Who submitted this (can be anonymous)

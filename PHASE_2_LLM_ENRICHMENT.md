@@ -8,12 +8,23 @@ LLM enrichment has been re-enabled for articles submitted via the browser extens
 - **New field:** `Noticia.markdown` - Stores LLM-generated markdown from captured HTML
 - **Migration:** `0010_noticia_markdown.py` (applied)
 
-### 2. Celery Task
+### 2. Celery Tasks
+
+**Task 1: HTML → Markdown**
 - **New task:** `enrich_from_captured_html(noticia_id)`
   - Converts captured HTML → Markdown using LLM
   - Uses `parse.parse_noticia_markdown()` function
   - Runs asynchronously after article submission
   - Protected by task lock to prevent concurrent execution
+  - Chains to entity extraction when done
+
+**Task 2: Markdown → Entities**
+- **New task:** `extract_entities_from_markdown(noticia_id)`
+  - Extracts entities and sentiment from markdown
+  - Uses `parse.parse_noticia()` function
+  - Creates Entidad and NoticiaEntidad records
+  - Runs automatically after markdown generation
+  - Protected by task lock to prevent duplicate processing
 
 ### 3. API Integration
 - **Trigger:** Automatically called when extension submits article with HTML
@@ -26,12 +37,13 @@ LLM enrichment has been re-enabled for articles submitted via the browser extens
 ┌─────────────────────────────────────────────────────────┐
 │ 1. User votes via extension                            │
 │    → HTML captured from browser                         │
+│    → Metadata extracted (og:image, title, etc.)        │
 └──────────────────┬──────────────────────────────────────┘
                    │
                    ▼
 ┌─────────────────────────────────────────────────────────┐
 │ 2. POST /api/submit-from-extension/                    │
-│    → Noticia created with captured_html                │
+│    → Noticia created with captured_html + metadata     │
 │    → Vote created                                       │
 │    → LLM enrichment triggered                           │
 └──────────────────┬──────────────────────────────────────┘
@@ -44,7 +56,7 @@ LLM enrichment has been re-enabled for articles submitted via the browser extens
                    │
                    ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 4. LLM Processing (Gemini/O3-mini)                     │
+│ 4. LLM Processing #1 (Gemini Flash Lite)               │
 │    → HTML → Clean markdown                              │
 │    → Removes ads, scripts, navigation                   │
 │    → Preserves article structure                        │
@@ -54,7 +66,29 @@ LLM enrichment has been re-enabled for articles submitted via the browser extens
 ┌─────────────────────────────────────────────────────────┐
 │ 5. Save markdown to Noticia                            │
 │    → noticia.markdown = result                          │
-│    → Ready for further processing                       │
+│    → Triggers next phase                                │
+└──────────────────┬──────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────┐
+│ 6. Celery: extract_entities_from_markdown.delay()      │
+│    → Background task queued                             │
+└──────────────────┬──────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────┐
+│ 7. LLM Processing #2 (Gemini/O3-mini)                  │
+│    → Markdown → Structured data                         │
+│    → Extract entities (personas, lugares, etc.)        │
+│    → Analyze sentiment per entity                       │
+└──────────────────┬──────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────┐
+│ 8. Save Entities to Database                           │
+│    → Create Entidad records                             │
+│    → Create NoticiaEntidad links with sentiment        │
+│    → Ready for display in UI                            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -136,6 +170,12 @@ OPENROUTER_API_KEY=your_openrouter_key_here
 [INFO] Task enrich_from_captured_html[abc-123] received
 [INFO] Converting captured HTML to markdown for noticia 123
 [INFO] Successfully converted HTML to markdown for noticia 123
+[INFO] Triggered entity extraction for noticia 123
+[INFO] Task extract_entities_from_markdown[def-456] received
+[INFO] Extracting entities from markdown for noticia 123
+[INFO] Found entity: Luis Lacalle Pou (persona, positivo)
+[INFO] Found entity: Banco Central (organizacion, neutral)
+[INFO] Saved 2 entities for noticia 123
 ```
 
 ## Troubleshooting
@@ -267,15 +307,15 @@ poetry run python manage.py shell
 
 ## Cost Estimation
 
-**Per article:**
-- Average article: ~3000 tokens (2000 words)
-- Gemini Flash Lite: ~$0.0001 per article
-- O3-mini fallback: ~$0.001 per article
+**Per article (2 LLM calls):**
+- **Markdown generation:** ~3000 tokens → ~$0.0001 (Gemini Flash Lite)
+- **Entity extraction:** ~1000 tokens → ~$0.0001 (Gemini/O3-mini)
+- **Total per article:** ~$0.0002
 
 **Monthly (100 articles/day):**
-- 3000 articles/month
-- Gemini: ~$0.30/month
-- O3-mini: ~$3/month (if all fallback)
+- 3000 articles/month × 2 calls = 6000 LLM calls
+- Gemini: ~$0.60/month
+- O3-mini: ~$6/month (if all fallback)
 
 **Practically free** with Gemini free tier (15 RPM = ~600 articles/hour)
 

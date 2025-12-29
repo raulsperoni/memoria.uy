@@ -145,7 +145,7 @@ class SubmitFromExtensionView(View):
             )
 
             # Trigger background task for LLM enrichment
-            if noticia.captured_html and not noticia.markdown:
+            if noticia.captured_html and not noticia.entidades.exists():
                 from core.tasks import enrich_from_captured_html
 
                 enrich_from_captured_html.delay(noticia.id)
