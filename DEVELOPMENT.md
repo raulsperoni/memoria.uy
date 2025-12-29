@@ -74,6 +74,12 @@ def get_voter_identifier(request):
 
 **Performance gain:** Submissions now < 1 second (was 30+ seconds).
 
+**Note on disabled code:**
+- Archive-related code remains in `core/tasks.py`, `core/archive_ph.py`, `core/archive_org.py` but is not called
+- LLM parsing code remains in `core/parse.py` (functions `parse_noticia`, `parse_noticia_markdown`) but is not called
+- These will be re-enabled in Phase 2 after browser extension is built
+- Archive.org image URL handling in `parse_from_meta_tags()` is still active (handles archived images)
+
 ---
 
 ## Roadmap

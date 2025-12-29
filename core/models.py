@@ -57,12 +57,13 @@ class Noticia(models.Model):
         Fetch title, image, and description from original URL meta tags.
         Fast, synchronous operation (just HTTP HEAD + parse <meta> tags).
         """
-        title, image = parse.parse_from_meta_tags(self.enlace)
+        title, image, description = parse.parse_from_meta_tags(self.enlace)
         if title:
             self.meta_titulo = title
         if image:
             self.meta_imagen = image
-        # TODO: Also extract og:description
+        if description:
+            self.meta_descripcion = description
         self.save()
 
 

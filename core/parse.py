@@ -186,6 +186,10 @@ BAD_URLS = ["https://ladiaria.com.uy/static/meta/la-diaria-1000x1000.png"]
 
 
 def parse_from_meta_tags(url):
+    """
+    Extract title, image, and description from URL meta tags.
+    Returns: (title, image, description) tuple
+    """
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -198,22 +202,52 @@ def parse_from_meta_tags(url):
         response = get(url, headers=headers, rotate_user_agent=True, retry_on_failure=True)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Extract Open Graph meta tags
-        og_title = soup.find("meta", property="og:title")
-        og_image = soup.find("meta", property="og:image")
-
-        print(f"OG title: {og_title} from {url}")
-        print(f"OG image: {og_image} from {url}")
-
+        # Extract title with multiple fallbacks
         title = None
-        if og_title and og_title["content"] not in BAD_TITLES:
+        og_title = soup.find("meta", property="og:title")
+        twitter_title = soup.find("meta", attrs={"name": "twitter:title"})
+        html_title = soup.find("title")
+
+        if og_title and og_title.get("content"):
             title = og_title["content"]
+        elif twitter_title and twitter_title.get("content"):
+            title = twitter_title["content"]
+        elif html_title and html_title.string:
+            title = html_title.string.strip()
 
+        # Filter bad titles
+        if title and title.lower() in [t.lower() for t in BAD_TITLES]:
+            title = None
+
+        logger.info(f"Title: {title} from {url}")
+
+        # Extract description
+        description = None
+        og_desc = soup.find("meta", property="og:description")
+        twitter_desc = soup.find("meta", attrs={"name": "twitter:description"})
+        meta_desc = soup.find("meta", attrs={"name": "description"})
+
+        if og_desc and og_desc.get("content"):
+            description = og_desc["content"]
+        elif twitter_desc and twitter_desc.get("content"):
+            description = twitter_desc["content"]
+        elif meta_desc and meta_desc.get("content"):
+            description = meta_desc["content"]
+
+        logger.info(f"Description: {description[:100] if description else None}")
+
+        # Extract image
         original_image = None
+        og_image = soup.find("meta", property="og:image")
+        twitter_image = soup.find("meta", attrs={"name": "twitter:image"})
 
-        if og_image:
+        image_url = None
+        if og_image and og_image.get("content"):
             image_url = og_image["content"]
-            
+        elif twitter_image and twitter_image.get("content"):
+            image_url = twitter_image["content"]
+
+        if image_url:
             # Check if it's an archive.org URL that contains an embedded original URL
             # Example formats:
             # 1. https://web.archive.org/web/20250304162934im_/https://media.elobservador.com.uy/...
@@ -265,8 +299,9 @@ def parse_from_meta_tags(url):
 
         logger.info(f"Title: {title}")
         logger.info(f"Image: {original_image}")
-        return title, original_image
+        logger.info(f"Description: {description[:100] if description else None}...")
+        return title, original_image, description
 
     except Exception as e:
         logger.error(f"Error getting title from meta tags: {e}")
-    return None, None
+    return None, None, None
