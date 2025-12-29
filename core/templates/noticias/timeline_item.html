@@ -119,6 +119,18 @@
       <p class="text-[11px] md:text-xs text-gray-700 mb-2 leading-snug">{{ noticia.meta_descripcion }}</p>
     {% endif %}
 
+    <!-- Markdown content (if enriched via extension) -->
+    {% if noticia.markdown %}
+      <details class="text-xs text-gray-700 mt-2 mb-2 border border-gray-300 rounded">
+        <summary class="cursor-pointer hover:bg-gray-50 p-2 font-semibold">
+          📄 Ver contenido completo (capturado)
+        </summary>
+        <div class="p-3 bg-gray-50 prose prose-sm max-w-none">
+          {{ noticia.markdown|linebreaks }}
+        </div>
+      </details>
+    {% endif %}
+
     <!-- Entities (if enriched) -->
     {% if noticia.entidades.exists %}
       <div class="mb-2">
@@ -150,6 +162,8 @@
         <p>> meta_titulo: {{ noticia.meta_titulo|default:"null" }}</p>
         <p>> meta_imagen: {{ noticia.meta_imagen|default:"null"|truncatechars:60 }}</p>
         <p>> meta_descripcion: {{ noticia.meta_descripcion|default:"null"|truncatechars:100 }}</p>
+        <p>> captured_html: {% if noticia.captured_html %}{{ noticia.captured_html|length }} chars{% else %}null{% endif %}</p>
+        <p>> markdown: {% if noticia.markdown %}{{ noticia.markdown|length }} chars{% else %}null{% endif %}</p>
         <p>> entidades: {{ noticia.entidades.all|length }}</p>
         <p>> votos: {{ noticia.votos.all|length }}</p>
       </div>

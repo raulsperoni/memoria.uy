@@ -185,6 +185,83 @@ BAD_TITLES = ["la diaria"]
 BAD_URLS = ["https://ladiaria.com.uy/static/meta/la-diaria-1000x1000.png"]
 
 
+def parse_from_html_string(html, base_url=None):
+    """
+    Extract title, image, and description from HTML string.
+    Similar to parse_from_meta_tags but works with captured HTML.
+    Returns: (title, image, description) tuple
+    """
+    try:
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Extract title with multiple fallbacks
+        title = None
+        og_title = soup.find("meta", property="og:title")
+        twitter_title = soup.find("meta", attrs={"name": "twitter:title"})
+        html_title = soup.find("title")
+        h1_title = soup.find("h1")
+
+        if og_title and og_title.get("content"):
+            title = og_title["content"]
+        elif twitter_title and twitter_title.get("content"):
+            title = twitter_title["content"]
+        elif h1_title and h1_title.get_text().strip():
+            title = h1_title.get_text().strip()
+        elif html_title and html_title.string:
+            title = html_title.string.strip()
+
+        # Filter bad titles (too short or generic)
+        if title and (
+            title.lower() in [t.lower() for t in BAD_TITLES]
+            or len(title) < 10
+            or title.lower() in ['mostrar todos los tags', 'tags']
+        ):
+            # Fallback to H1 if meta title is bad
+            if h1_title and h1_title.get_text().strip():
+                title = h1_title.get_text().strip()
+            else:
+                title = None
+
+        # Extract description
+        description = None
+        og_desc = soup.find("meta", property="og:description")
+        twitter_desc = soup.find("meta", attrs={"name": "twitter:description"})
+        meta_desc = soup.find("meta", attrs={"name": "description"})
+
+        if og_desc and og_desc.get("content"):
+            description = og_desc["content"]
+        elif twitter_desc and twitter_desc.get("content"):
+            description = twitter_desc["content"]
+        elif meta_desc and meta_desc.get("content"):
+            description = meta_desc["content"]
+
+        # Extract image
+        image_url = None
+        og_image = soup.find("meta", property="og:image")
+        twitter_image = soup.find("meta", attrs={"name": "twitter:image"})
+
+        if og_image and og_image.get("content"):
+            image_url = og_image["content"]
+        elif twitter_image and twitter_image.get("content"):
+            image_url = twitter_image["content"]
+
+        # Make relative URLs absolute if base_url provided
+        if image_url and base_url and not image_url.startswith(('http://', 'https://')):
+            from urllib.parse import urljoin
+            image_url = urljoin(base_url, image_url)
+
+        # Filter bad images
+        if image_url and image_url in BAD_URLS:
+            image_url = None
+
+        logger.info(f"Parsed from HTML - Title: {title}, Image: {image_url}")
+        return title, image_url, description
+
+    except Exception as e:
+        logger.error(f"Error parsing HTML string: {e}")
+        return None, None, None
+
+
 def parse_from_meta_tags(url):
     """
     Extract title, image, and description from URL meta tags.

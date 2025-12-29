@@ -224,3 +224,71 @@ def refresh_proxy_list(max_proxies: int = 20, test_url: str = "https://www.googl
     
     logger.info(f"Proxy list refresh completed. Found {len(working_proxies)} working proxies")
     return len(working_proxies)
+
+
+@shared_task
+@task_lock()
+def enrich_from_captured_html(noticia_id):
+    """
+    Convert captured HTML to markdown using LLM.
+    This is the entry point for browser extension submissions.
+
+    Flow:
+    1. Get Noticia with captured_html
+    2. Convert HTML → Markdown using LLM
+    3. Save markdown to noticia
+
+    Args:
+        noticia_id: ID of the Noticia to enrich
+    """
+    try:
+        noticia = Noticia.objects.get(id=noticia_id)
+
+        if not noticia.captured_html:
+            logger.warning(
+                f"No captured HTML for noticia {noticia_id}"
+            )
+            return None
+
+        if noticia.markdown:
+            logger.info(
+                f"Noticia {noticia_id} already has markdown, skipping"
+            )
+            return noticia_id
+
+        logger.info(
+            f"Converting captured HTML to markdown for noticia {noticia_id}"
+        )
+
+        # Use meta_titulo as hint for LLM
+        title_hint = noticia.meta_titulo or "Article"
+
+        # Convert HTML to markdown
+        markdown = parse.parse_noticia_markdown(
+            noticia.captured_html,
+            title_hint
+        )
+
+        if markdown:
+            noticia.markdown = markdown
+            noticia.save()
+            logger.info(
+                f"Successfully converted HTML to markdown for "
+                f"noticia {noticia_id}"
+            )
+            return noticia_id
+        else:
+            logger.error(
+                f"Failed to convert HTML to markdown for noticia {noticia_id}"
+            )
+            return None
+
+    except Noticia.DoesNotExist:
+        logger.error(f"Noticia {noticia_id} does not exist")
+        return None
+    except Exception as e:
+        logger.exception(
+            f"Unexpected error in enrich_from_captured_html for "
+            f"noticia {noticia_id}: {e}"
+        )
+        return None

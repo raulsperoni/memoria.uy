@@ -27,6 +27,10 @@ from core.views import (
     RefreshNoticiaView,
     DeleteNoticiaView,
 )
+from core.api_views import (
+    SubmitFromExtensionView,
+    CheckVoteView,
+)
 from memoria.views import health_check
 
 urlpatterns = (
@@ -44,6 +48,17 @@ urlpatterns = (
             "noticias/<int:pk>/delete/",
             DeleteNoticiaView.as_view(),
             name="noticia-delete",
+        ),
+        # Extension API endpoints
+        path(
+            "api/submit-from-extension/",
+            SubmitFromExtensionView.as_view(),
+            name="api-submit-extension",
+        ),
+        path(
+            "api/check-vote/",
+            CheckVoteView.as_view(),
+            name="api-check-vote",
         ),
         path("accounts/", include("allauth.urls")),
         path("__reload__/", include("django_browser_reload.urls")),

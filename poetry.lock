@@ -1062,6 +1062,22 @@ asgiref = ">=3.6"
 django = ">=4.2"
 
 [[package]]
+name = "django-cors-headers"
+version = "4.9.0"
+description = "django-cors-headers is a Django application for handling the server headers required for Cross-Origin Resource Sharing (CORS)."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "django_cors_headers-4.9.0-py3-none-any.whl", hash = "sha256:15c7f20727f90044dcee2216a9fd7303741a864865f0c3657e28b7056f61b449"},
+    {file = "django_cors_headers-4.9.0.tar.gz", hash = "sha256:fe5d7cb59fdc2c8c646ce84b727ac2bca8912a247e6e68e1fb507372178e59e8"},
+]
+
+[package.dependencies]
+asgiref = ">=3.6"
+django = ">=4.2"
+
+[[package]]
 name = "django-tailwind"
 version = "3.8.0"
 description = "Tailwind CSS Framework for Django projects"
@@ -3866,4 +3882,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "8434a0af7f6f52121fc168fbede02afc443d7e23e0de1b081d8055089fe8ead9"
+content-hash = "2f557304c183fa8fbdd91312642cecc58adf1d350e21e5ac339a1f780c23ec1f"
