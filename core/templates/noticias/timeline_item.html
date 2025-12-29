@@ -9,13 +9,65 @@
     </div>
   </div>
 
-  <!-- Image (if exists) -->
+  <!-- Image with Vote Buttons Overlay OR Vote Buttons Bar -->
   {% if noticia.mostrar_imagen %}
-    <img src="{{ noticia.mostrar_imagen }}" alt="{{ noticia.mostrar_titulo }}" class="w-full object-cover border-b-2 border-black">
+    <div class="relative border-b-2 border-black group">
+      <img src="{{ noticia.mostrar_imagen }}" alt="{{ noticia.mostrar_titulo }}" class="w-full object-cover">
+
+      <!-- Vote buttons overlay -->
+      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
+        <form hx-post="{% url 'vote' noticia.pk %}"
+              hx-target="#vote-area-{{ noticia.pk }}"
+              hx-swap="outerHTML"
+              class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-3">
+          {% csrf_token %}
+          <button type="submit" name="opinion" value="buena"
+            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
+              {% if noticia.user_vote == 'buena' %}bg-black text-white{% endif %}">
+            😊
+          </button>
+          <button type="submit" name="opinion" value="neutral"
+            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
+              {% if noticia.user_vote == 'neutral' %}bg-black text-white{% endif %}">
+            😐
+          </button>
+          <button type="submit" name="opinion" value="mala"
+            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
+              {% if noticia.user_vote == 'mala' %}bg-black text-white{% endif %}">
+            😞
+          </button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <!-- Compact vote buttons bar for news without images -->
+    <div class="border-b-2 border-black bg-gray-50 p-2">
+      <form hx-post="{% url 'vote' noticia.pk %}"
+            hx-target="#vote-area-{{ noticia.pk }}"
+            hx-swap="outerHTML"
+            class="flex gap-2 justify-center">
+        {% csrf_token %}
+        <button type="submit" name="opinion" value="buena"
+          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
+            {% if noticia.user_vote == 'buena' %}bg-black text-white{% endif %}">
+          😊
+        </button>
+        <button type="submit" name="opinion" value="neutral"
+          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
+            {% if noticia.user_vote == 'neutral' %}bg-black text-white{% endif %}">
+          😐
+        </button>
+        <button type="submit" name="opinion" value="mala"
+          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
+            {% if noticia.user_vote == 'mala' %}bg-black text-white{% endif %}">
+          😞
+        </button>
+      </form>
+    </div>
   {% endif %}
 
   <!-- Metadata Bar -->
-  <div class="border-b-2 border-black px-3 py-1.5 bg-gray-50 flex items-center text-[10px] text-gray-700">
+  <div class="border-b-2 border-black px-3 py-1.5 bg-gray-50 flex items-center justify-between text-[10px] text-gray-700">
     <div class="flex flex-wrap items-center gap-x-3">
       <a href="{{ noticia.enlace }}" target="_blank" class="hover:underline">
         → leer original
@@ -23,6 +75,13 @@
       {% if noticia.mostrar_fecha %}
         <span>{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}
+    </div>
+
+    <div class="flex items-center gap-x-2 text-gray-500">
+      {% load vote_extras %}
+      <span title="Votos buenos">😊 {{ noticia.votos|vote_count:"buena" }}</span>
+      <span title="Votos neutrales">😐 {{ noticia.votos|vote_count:"neutral" }}</span>
+      <span title="Votos malos">😞 {{ noticia.votos|vote_count:"mala" }}</span>
     </div>
 
     <!-- Admin actions -->
@@ -50,59 +109,54 @@
     {% endif %}
   </div>
 
-  <!-- Content Grid: 2 columns on desktop -->
-  <div class="md:grid md:grid-cols-[1fr_200px]">
-    <!-- Main content column -->
-    <div class="p-3 md:border-r-2 md:border-black">
-      <!-- Title -->
-      <h3 class="text-sm md:text-base font-bold mb-1.5 leading-tight">{{ noticia.mostrar_titulo }}</h3>
+  <!-- Content -->
+  <div class="p-3">
+    <!-- Title -->
+    <h3 class="text-sm md:text-base font-bold mb-1.5 leading-tight">{{ noticia.mostrar_titulo }}</h3>
 
-      <!-- Description -->
-      {% if noticia.meta_descripcion %}
-        <p class="text-[11px] md:text-xs text-gray-700 mb-2 leading-snug">{{ noticia.meta_descripcion }}</p>
-      {% endif %}
+    <!-- Description -->
+    {% if noticia.meta_descripcion %}
+      <p class="text-[11px] md:text-xs text-gray-700 mb-2 leading-snug">{{ noticia.meta_descripcion }}</p>
+    {% endif %}
 
-      <!-- Entities (if enriched) -->
-      {% if noticia.entidades.exists %}
-        <div class="mb-2">
-          <p class="text-[10px] text-gray-600 mb-1">menciones:</p>
-          <div class="flex flex-wrap gap-1.5">
-            {% for entidad in noticia.entidades.all %}
-              <span class="border border-black px-1.5 py-0.5 text-[10px]">
-                {{ entidad.entidad.nombre }}
-                {% if entidad.sentimiento == "positivo" %}
-                  😊
-                {% elif entidad.sentimiento == "negativo" %}
-                  😞
-                {% else %}
-                  😐
-                {% endif %}
-              </span>
-            {% endfor %}
-          </div>
+    <!-- Entities (if enriched) -->
+    {% if noticia.entidades.exists %}
+      <div class="mb-2">
+        <p class="text-[10px] text-gray-600 mb-1">menciones:</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for entidad in noticia.entidades.all %}
+            <span class="border border-black px-1.5 py-0.5 text-[10px]">
+              {{ entidad.entidad.nombre }}
+              {% if entidad.sentimiento == "positivo" %}
+                😊
+              {% elif entidad.sentimiento == "negativo" %}
+                😞
+              {% else %}
+                😐
+              {% endif %}
+            </span>
+          {% endfor %}
         </div>
-      {% endif %}
+      </div>
+    {% endif %}
 
-      <!-- Debug section (staff only) -->
-      {% if user.is_staff %}
-      <details class="text-xs text-gray-600 mt-3 border-t border-gray-300 pt-2">
-        <summary class="cursor-pointer hover:text-black">[ debug ]</summary>
-        <div class="mt-2 font-mono space-y-1">
-          <p>> id: {{ noticia.pk }}</p>
-          <p>> enlace: {{ noticia.enlace|truncatechars:60 }}</p>
-          <p>> meta_titulo: {{ noticia.meta_titulo|default:"null" }}</p>
-          <p>> meta_imagen: {{ noticia.meta_imagen|default:"null"|truncatechars:60 }}</p>
-          <p>> meta_descripcion: {{ noticia.meta_descripcion|default:"null"|truncatechars:100 }}</p>
-          <p>> entidades: {{ noticia.entidades.all|length }}</p>
-          <p>> votos: {{ noticia.votos.all|length }}</p>
-        </div>
-      </details>
-      {% endif %}
-    </div>
-
-    <!-- Vote Area Column (right side on desktop, below on mobile) -->
-    <div id="vote-area-{{ noticia.pk }}">
-      {% include "noticias/vote_area.html" %}
-    </div>
+    <!-- Debug section (staff only) -->
+    {% if user.is_staff %}
+    <details class="text-xs text-gray-600 mt-3 border-t border-gray-300 pt-2">
+      <summary class="cursor-pointer hover:text-black">[ debug ]</summary>
+      <div class="mt-2 font-mono space-y-1">
+        <p>> id: {{ noticia.pk }}</p>
+        <p>> enlace: {{ noticia.enlace|truncatechars:60 }}</p>
+        <p>> meta_titulo: {{ noticia.meta_titulo|default:"null" }}</p>
+        <p>> meta_imagen: {{ noticia.meta_imagen|default:"null"|truncatechars:60 }}</p>
+        <p>> meta_descripcion: {{ noticia.meta_descripcion|default:"null"|truncatechars:100 }}</p>
+        <p>> entidades: {{ noticia.entidades.all|length }}</p>
+        <p>> votos: {{ noticia.votos.all|length }}</p>
+      </div>
+    </details>
+    {% endif %}
   </div>
+
+  <!-- Hidden vote area for HTMX swap target -->
+  <div id="vote-area-{{ noticia.pk }}" class="hidden"></div>
 </div>

@@ -7,7 +7,9 @@ Estrategia de comunicación para usuarios uruguayos.
 ## Propuesta de Valor Central
 
 **Qué hacen:**
-"Votá noticias - no solo qué pasó, sino cómo te hizo sentir. ¿Fue buen periodismo? ¿Mala información? ¿O simplemente... meh?"
+"Votá noticias - no solo qué pasó, sino qué pensás de lo que pasó. ¿Buena noticia? ¿Mala noticia? ¿Te da igual?"
+
+**IMPORTANTE:** El voto es sobre **el contenido/evento de la noticia**, NO sobre la calidad del periodismo.
 
 **Por qué deberían:**
 1. **Autoconocimiento**: "Descubrí dónde te parás en el panorama mediático uruguayo"
@@ -70,7 +72,7 @@ Votá anónimamente. Filtrá por consenso, controversia, o solo TUS votos. Sin t
 [Hero: Tarjeta de noticia simple con 3 botones de voto]
 
 "¿Qué pensás de esta noticia?"
-😊 Buena   😐 Neutral   😞 Mala
+😊 Buena noticia   😐 Me da igual   😞 Mala noticia
 
 [Texto pequeño debajo]
 Sin registro. Sin seguimiento. Solo votá.
@@ -87,7 +89,7 @@ Sin registro. Sin seguimiento. Solo votá.
 😐 Neutral: 128 personas (25%)
 😞 Mala: 156 personas (30%)
 
-Estás con el 45% que piensa que esto es buen periodismo.
+Estás con el 45% que piensa que esta es una buena noticia.
 
 [Filtrar: Mostrame artículos así]
 ```
@@ -161,7 +163,7 @@ Temas de consenso en TODOS los grupos: [lista]"
 ### Para medios de comunicación (Fase 3 - widgets embebibles):
 **"Dejá que los lectores reaccionen más allá de los comentarios"**
 - Embebé votación de Memoria en tus artículos
-- Mirá cómo es recibido tu periodismo
+- Mirá cómo reaccionan al contenido que publicás
 - Compará el sentimiento de tu audiencia con el promedio nacional
 
 ### Para investigadores/activistas (Fase 4 - clustering):
@@ -209,9 +211,11 @@ Votá anónimamente. Mirá patrones. Sin seguimiento.
 ## Microcopy Específico para UI
 
 ### Botones de Voto
-- 😊 Buena (buen periodismo, información útil)
-- 😐 Neutral (ni buena ni mala)
-- 😞 Mala (mal periodismo, desinformación)
+- 😊 Buena (buena noticia - contenido positivo)
+- 😐 Neutral (me da igual - ni buena ni mala)
+- 😞 Mala (mala noticia - contenido negativo)
+
+**Nota:** El voto refleja tu reacción al CONTENIDO/EVENTO reportado, no a la calidad periodística.
 
 ### Filtros
 - "Todas las noticias"
