@@ -5,16 +5,12 @@
   <div id="notification-area" class="fixed top-20 right-4 z-50 max-w-md"></div>
 
   <!-- Hero / Value Prop -->
-  <div class="border-2 border-black bg-white p-4 mb-4">
+  <div class="border-0 border-black bg-white p-4 mb-4">
     <h2 class="text-lg md:text-xl font-bold mb-2">
-      ¿Qué piensan realmente los uruguayos sobre las noticias?
+      Votá anónimamente. Mirá patrones. Sin seguimiento.
     </h2>
     <p class="text-xs md:text-sm text-gray-700 mb-2">
-      Votá anónimamente. Mirá patrones. Sin seguimiento.
-    </p>
-    <div class="border-t border-black my-2"></div>
-    <p class="text-[10px] md:text-xs text-gray-600">
-      > no hace falta cuenta. solo votá.
+      Votá noticias existentes, o agregá una nueva. Sin registro. Sin seguimiento. Solo votá.
     </p>
   </div>
 
@@ -32,7 +28,7 @@
       <!-- URL Input -->
       <div class="mb-2">
         <label class="block text-[10px] text-gray-600 mb-1">
-          01. pegá el link de la noticia
+          
         </label>
         {{ form.enlace }}
       </div>
@@ -40,23 +36,20 @@
       <!-- Opinion Buttons -->
       <div>
         <label class="block text-[10px] text-gray-600 mb-1">
-          02. ¿qué pensás de la noticia?
+          
         </label>
         <div class="grid grid-cols-3 gap-2">
           <button type="submit" name="opinion" value="buena"
             class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
-            <span class="block text-[9px] text-gray-500 mb-0.5">[ buena noticia ]</span>
-            <span class="text-[11px] font-medium">😊 buena</span>
+            <span class="text-[11px] font-medium">😊 buena noticia</span>
           </button>
           <button type="submit" name="opinion" value="neutral"
             class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
-            <span class="block text-[9px] text-gray-500 mb-0.5">[ me da igual ]</span>
             <span class="text-[11px] font-medium">😐 neutral</span>
           </button>
           <button type="submit" name="opinion" value="mala"
             class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
-            <span class="block text-[9px] text-gray-500 mb-0.5">[ mala noticia ]</span>
-            <span class="text-[11px] font-medium">😞 mala</span>
+            <span class="text-[11px] font-medium">😞 mala noticia</span>
           </button>
         </div>
       </div>
@@ -101,15 +94,23 @@
     <!-- Filter options (collapsible) -->
     <div x-show="openFilters" x-transition class="p-3 bg-white space-y-4">
 
-      <!-- Basic filter: All news -->
+      <!-- Basic filters -->
       <div>
-        <h4 class="text-[10px] text-gray-600 mb-1">// filtro básico</h4>
-        <button hx-get="{% url 'timeline' %}?filter=todas"
-                hx-target="#timeline-items"
-                hx-swap="innerHTML"
-                class="border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors text-xs">
-          todas las noticias
-        </button>
+        <h4 class="text-[10px] text-gray-600 mb-2">// filtro básico</h4>
+        <div class="flex gap-2 flex-wrap">
+          <button hx-get="{% url 'timeline' %}?filter=nuevas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs {% if current_filter == 'nuevas' or not current_filter %}bg-black text-white{% else %}hover:bg-black hover:text-white{% endif %}">
+            noticias nuevas
+          </button>
+          <button hx-get="{% url 'timeline' %}?filter=todas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs {% if current_filter == 'todas' %}bg-black text-white{% else %}hover:bg-black hover:text-white{% endif %}">
+            todas las noticias
+          </button>
+        </div>
       </div>
 
       <!-- Opinion filters -->
@@ -236,6 +237,36 @@
 
 <!-- JavaScript -->
 <script>
+  // Extension session synchronization
+  console.log('[Memoria Web] Checking for extension session in localStorage...');
+
+  // Check if extension has set a session ID in localStorage
+  const extensionSessionId = localStorage.getItem('memoria_extension_session');
+
+  if (extensionSessionId) {
+    console.log('[Memoria Web] ✓ Found extension session:', extensionSessionId);
+
+    // Inject extension session into all HTMX requests
+    document.body.addEventListener('htmx:configRequest', function(event) {
+      console.log('[Memoria Web] Adding X-Extension-Session header to request:', {
+        url: event.detail.path,
+        sessionId: extensionSessionId
+      });
+      event.detail.headers['X-Extension-Session'] = extensionSessionId;
+    });
+
+    // Log when requests complete
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+      console.log('[Memoria Web] Request completed:', {
+        url: event.detail.pathInfo.finalRequestPath,
+        status: event.detail.xhr.status
+      });
+    });
+  } else {
+    console.log('[Memoria Web] No extension session found in localStorage');
+    console.log('[Memoria Web] Will use Django session instead');
+  }
+
   // Notification system
   function showNotification(message, type) {
     const notificationArea = document.getElementById('notification-area');

@@ -114,10 +114,19 @@ async function submitArticle(data, apiUrl) {
   // Get or create session ID
   let { sessionId } = await chrome.storage.local.get('sessionId');
 
+  console.log('[Memoria Extension] Current session ID:', sessionId);
+
   if (!sessionId) {
     sessionId = generateSessionId();
     await chrome.storage.local.set({ sessionId });
+    console.log('[Memoria Extension] ✓ Generated new session ID:', sessionId);
+  } else {
+    console.log('[Memoria Extension] ✓ Using existing session ID:', sessionId);
   }
+
+  console.log('[Memoria Extension] Submitting article with headers:', {
+    'X-Extension-Session': sessionId
+  });
 
   const response = await fetch(`${apiUrl}/api/submit-from-extension/`, {
     method: 'POST',
@@ -127,6 +136,8 @@ async function submitArticle(data, apiUrl) {
     },
     body: JSON.stringify(data)
   });
+
+  console.log('[Memoria Extension] Response status:', response.status);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

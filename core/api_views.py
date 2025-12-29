@@ -33,6 +33,9 @@ class SubmitFromExtensionView(View):
     """
 
     def post(self, request):
+        logger.info("=" * 60)
+        logger.info("[Extension API] Submit from extension called")
+
         try:
             # Parse JSON body
             data = json.loads(request.body)
@@ -41,6 +44,10 @@ class SubmitFromExtensionView(View):
             vote_opinion = data.get("vote")
             title = data.get("title", "")
             metadata = data.get("metadata", {})
+
+            logger.info(f"[Extension API] URL: {url}")
+            logger.info(f"[Extension API] Vote: {vote_opinion}")
+            logger.info(f"[Extension API] HTML length: {len(html) if html else 0}")
 
             # Validate required fields
             if not url:
@@ -56,7 +63,10 @@ class SubmitFromExtensionView(View):
 
             # Get session ID from extension
             session_id = get_extension_session_id(request)
+            logger.info(f"[Extension API] Session ID: {session_id}")
+
             if not session_id:
+                logger.error("[Extension API] No session ID provided!")
                 return JsonResponse({"error": "Session ID es requerido"}, status=400)
 
             # Get or create Noticia
@@ -138,10 +148,20 @@ class SubmitFromExtensionView(View):
             # Check if user is authenticated (via cookie/token)
             if request.user.is_authenticated:
                 vote_data = {"usuario": request.user}
+                logger.info(
+                    f"[Extension API] Authenticated user: {request.user.username}"
+                )
+            else:
+                logger.info(f"[Extension API] Anonymous vote with session: {session_id}")
 
             # Try to update existing vote or create new one
             vote, vote_created = Voto.objects.update_or_create(
                 noticia=noticia, **vote_data, defaults={"opinion": vote_opinion}
+            )
+
+            logger.info(
+                f"[Extension API] Vote {'created' if vote_created else 'updated'}: "
+                f"{vote.id}"
             )
 
             # Trigger background task for LLM enrichment
@@ -150,7 +170,7 @@ class SubmitFromExtensionView(View):
 
                 enrich_from_captured_html.delay(noticia.id)
                 logger.info(
-                    f"Triggered LLM enrichment for noticia {noticia.id}"
+                    f"[Extension API] Triggered LLM enrichment for noticia {noticia.id}"
                 )
 
             return JsonResponse(

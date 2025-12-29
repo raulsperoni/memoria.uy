@@ -1,7 +1,7 @@
 {# templates/noticias/timeline_items.html #}
 
 {% for noticia in noticias %}
-{% include "noticias/timeline_item.html" with noticia=noticia %}
+{% include "noticias/timeline_item.html" with noticia=noticia current_filter=current_filter %}
 {% endfor %}
 
 {# Empty state #}
@@ -15,7 +15,7 @@
 {# Infinite scroll trigger #}
 {% if page_obj.has_next %}
   <div class="text-center py-8 mono text-xs text-gray-600"
-    hx-get="{% url 'timeline' %}?page={{ page_obj.next_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}{% if request.GET.entidad %}&entidad={{ request.GET.entidad }}{% endif %}"
+    hx-get="{% url 'timeline' %}?page={{ page_obj.next_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if request.GET.entidad %}&entidad={{ request.GET.entidad }}{% endif %}"
     hx-trigger="revealed"
     hx-swap="outerHTML">
     <div class="border-2 border-black bg-white p-4">

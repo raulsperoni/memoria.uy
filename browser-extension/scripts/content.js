@@ -1,5 +1,52 @@
 // content.js - Extracts article HTML from the current page
 
+// Sync extension session ID to localStorage for memoria.uy domain
+(async function syncSessionToLocalStorage() {
+  const currentDomain = window.location.hostname;
+
+  console.log('[Memoria Extension] Current domain:', currentDomain);
+
+  // Check if we're on memoria.uy or localhost (development)
+  if (currentDomain.includes('memoria.uy') ||
+      currentDomain === 'localhost' ||
+      currentDomain === '127.0.0.1') {
+
+    console.log('[Memoria Extension] On memoria.uy domain, syncing session...');
+
+    try {
+      // Get extension session ID
+      const result = await chrome.storage.local.get('sessionId');
+
+      console.log('[Memoria Extension] Extension session ID:', result.sessionId);
+
+      if (result.sessionId) {
+        // Store in page's localStorage for web app to use
+        localStorage.setItem('memoria_extension_session', result.sessionId);
+        console.log(
+          '[Memoria Extension] ✓ Session ID synced to localStorage:',
+          result.sessionId
+        );
+
+        // Also set as cookie so Django can read it on initial page load
+        document.cookie = `memoria_extension_session=${result.sessionId}; path=/; max-age=31536000; SameSite=Lax`;
+        console.log('[Memoria Extension] ✓ Session ID synced to cookie');
+
+        // Verify it was stored correctly
+        const stored = localStorage.getItem('memoria_extension_session');
+        console.log('[Memoria Extension] Verified stored session:', stored);
+      } else {
+        console.warn(
+          '[Memoria Extension] No session ID found in chrome.storage'
+        );
+      }
+    } catch (error) {
+      console.error('[Memoria Extension] Failed to sync session:', error);
+    }
+  } else {
+    console.log('[Memoria Extension] Not on memoria.uy domain, skipping sync');
+  }
+})();
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getArticleData') {
