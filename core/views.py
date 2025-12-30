@@ -325,8 +325,35 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
             },
         )
 
-        # Fetch metadata (fast, synchronous)
-        if created or not noticia.meta_titulo:
+        # Try to capture full HTML for better parsing
+        html_captured = False
+        if created and not noticia.captured_html:
+            from core import url_requests
+            from core.tasks import enrich_from_captured_html
+
+            try:
+                response = url_requests.get(enlace, timeout=10)
+                if response.status_code == 200:
+                    noticia.captured_html = response.text
+                    noticia.save()
+                    html_captured = True
+                    logger.info(
+                        f"Captured HTML for noticia {noticia.id} from web"
+                    )
+                    # Trigger async enrichment with LLM
+                    enrich_from_captured_html.delay(noticia.id)
+                else:
+                    logger.warning(
+                        f"Failed to capture HTML for {enlace}: "
+                        f"HTTP {response.status_code}"
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Could not capture HTML for {enlace}: {e}"
+                )
+
+        # Fallback: fetch basic metadata if HTML capture failed
+        if not html_captured and (created or not noticia.meta_titulo):
             try:
                 noticia.update_meta_from_url()
             except Exception as e:
