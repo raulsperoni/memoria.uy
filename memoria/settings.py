@@ -16,12 +16,19 @@ DATABASE_URL_ENV = os.getenv(
     "DATABASE_URL", os.getenv("SUPABASE_DATABASE_URL", None)
 )
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+# ALLOWED_HOSTS - Railway provides RAILWAY_PUBLIC_DOMAIN
+allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
+railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+if railway_domain:
+    allowed_hosts.append(railway_domain)
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts if host.strip()]
 
 # CSRF trusted origins - split by comma to support multiple domains
 csrf_origins = os.getenv(
     "CSRF_TRUSTED_ORIGINS", "https://memoria.uy"
 ).split(",")
+if railway_domain:
+    csrf_origins.append(f"https://{railway_domain}")
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins]
 
 
@@ -210,6 +217,8 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 cors_allowed = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:8000,https://memoria.uy"
 ).split(",")
+if railway_domain:
+    cors_allowed.append(f"https://{railway_domain}")
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_allowed]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
