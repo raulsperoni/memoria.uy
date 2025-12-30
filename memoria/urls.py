@@ -27,6 +27,7 @@ from core.views import (
     RefreshNoticiaView,
     DeleteNoticiaView,
     AcercaDeView,
+    PrivacidadView,
 )
 from core.api_views import (
     SubmitFromExtensionView,
@@ -38,7 +39,8 @@ urlpatterns = (
     [
         path("admin/", admin.site.urls),
         path("", NewsTimelineView.as_view(), name="timeline"),
-        path("acerca-de/", AcercaDeView.as_view(), name="acerca-de"),
+        path("acerca-de/", AcercaDeView.as_view(), name="acerca_de"),
+        path("privacidad/", PrivacidadView.as_view(), name="privacidad"),
         path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
         path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
         path(

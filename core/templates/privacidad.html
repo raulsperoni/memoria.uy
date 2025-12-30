@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-8 border-b-2 border-black pb-4">
+    <h1 class="text-3xl md:text-4xl font-bold mono mb-2">
+      Política de Privacidad
+    </h1>
+    <p class="text-sm text-gray-600 mono">
+      Última actualización: 30 de diciembre de 2025
+    </p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="space-y-8 text-sm md:text-base leading-relaxed">
+
+    <!-- Introducción -->
+    <section>
+      <p class="mb-3">
+        Memoria.uy es un proyecto académico y de interés social que respeta
+        tu privacidad. Esta política explica qué información recopilamos,
+        cómo la usamos y tus derechos.
+      </p>
+      <p class="text-gray-700">
+        Al usar memoria.uy (sitio web o extensión de navegador),
+        aceptás las prácticas descritas en esta política.
+      </p>
+    </section>
+
+    <!-- 1. Información que recopilamos -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">1.</span>
+        Información que recopilamos
+      </h2>
+
+      <div class="space-y-4">
+        <div>
+          <p class="font-semibold mono text-sm mb-2">
+            1.1 Información que vos proporcionás
+          </p>
+          <ul class="pl-4 space-y-1 text-gray-700">
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>URLs de noticias:</strong> Las direcciones web de
+              artículos que enviás para votar o archivar.</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>Contenido HTML:</strong> Cuando usás la extensión
+              de navegador, capturamos el contenido completo de la página
+              para procesarlo (esto permite acceder a artículos detrás de
+              paywalls).</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>Votos:</strong> Tu opinión sobre cada noticia
+              (buena/mala/neutral).</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>Datos de cuenta (opcional):</strong> Si en el
+              futuro activamos el registro de usuarios, podríamos recopilar
+              email. Actualmente el registro está deshabilitado.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-semibold mono text-sm mb-2">
+            1.2 Información recopilada automáticamente
+          </p>
+          <ul class="pl-4 space-y-1 text-gray-700">
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>Identificador de sesión:</strong> Un ID único
+              generado aleatoriamente (UUID) para vincular tus votos de
+              forma anónima. No contiene información personal.</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>Dirección IP:</strong> Registrada temporalmente
+              en logs del servidor para seguridad y depuración. No se
+              vincula permanentemente a tus votos.</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span><strong>Información técnica:</strong> Tipo de navegador,
+              sistema operativo, timestamps de acceso (logs estándar de
+              servidor web).</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-semibold mono text-sm mb-2">
+            1.3 Información que NO recopilamos
+          </p>
+          <ul class="pl-4 space-y-1 text-gray-700">
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span>No rastreamos tu navegación fuera de memoria.uy</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span>No usamos cookies de terceros o trackers publicitarios</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span>No vinculamos tu identidad real a tus votos</span>
+            </li>
+            <li class="flex items-start">
+              <span class="mr-2">•</span>
+              <span>No vendemos ni compartimos datos con anunciantes</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Cómo usamos la información -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">2.</span>
+        Cómo usamos la información
+      </h2>
+
+      <ul class="pl-4 space-y-2 text-gray-700">
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Procesamiento de contenido:</strong> Usamos modelos
+          de lenguaje (LLMs vía LiteLLM/OpenRouter) para extraer título,
+          resumen, entidades y sentimiento de los artículos.</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Análisis agregado:</strong> Estudiamos patrones de
+          votación de forma anónima para investigación sobre polarización
+          mediática y consenso social.</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Funcionalidad del servicio:</strong> Vincular tus
+          votos entre sesiones, mostrar filtros personalizados,
+          sincronizar extensión con sitio web.</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Mejora del servicio:</strong> Detectar errores,
+          optimizar rendimiento, prevenir abuso.</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 3. Compartir información con terceros -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">3.</span>
+        Compartir información con terceros
+      </h2>
+
+      <div class="space-y-3">
+        <p class="mb-2">
+          Compartimos información mínima con estos proveedores de servicios:
+        </p>
+
+        <div class="pl-4 space-y-3 text-gray-700">
+          <div>
+            <p class="font-semibold text-black">
+              OpenRouter / Proveedores de LLM
+            </p>
+            <p class="text-sm">
+              Enviamos el contenido HTML de las noticias para procesamiento
+              con inteligencia artificial. No enviamos tu ID de sesión ni
+              información personal. Estos servicios tienen sus propias
+              políticas de privacidad.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-semibold text-black">Hosting / Infraestructura</p>
+            <p class="text-sm">
+              Usamos proveedores de hosting (Railway, potencialmente otros)
+              que pueden tener acceso a logs del servidor y datos de
+              infraestructura. Los datos se almacenan en bases de datos
+              gestionadas por estos proveedores.
+            </p>
+          </div>
+        </div>
+
+        <p class="mt-4 border-l-4 border-gray-300 pl-4 text-gray-700">
+          <strong>No vendemos</strong> tus datos. No compartimos información
+          con anunciantes, brokers de datos, o redes sociales.
+        </p>
+      </div>
+    </section>
+
+    <!-- 4. Retención de datos -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">4.</span>
+        Retención de datos
+      </h2>
+
+      <ul class="pl-4 space-y-2 text-gray-700">
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Votos y noticias:</strong> Se mantienen
+          indefinidamente para valor histórico de investigación.</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Sesiones:</strong> Las sesiones de Django expiran
+          según configuración estándar (típicamente 2 semanas de
+          inactividad). El ID de sesión de la extensión persiste en tu
+          navegador hasta que lo elimines.</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Logs del servidor:</strong> Se mantienen por
+          máximo 30 días para depuración.</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>HTML capturado:</strong> Se almacena para permitir
+          re-procesamiento si es necesario.</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 5. Tus derechos -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">5.</span>
+        Tus derechos
+      </h2>
+
+      <p class="mb-3">
+        Dado que no recopilamos información personal identificable
+        (los votos están vinculados a un ID de sesión anónimo),
+        no podemos identificarte para ejercer derechos GDPR típicos
+        (acceso, rectificación, eliminación).
+      </p>
+
+      <div class="space-y-2 text-gray-700">
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Eliminar tu sesión:</strong> Podés borrar cookies
+          y localStorage de tu navegador en cualquier momento. Esto
+          desvincula tus votos futuros de los anteriores.</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Dejar de usar el servicio:</strong> Podés
+          desinstalar la extensión y dejar de visitar el sitio en
+          cualquier momento.</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span><strong>Contacto:</strong> Si tenés preocupaciones
+          específicas sobre privacidad, contactanos a través de GitHub
+          (ver sección de contacto).</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- 6. Seguridad -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">6.</span>
+        Seguridad
+      </h2>
+
+      <p class="mb-3 text-gray-700">
+        Implementamos medidas de seguridad razonables para proteger los
+        datos:
+      </p>
+
+      <ul class="pl-4 space-y-1 text-gray-700">
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Comunicación cifrada (HTTPS)</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Protección CSRF en formularios</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Validación de entrada para prevenir inyecciones</span>
+        </li>
+        <li class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Logs de acceso para detectar actividad sospechosa</span>
+        </li>
+      </ul>
+
+      <p class="mt-3 text-gray-700">
+        Sin embargo, ningún sistema es 100% seguro. Usá el servicio
+        bajo tu propio riesgo.
+      </p>
+    </section>
+
+    <!-- 7. Extensión de navegador -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">7.</span>
+        Extensión de navegador
+      </h2>
+
+      <p class="mb-3">
+        La extensión de Chrome/Firefox de memoria.uy tiene permisos
+        específicos:
+      </p>
+
+      <div class="space-y-3 text-gray-700">
+        <div>
+          <p class="font-semibold text-black">activeTab</p>
+          <p class="text-sm">
+            Accede al contenido de la página actual solo cuando hacés
+            clic en el ícono de la extensión.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-black">storage</p>
+          <p class="text-sm">
+            Guarda tu ID de sesión localmente en tu navegador
+            (chrome.storage.local). No se sincroniza a otros dispositivos.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-black">scripting</p>
+          <p class="text-sm">
+            Permite inyectar código solo en páginas de memoria.uy para
+            sincronizar tu sesión.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-semibold text-black">host_permissions</p>
+          <p class="text-sm">
+            Comunica únicamente con memoria.uy y localhost:8000
+            (desarrollo). No envía datos a otros sitios.
+          </p>
+        </div>
+      </div>
+
+      <p class="mt-4 border-l-4 border-gray-300 pl-4 text-gray-700">
+        La extensión <strong>no rastrea tu navegación</strong>. El content
+        script que se ejecuta en todas las URLs solo actúa cuando visitás
+        memoria.uy para sincronizar sesiones.
+      </p>
+    </section>
+
+    <!-- 8. Menores de edad -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">8.</span>
+        Menores de edad
+      </h2>
+
+      <p class="text-gray-700">
+        Memoria.uy no está dirigido a menores de 13 años. No recopilamos
+        intencionalmente información de niños. Si descubrimos que hemos
+        recopilado datos de un menor, los eliminaremos.
+      </p>
+    </section>
+
+    <!-- 9. Cambios a esta política -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">9.</span>
+        Cambios a esta política
+      </h2>
+
+      <p class="text-gray-700">
+        Podemos actualizar esta política ocasionalmente. La fecha de
+        "Última actualización" al inicio de la página refleja la versión
+        más reciente. Cambios significativos serán comunicados en el sitio
+        web o repositorio de GitHub.
+      </p>
+    </section>
+
+    <!-- 10. Código abierto -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">10.</span>
+        Transparencia (Código abierto)
+      </h2>
+
+      <p class="mb-3 text-gray-700">
+        El código completo de memoria.uy es público y auditable:
+      </p>
+
+      <p>
+        <a href="https://github.com/raulsperoni/memoria"
+           target="_blank"
+           class="mono text-sm border border-black px-3 py-2 inline-block
+                  hover:bg-black hover:text-white transition-colors">
+          github.com/raulsperoni/memoria
+        </a>
+      </p>
+
+      <p class="mt-3 text-gray-700">
+        Podés verificar exactamente qué hace el código con tus datos.
+        Aceptamos auditorías de seguridad y privacidad de la comunidad.
+      </p>
+    </section>
+
+    <!-- 11. Contacto -->
+    <section class="border-t-2 border-black pt-6 mt-8">
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">11.</span>
+        Contacto
+      </h2>
+
+      <p class="mb-3 text-gray-700">
+        Para consultas sobre privacidad o esta política:
+      </p>
+
+      <div class="space-y-2">
+        <p class="flex items-start">
+          <span class="mr-2 font-semibold">GitHub:</span>
+          <a href="https://github.com/raulsperoni/memoria/issues"
+             target="_blank"
+             class="underline hover:text-gray-600">
+            github.com/raulsperoni/memoria/issues
+          </a>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2 font-semibold">Email:</span>
+          <span class="text-gray-700">
+            [Tu email de contacto - agregar cuando esté disponible]
+          </span>
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Navigation -->
+  <div class="mt-12 mb-8 flex gap-4">
+    <a href="/acerca-de/"
+       class="mono text-sm border-2 border-black px-4 py-2 inline-block
+              hover:bg-black hover:text-white transition-colors">
+      ← Acerca de
+    </a>
+    <a href="{% url 'timeline' %}"
+       class="mono text-sm border-2 border-black px-4 py-2 inline-block
+              hover:bg-black hover:text-white transition-colors">
+      Volver a las noticias
+    </a>
+  </div>
+
+</div>
+{% endblock %}

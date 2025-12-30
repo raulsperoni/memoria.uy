@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Memoria.uy",
   "version": "1.0.0",
-  "description": "Vote on news articles and help archive journalism",
+  "description": "Archivá noticias. Votá anónimamente. Descubrí patrones.",
 
   "permissions": [
     "activeTab",
