@@ -95,17 +95,8 @@ jobs:
 
     - name: Deploy to Railway
       run: |
-        railway up --service web --detach
-        railway up --service worker --detach
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-    - name: Run database migrations
-      run: railway run --service web python manage.py migrate
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-    - name: Collect static files
-      run: railway run --service web python manage.py collectstatic --noinput
+        # Railway auto-deploys on push, this just triggers it explicitly
+        echo "Railway will auto-deploy from GitHub push"
+        echo "Migrations and static files run automatically via railway.json"
       env:
         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
