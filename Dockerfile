@@ -44,8 +44,12 @@ COPY . .
 RUN cd /app/theme/static_src && npm install
 RUN cd /app/theme/static_src && npm run build
 
-# Collect static files during build
-RUN python manage.py collectstatic --noinput || echo "collectstatic will run at deploy time"
+# Collect static files during build (with minimal env vars)
+ENV SECRET_KEY=build-time-secret-key-not-for-runtime
+ENV DEBUG=True
+RUN python manage.py collectstatic --noinput
+ENV SECRET_KEY=
+ENV DEBUG=
 
 # Expose port
 EXPOSE 8000
