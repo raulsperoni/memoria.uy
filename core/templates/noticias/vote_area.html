@@ -1,56 +1,54 @@
 <!-- templates/noticias/vote_area.html -->
 {% load vote_extras %}
-<div class="vote-area mt-4 p-4 bg-gray-50 rounded">
-  <!-- Vote Counts -->
-  <div class="mb-3 flex justify-around text-sm">
-    <div class="flex items-center space-x-1">
-      <span>Buena:</span>
-      <span class="font-semibold">{{ noticia.votos|vote_count:"buena" }}</span>
+<div class="vote-area p-2 md:p-3 bg-gray-50 mono">
+  <!-- Vote Counts - Compact on desktop -->
+  <div class="mb-2 grid grid-cols-3 md:grid-cols-1 gap-1.5 md:gap-2 text-[10px] text-center md:text-left">
+    <div>
+      <div class="text-gray-600">😊</div>
+      <div class="text-sm md:text-base font-bold">{{ noticia.votos|vote_count:"buena" }}</div>
     </div>
-    <div class="flex items-center space-x-1">
-      <span>Mala:</span>
-      <span class="font-semibold">{{ noticia.votos|vote_count:"mala" }}</span>
+    <div>
+      <div class="text-gray-600">😐</div>
+      <div class="text-sm md:text-base font-bold">{{ noticia.votos|vote_count:"neutral" }}</div>
     </div>
-    <div class="flex items-center space-x-1">
-      <span>Neutral:</span>
-      <span class="font-semibold">{{ noticia.votos|vote_count:"neutral" }}</span>
+    <div>
+      <div class="text-gray-600">😞</div>
+      <div class="text-sm md:text-base font-bold">{{ noticia.votos|vote_count:"mala" }}</div>
     </div>
   </div>
-  {% if user.is_authenticated %}
-    <form hx-post="{% url 'vote' noticia.pk %}" hx-target="#vote-area-{{ noticia.pk }}" hx-swap="outerHTML" class="flex flex-col md:flex-row gap-2">
-      {% csrf_token %}
-      <button type="submit" name="opinion" value="buena"
-        class="flex-1 px-4 py-2 rounded text-sm
-          {% if noticia.user_vote == 'buena' %}
-            bg-green-500 text-white
-          {% else %}
-            bg-gray-200 text-gray-700 hover:bg-green-300
-          {% endif %}">
-        Es una buena noticia
-      </button>
-      <button type="submit" name="opinion" value="mala"
-        class="flex-1 px-4 py-2 rounded text-sm
-          {% if noticia.user_vote == 'mala' %}
-            bg-red-500 text-white
-          {% else %}
-            bg-gray-200 text-gray-700 hover:bg-red-300
-          {% endif %}">
-        Es una mala noticia
-      </button>
-      <button type="submit" name="opinion" value="neutral"
-        class="flex-1 px-4 py-2 rounded text-sm
-          {% if noticia.user_vote == 'neutral' %}
-            bg-yellow-500 text-white
-          {% else %}
-            bg-gray-200 text-gray-700 hover:bg-yellow-300
-          {% endif %}">
-        Ni buena ni mala
-      </button>
-    </form>
-  {% else %}
-  <!--
-    <p class="text-center text-sm">
-    </p>
-    -->
-  {% endif %}
+
+  <!-- Voting Buttons - Stacked on desktop -->
+  <form hx-post="{% url 'vote' noticia.pk %}"
+        hx-target="#vote-area-{{ noticia.pk }}"
+        hx-swap="outerHTML"
+        class="grid grid-cols-3 md:grid-cols-1 gap-1.5">
+    {% csrf_token %}
+    <button type="submit" name="opinion" value="buena"
+      class="border-2 px-1.5 py-1.5 md:py-2 text-[10px] transition-colors
+        {% if noticia.user_vote == 'buena' %}
+          border-black bg-black text-white
+        {% else %}
+          border-black bg-white text-black hover:bg-black hover:text-white
+        {% endif %}">
+      <span class="hidden md:inline">😊 </span>buena
+    </button>
+    <button type="submit" name="opinion" value="neutral"
+      class="border-2 px-1.5 py-1.5 md:py-2 text-[10px] transition-colors
+        {% if noticia.user_vote == 'neutral' %}
+          border-black bg-black text-white
+        {% else %}
+          border-black bg-white text-black hover:bg-black hover:text-white
+        {% endif %}">
+      <span class="hidden md:inline">😐 </span>neutral
+    </button>
+    <button type="submit" name="opinion" value="mala"
+      class="border-2 px-1.5 py-1.5 md:py-2 text-[10px] transition-colors
+        {% if noticia.user_vote == 'mala' %}
+          border-black bg-black text-white
+        {% else %}
+          border-black bg-white text-black hover:bg-black hover:text-white
+        {% endif %}">
+      <span class="hidden md:inline">😞 </span>mala
+    </button>
+  </form>
 </div>

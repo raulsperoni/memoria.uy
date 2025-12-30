@@ -1,269 +1,209 @@
 {# templates/noticias/timeline_fragment.html #}
 
-<div id="timeline-container" class="max-w-3xl mx-auto">
-  <!-- Notification area for success messages -->
-  <div id="notification-area" class="fixed top-4 right-4 z-50"></div>
-  <!-- News Entry Form -->
-  <div class="bg-white shadow-lg rounded-lg p-6 border-l-4 border-memoria-blue mb-8 relative">
-    <!-- Form content -->
-    <h2 class="text-2xl font-headline font-bold mb-2 text-memoria-dark">Para resistir el archivo hay que tener Memoria</h2>
-    <p class="text-gray-600 mb-6">
-      Llevá un registro de las noticias y cómo te hacen sentir, dentro de 4 años lo podés necesitar.
+<div id="timeline-container" class="max-w-3xl mx-auto mono">
+  <!-- Notification area -->
+  <div id="notification-area" class="fixed top-20 right-4 z-50 max-w-md"></div>
+
+  <!-- Hero / Value Prop -->
+  <div class="border-0 border-black bg-white p-4 mb-4">
+    <h2 class="text-lg md:text-xl font-bold mb-2">
+      Archivá noticias. Votá anónimamente. Descubrí patrones.
+    </h2>
+    <p class="text-xs md:text-sm text-gray-700 mb-2">
+      Votá noticias existentes, o agregá una nueva. Sin registro. Sin seguimiento.
     </p>
+  </div>
+
+  <!-- News Entry Form -->
+  <div class="border-2 border-black bg-white p-3 md:p-4 mb-4 relative">
+    <h3 class="text-xs font-bold mb-2">[ agregar noticia ]</h3>
+
     <form method="post" action="{% url 'noticia-create' %}"
-          hx-post="{% url 'noticia-create' %}" hx-target="#timeline-container" hx-swap="outerHTML"
+          hx-post="{% url 'noticia-create' %}"
+          hx-target="#timeline-container"
+          hx-swap="outerHTML"
           hx-indicator="#form-overlay">
       {% csrf_token %}
-      <!-- URL Input Field -->
-      <div class="mb-5">
+
+      <!-- URL Input -->
+      <div class="mb-2">
+        <label class="block text-[10px] text-gray-600 mb-1">
+          
+        </label>
         {{ form.enlace }}
       </div>
-      <!-- Voting Buttons -->
-      <div class="mb-4">
-        <p class="text-gray-700 mb-3 font-semibold">Guardar noticia como:</p>
-        <div class="flex flex-col sm:flex-row gap-2">
+
+      <!-- Opinion Buttons -->
+      <div>
+        <label class="block text-[10px] text-gray-600 mb-1">
+          
+        </label>
+        <div class="grid grid-cols-3 gap-2">
           <button type="submit" name="opinion" value="buena"
-            class="flex-1 px-4 py-3 rounded-md text-sm font-medium border-2 border-green-200 bg-green-50 hover:bg-green-200 text-green-800 transition-colors duration-200 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-            </svg>
-            Buena noticia
-          </button>
-          <button type="submit" name="opinion" value="mala"
-            class="flex-1 px-4 py-3 rounded-md text-sm font-medium border-2 border-red-200 bg-red-50 hover:bg-red-200 text-red-800 transition-colors duration-200 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.105-1.79l-.05-.025A4 4 0 0011.055 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z" />
-            </svg>
-            Mala noticia
+            class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
+            <span class="text-[11px] font-medium">😊 buena noticia</span>
           </button>
           <button type="submit" name="opinion" value="neutral"
-            class="flex-1 px-4 py-3 rounded-md text-sm font-medium border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-200 text-yellow-800 transition-colors duration-200 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-            Ni buena ni mala
+            class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
+            <span class="text-[11px] font-medium">😐 neutral</span>
+          </button>
+          <button type="submit" name="opinion" value="mala"
+            class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
+            <span class="text-[11px] font-medium">😞 mala noticia</span>
           </button>
         </div>
       </div>
     </form>
-    
-    <!-- Loading overlay with centered spinner -->
-    <div id="form-overlay" class="htmx-indicator absolute inset-0 bg-white bg-opacity-80 backdrop-blur-sm flex items-center justify-center rounded-lg z-10 transition-opacity duration-300 ease-in-out">
-      <div class="text-center transform transition-transform duration-300 ease-in-out scale-100">
-        <svg class="animate-spin h-12 w-12 text-memoria-blue mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l-2-2-2 2V4a8 8 0 00-4 8h4z"></path>
-        </svg>
-        <p class="text-memoria-blue font-medium mt-3 animate-pulse">Guardando noticia...</p>
+
+    <!-- Loading overlay -->
+    <div id="form-overlay" class="htmx-indicator absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+      <div class="text-center">
+        <div class="border-4 border-black border-t-transparent h-12 w-12 rounded-full animate-spin mx-auto mb-3"></div>
+        <p class="text-black font-medium text-sm">procesando...</p>
       </div>
     </div>
   </div>
- 
-  <!-- Redesigned Filter bar -->
-  <div x-data="{ 
-    openFilters: false, 
-    audience: 'mi', 
-    advancedFilter: '', 
-    entity: '', 
-    init() {
-      // Watch for changes to entity value
-      this.$watch('entity', value => {
-        console.log('Entity value changed:', value);
-      });
-    }
-  }" class="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
-    <!-- Filter header and active filters - Always visible -->
-    <div class="bg-gradient-to-r from-gray-50 to-white p-4">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="font-semibold text-gray-800 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-memoria-blue" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-          </svg>
-          Filtrar noticias
+
+  <!-- Filter bar -->
+  <div x-data="{
+    openFilters: false,
+    audience: 'mi',
+    advancedFilter: '',
+    entity: ''
+  }" class="border-2 border-black bg-white mb-4">
+
+    <!-- Filter header -->
+    <div class="p-3 border-b-2 border-black bg-gray-50">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold flex items-center text-xs">
+          <span class="mr-2">▶</span> filtrar noticias
         </h3>
-        <button @click="openFilters = !openFilters" class="px-3 py-1 text-sm bg-white border border-gray-200 rounded-md text-gray-600 hover:text-memoria-blue hover:border-memoria-blue transition-colors duration-200">
-          <span x-show="!openFilters">Mostrar filtros</span>
-          <span x-show="openFilters">Ocultar filtros</span>
+        <button @click="openFilters = !openFilters"
+                class="border border-black px-2 py-1 text-[10px] hover:bg-black hover:text-white transition-colors">
+          <span x-show="!openFilters">[mostrar]</span>
+          <span x-show="openFilters">[ocultar]</span>
         </button>
       </div>
-      
-      <!-- Active filters indicator - Always visible -->
-      <div class="flex items-center space-x-2 bg-memoria-yellow bg-opacity-10 rounded-lg p-3 border border-memoria-yellow border-opacity-20">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-memoria-dark" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-        </svg>
-        <span class="text-memoria-dark font-medium">{{ filter_description|default:"Sin filtros activos" }}</span>
+
+      <!-- Active filter indicator -->
+      <div class="mt-2 text-[10px] text-gray-600">
+        > {{ filter_description|default:"sin filtros activos" }}
       </div>
     </div>
-    
-    <!-- Filter options (collapsible) -->
-    <div x-show="openFilters" x-transition class="p-4 border-t border-gray-200 bg-white">
 
-      <div class="space-y-8">
-        <!-- Basic filters -->
-        <div class="bg-gray-50 rounded-lg p-4">
-          <h4 class="font-medium text-sm text-gray-600 mb-3 flex items-center">
-            <span class="inline-block w-2 h-2 bg-memoria-dark rounded-full mr-2"></span>
-            FILTRO BÁSICO
-          </h4>
-          <div class="flex flex-wrap gap-2">
-            <button hx-get="{% url 'timeline' %}?filter=todas" 
-                    hx-target="#timeline-items" 
-                    hx-swap="innerHTML" 
-                    class="px-4 py-2 bg-white border-2 border-memoria-dark hover:bg-memoria-dark hover:text-white text-memoria-dark rounded-md text-sm font-medium transition-colors duration-200">
-              Todas las noticias
+    <!-- Filter options (collapsible) -->
+    <div x-show="openFilters" x-transition class="p-3 bg-white space-y-4">
+
+      <!-- Basic filters -->
+      <div>
+        <h4 class="text-[10px] text-gray-600 mb-2">// filtro básico</h4>
+        <div class="flex gap-2 flex-wrap">
+          <button hx-get="{% url 'timeline' %}?filter=nuevas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs {% if current_filter == 'nuevas' or not current_filter %}bg-black text-white{% else %}hover:bg-black hover:text-white{% endif %}">
+            noticias nuevas
+          </button>
+          <button hx-get="{% url 'timeline' %}?filter=todas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs {% if current_filter == 'todas' %}bg-black text-white{% else %}hover:bg-black hover:text-white{% endif %}">
+            todas las noticias
+          </button>
+        </div>
+      </div>
+
+      <!-- Opinion filters -->
+      <div>
+        <h4 class="text-[10px] text-gray-600 mb-2">// filtro por opinión</h4>
+
+        <!-- Audience selector -->
+        <div class="mb-2">
+          <span class="text-[10px] text-gray-600 block mb-1">perspectiva:</span>
+          <div class="inline-flex border-2 border-black">
+            <button @click="audience = 'mi'"
+                    :class="{'bg-black text-white': audience === 'mi', 'bg-white text-black': audience !== 'mi'}"
+                    class="px-3 py-1.5 text-xs border-r-2 border-black transition-colors">
+              mi opinión
+            </button>
+            <button @click="audience = 'mayoria'"
+                    :class="{'bg-black text-white': audience === 'mayoria', 'bg-white text-black': audience !== 'mayoria'}"
+                    class="px-3 py-1.5 text-xs transition-colors">
+              mayoría
             </button>
           </div>
         </div>
-        
-        <!-- Opinion filters -->
-        <div class="bg-gray-50 rounded-lg p-4">
-          <h4 class="font-medium text-sm text-gray-600 mb-3 flex items-center">
-            <span class="inline-block w-2 h-2 bg-memoria-blue rounded-full mr-2"></span>
-            FILTRO POR OPINIÓN
-          </h4>
-          <div class="flex flex-col sm:flex-row gap-4">
-            <!-- Audience selector -->
-            <div class="bg-white rounded-lg p-3 border border-gray-200 flex-1">
-              <span class="text-sm text-gray-700 block mb-2">Perspectiva:</span>
-              <div class="flex rounded-md shadow-sm">
-                <button @click="audience = 'mi'" 
-                        :class="{'bg-memoria-yellow text-black': audience === 'mi', 'bg-gray-200 text-gray-700': audience !== 'mi'}"
-                        class="px-3 py-1 rounded-l-md text-sm font-medium">
-                  Mi opinión
-                </button>
-                <button @click="audience = 'mayoria'" 
-                        :class="{'bg-memoria-yellow text-black': audience === 'mayoria', 'bg-gray-200 text-gray-700': audience !== 'mayoria'}"
-                        class="px-3 py-1 rounded-r-md text-sm font-medium">
-                  Mayoría
-                </button>
-              </div>
-            </div>
-            
-            <!-- Opinion type buttons -->
-            <div class="flex flex-1 gap-2">
-              <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience" 
-                      hx-target="#timeline-items" 
-                      hx-swap="innerHTML" 
-                      class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium">
-                <span class="flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-                  </svg>
-                  Buenas
-                </span>
-              </button>
-              <button x-bind:hx-get="'{% url 'timeline' %}?filter=mala_' + audience" 
-                      hx-target="#timeline-items" 
-                      hx-swap="innerHTML" 
-                      class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium">
-                <span class="flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.105-1.79l-.05-.025A4 4 0 0011.055 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z" />
-                  </svg>
-                  Malas
-                </span>
-              </button>
-            </div>
-          </div>
+
+        <!-- Opinion buttons -->
+        <div class="grid grid-cols-2 gap-2">
+          <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors text-xs">
+            😊 buenas
+          </button>
+          <button x-bind:hx-get="'{% url 'timeline' %}?filter=mala_' + audience"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors text-xs">
+            😞 malas
+          </button>
         </div>
-        
-        <!-- Entity filters -->
-        <div>
-          <h4 class="font-medium text-sm text-gray-500 mb-2">FILTRO POR ENTIDAD</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="md:col-span-1">
-              <label class="block text-sm text-gray-700 mb-1">Tipo de mención:</label>
-              <select x-model="advancedFilter" class="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-memoria-blue focus:border-memoria-blue">
-                <option value="">Seleccione tipo</option>
-                <option value="mencionan_a">Cualquier mención</option>
-                <option value="mencionan_positiva">Mención positiva</option>
-                <option value="mencionan_negativa">Mención negativa</option>
-              </select>
-            </div>
-            <div class="md:col-span-1">
-              <label class="block text-sm text-gray-700 mb-1">Entidad mencionada:</label>
-              <select 
-                x-model="entity" 
-                @change="console.log('Entity select changed:', $event.target.value)" 
-                class="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-memoria-blue focus:border-memoria-blue">
-                <option value="">Seleccione entidad</option>
-                {% for entidad in entidades %}
-                  <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
-                {% endfor %}
-              </select>
-              <!-- Debug display of entity value -->
-              <div class="text-xs text-gray-500 mt-1">Selected entity ID: <span x-text="entity"></span></div>
-            </div>
-            <div class="md:col-span-1 flex items-end">
-              <button 
-                      @click="
-                        console.log('Applying filter with entity:', entity);
-                        const url = '{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity;
-                        console.log('Request URL:', url);
-                        // Manually trigger the HTMX request with the correct parameters
-                        const htmx = window.htmx || (window.htmx = {});
-                        htmx.ajax('GET', url, {target:'#timeline-items', swap:'innerHTML'});
-                        return false; // Prevent default button action
-                      " 
-                      :disabled="advancedFilter === '' || entity === ''"
-                      :class="{'opacity-50 cursor-not-allowed': advancedFilter === '' || entity === ''}"
-                      class="w-full px-4 py-2 bg-memoria-blue hover:bg-blue-700 text-white rounded-md text-sm font-medium">
-                Aplicar filtro
-              </button>
-              <!-- Hidden input to ensure entity value is included in the request -->
-              <input type="hidden" name="entity" x-bind:value="entity">
-              
-              <!-- Debug button to manually construct and trigger the request -->
-              <button 
-                      @click="
-                        const url = '{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity;
-                        console.log('Manual request URL:', url);
-                        fetch(url)
-                          .then(response => response.text())
-                          .then(html => {
-                            document.getElementById('timeline-items').innerHTML = html;
-                            console.log('Manual request completed');
-                          });
-                      "
-                      type="button"
-                      style="display: none;"
-                      :disabled="advancedFilter === '' || entity === ''"
-                      class="mt-2 px-2 py-1 bg-gray-200 text-xs text-gray-700 rounded">
-                Debug: Manual Request
-              </button>
-            </div>
+      </div>
+
+      <!-- Entity filters (if entities exist) -->
+      {% if entidades %}
+      <div>
+        <h4 class="text-xs text-gray-600 mb-3">// filtro por entidad</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">tipo:</label>
+            <select x-model="advancedFilter"
+                    class="w-full border-2 border-black px-2 py-2 bg-white text-sm">
+              <option value="">seleccionar</option>
+              <option value="mencionan_a">cualquier mención</option>
+              <option value="mencionan_positiva">mención positiva</option>
+              <option value="mencionan_negativa">mención negativa</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">entidad:</label>
+            <select x-model="entity"
+                    class="w-full border-2 border-black px-2 py-2 bg-white text-sm">
+              <option value="">seleccionar</option>
+              {% for entidad in entidades %}
+                <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button @click="
+                      const url = '{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity;
+                      htmx.ajax('GET', url, {target:'#timeline-items', swap:'innerHTML'});
+                    "
+                    :disabled="advancedFilter === '' || entity === ''"
+                    :class="{'opacity-50 cursor-not-allowed': advancedFilter === '' || entity === ''}"
+                    class="w-full border-2 border-black px-4 py-2 hover:bg-black hover:text-white transition-colors text-sm">
+              aplicar
+            </button>
           </div>
         </div>
       </div>
-      
-      <!-- Active filters indicator (shows when filters are applied) -->
-      <div class="mt-4 pt-4 border-t border-gray-200">
-        <h4 class="font-medium text-sm text-gray-500 mb-2">FILTROS ACTIVOS</h4>
-        <div class="flex flex-wrap gap-2" id="active-filters">
-          <!-- Display the filter description -->
-          <div class="inline-flex items-center px-3 py-2 rounded-md bg-memoria-yellow text-memoria-dark text-sm font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
-            </svg>
-            <span>{{ filter_description|default:"Sin filtros activos" }}</span>
-          </div>
-        </div>
-      </div>
+      {% endif %}
     </div>
   </div>
 
   <!-- Timeline Items -->
-  <div id="timeline-items" class="timeline">
+  <div id="timeline-items">
     {% include "noticias/timeline_items.html" %}
   </div>
 </div>
 
-<!-- CSS for HTMX indicators -->
+<!-- Styles -->
 <style>
+  /* HTMX indicator handling */
   .htmx-indicator {
     display: none;
-    text-align: center;
   }
   .htmx-request .htmx-indicator {
     display: flex;
@@ -271,133 +211,119 @@
   .htmx-request.htmx-indicator {
     display: flex;
   }
-  
-  /* Ensure backdrop filter works properly */
-  #form-overlay {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+
+  /* Form input styling */
+  input[type="url"],
+  input[type="text"] {
+    width: 100%;
+    border: 2px solid black;
+    padding: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.875rem;
+    background: white;
   }
-  
-  /* Disable form elements during loading */
-  .htmx-request form button,
-  .htmx-request form input {
-    pointer-events: none;
-    opacity: 0.7;
+
+  input[type="url"]:focus,
+  input[type="text"]:focus {
+    outline: none;
+    background-color: #f9f9f9;
+  }
+
+  /* Select styling */
+  select {
+    font-family: 'IBM Plex Mono', monospace;
   }
 </style>
 
-<!-- JavaScript to update filter description dynamically and handle notifications -->
+<!-- JavaScript -->
 <script>
-  document.addEventListener('htmx:afterSwap', function(event) {
-    // Listen for the custom event from the server
-    document.body.addEventListener('updateActiveFilters', function(event) {
-      const filterDescription = event.detail.description;
-      const activeFiltersContainer = document.querySelector('#active-filters span');
-      if (activeFiltersContainer) {
-        activeFiltersContainer.textContent = filterDescription;
-      }
+  // Extension session synchronization
+  console.log('[Memoria Web] Checking for extension session in localStorage...');
+
+  // Check if extension has set a session ID in localStorage
+  const extensionSessionId = localStorage.getItem('memoria_extension_session');
+
+  if (extensionSessionId) {
+    console.log('[Memoria Web] ✓ Found extension session:', extensionSessionId);
+
+    // Inject extension session into all HTMX requests
+    document.body.addEventListener('htmx:configRequest', function(event) {
+      console.log('[Memoria Web] Adding X-Extension-Session header to request:', {
+        url: event.detail.path,
+        sessionId: extensionSessionId
+      });
+      event.detail.headers['X-Extension-Session'] = extensionSessionId;
     });
+
+    // Log when requests complete
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+      console.log('[Memoria Web] Request completed:', {
+        url: event.detail.pathInfo.finalRequestPath,
+        status: event.detail.xhr.status
+      });
+    });
+  } else {
+    console.log('[Memoria Web] No extension session found in localStorage');
+    console.log('[Memoria Web] Will use Django session instead');
+  }
+
+  // Notification system
+  function showNotification(message, type) {
+    const notificationArea = document.getElementById('notification-area');
+    const notification = document.createElement('div');
+
+    let bgClass = type === 'error' ? 'bg-red-50' : 'bg-green-50';
+
+    notification.className = `border-2 border-black ${bgClass} px-4 py-3 shadow-lg mb-3 mono text-sm`;
+    notification.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="mr-2">${type === 'error' ? '✗' : '✓'}</span>
+          <span>${message}</span>
+        </div>
+        <button type="button" class="ml-4 text-xl" onclick="this.parentNode.parentNode.remove()">
+          ×
+        </button>
+      </div>
+    `;
+
+    notificationArea.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      notification.remove();
+    }, 5000);
+  }
+
+  // Event listeners
+  document.body.addEventListener('noticiaCreated', function(event) {
+    showNotification(event.detail.message, 'success');
   });
-  
-  // General HTMX error handler
+
+  document.body.addEventListener('noticiaError', function(event) {
+    showNotification(event.detail.message, 'error');
+  });
+
   document.addEventListener('htmx:responseError', function(event) {
-    let errorMessage = 'Ha ocurrido un error en la solicitud';
-    
-    // Try to extract more specific error information if available
+    let errorMessage = 'error en la solicitud';
     try {
       const xhr = event.detail.xhr;
       if (xhr.status === 400 || xhr.status === 500) {
-        // Try to parse JSON response if available
-        try {
-          const response = JSON.parse(xhr.responseText);
-          if (response.error) {
-            errorMessage = response.error;
-          }
-        } catch (e) {
-          // If not JSON or no error field, use status text
-          errorMessage = `Error ${xhr.status}: ${xhr.statusText || 'Error en el servidor'}`;
-        }
+        errorMessage = `error ${xhr.status}`;
       } else if (xhr.status === 404) {
-        errorMessage = 'El recurso solicitado no fue encontrado';
-      } else if (xhr.status === 403) {
-        errorMessage = 'No tienes permiso para realizar esta acción';
-      } else if (xhr.status === 429) {
-        errorMessage = 'Demasiadas solicitudes. Por favor, intenta más tarde';
+        errorMessage = 'recurso no encontrado';
       }
     } catch (e) {
       console.error('Error processing HTMX error:', e);
     }
-    
-    // Show the error notification
     showNotification(errorMessage, 'error');
   });
-  
-  // Handle network errors (when the request fails completely)
+
   document.addEventListener('htmx:sendError', function(event) {
-    showNotification('Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.', 'error');
+    showNotification('error de conexión', 'error');
   });
-  
-  // Handle timeout errors
+
   document.addEventListener('htmx:timeout', function(event) {
-    showNotification('La solicitud ha tomado demasiado tiempo en responder. Por favor, intenta nuevamente.', 'error');
+    showNotification('timeout: intentá de nuevo', 'error');
   });
-  
-  // Listen for noticia created event
-  document.body.addEventListener('noticiaCreated', function(event) {
-    showNotification(event.detail.message, 'success');
-  });
-  
-  // Listen for noticia error event
-  document.body.addEventListener('noticiaError', function(event) {
-    showNotification(event.detail.message, 'error');
-  });
-  
-  // Function to show notifications
-  function showNotification(message, type) {
-    const notificationArea = document.getElementById('notification-area');
-    const notification = document.createElement('div');
-    
-    // Set notification styles based on type
-    let bgColor, textColor, borderColor;
-    if (type === 'success') {
-      bgColor = 'bg-green-100';
-      textColor = 'text-green-800';
-      borderColor = 'border-green-500';
-    } else if (type === 'error') {
-      bgColor = 'bg-red-100';
-      textColor = 'text-red-800';
-      borderColor = 'border-red-500';
-    } else {
-      bgColor = 'bg-blue-100';
-      textColor = 'text-blue-800';
-      borderColor = 'border-blue-500';
-    }
-    
-    // Create notification element
-    notification.className = `${bgColor} ${textColor} px-4 py-3 rounded-lg shadow-md border-l-4 ${borderColor} mb-3 transform transition-all duration-500 ease-in-out translate-x-0 opacity-100`;
-    notification.innerHTML = `
-      <div class="flex items-center justify-between">
-        <div class="flex items-center">
-          <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-          </svg>
-          <p>${message}</p>
-        </div>
-        <button type="button" class="ml-4" onclick="this.parentNode.parentNode.remove()">
-          <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-          </svg>
-        </button>
-      </div>
-    `;
-    
-    // Add to notification area
-    notificationArea.appendChild(notification);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      notification.classList.add('translate-x-full', 'opacity-0');
-      setTimeout(() => notification.remove(), 500);
-    }, 5000);
-  }
 </script>

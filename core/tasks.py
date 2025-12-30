@@ -2,8 +2,6 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from core.models import Noticia, Entidad, NoticiaEntidad
 from core import parse
-from core import archive_ph as archive
-from datetime import datetime
 from django.core.cache import cache
 from functools import wraps
 from core import url_requests
@@ -55,149 +53,6 @@ def task_lock(timeout=60 * 10):
 
 
 @shared_task
-@task_lock()
-def enrich_markdown(noticia_id, html):
-    noticia = Noticia.objects.get(id=noticia_id)
-    if noticia.archivo_url:
-        logger.info(f"Fetching archived URL for {noticia.enlace}")
-        markdown = parse.parse_noticia_markdown(html, noticia.titulo)
-        if markdown:
-            noticia.markdown = markdown
-            noticia.save()
-            logger.info(f"Enriched {noticia.enlace} with markdown")
-            enrich_content.delay(noticia_id)
-            return noticia_id
-        logger.error(f"Failed to enrich {noticia.enlace} with markdown")
-    else:
-        logger.error(f"No archived URL for {noticia.enlace}")
-    return noticia_id
-
-
-@shared_task
-@task_lock()
-def enrich_content(noticia_id):
-    noticia = Noticia.objects.get(id=noticia_id)
-    if noticia.markdown:
-        articulo = parse.parse_noticia(noticia.markdown)
-        if articulo:
-            noticia.titulo = articulo.titulo
-            noticia.fuente = articulo.fuente
-            noticia.categoria = articulo.categoria if articulo.categoria else "otros"
-            noticia.resumen = articulo.resumen
-            if articulo.fecha:
-                try:
-                    noticia.fecha_noticia = datetime.fromisoformat(articulo.fecha)
-                except (ValueError, TypeError):
-                    logger.warning(
-                        f"Could not parse date {articulo.fecha} for {noticia.enlace}"
-                    )
-            noticia.save()
-            logger.info(f"Enriched {noticia.enlace} with content")
-            if articulo.entidades:
-                for entidad_nombrada in articulo.entidades:
-                    logger.info(f"Found entity {entidad_nombrada}")
-                    entidad, _ = Entidad.objects.get_or_create(
-                        nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
-                    )
-                    NoticiaEntidad.objects.get_or_create(
-                        noticia=noticia,
-                        entidad=entidad,
-                        defaults={"sentimiento": entidad_nombrada.sentimiento},
-                    )
-                logger.info(f"Entities saved for {noticia.enlace}")
-            return noticia_id
-        logger.error(f"Failed to enrich {noticia.enlace} with content")
-    else:
-        logger.error(f"No markdown content for {noticia.enlace}")
-    return noticia_id
-
-
-@shared_task(bind=True, max_retries=3)
-@task_lock()
-def find_archived(self, noticia_id):
-    """Async task to retry finding archived URL when archive is in progress.
-    This task is called after the first synchronous attempt fails with ArchiveInProgress.
-    """
-    try:
-        noticia = Noticia.objects.get(id=noticia_id)
-        noticia.archivo_url, html = archive.get_latest_snapshot(noticia.enlace)
-        noticia.archivo_fecha = datetime.now()
-        noticia.save()
-        if not noticia.markdown:
-            enrich_markdown.delay(noticia.id, html)
-        elif not noticia.resumen:
-            enrich_content.delay(noticia.id)
-        noticia.update_title_image_from_archive()
-        logger.info(
-            f"Successfully archived URL for noticia {noticia_id} on retry #{self.request.retries+1}"
-        )
-        return noticia.archivo_url
-    except archive.ArchiveInProgress as e:
-        retry_count = self.request.retries
-        if retry_count < 2:  # We'll do a total of 3 attempts (0, 1, 2)
-            logger.info(
-                f"Archive still in progress for noticia {noticia_id}, retry {retry_count+1}/3 in 3 minutes"
-            )
-            # Retry in 3 minutes (180 seconds)
-            raise self.retry(exc=e, countdown=180)
-        else:
-            logger.warning(
-                f"Archive still in progress after 3 attempts for noticia {noticia_id}, giving up"
-            )
-            return None
-    except archive.ArchiveNotFound as e:
-        # If no snapshot found, try to save the URL
-        logger.info(f"No snapshot found for noticia {noticia_id}, attempting to save URL")
-        save_to_archive_org.delay(noticia_id)
-        return None
-    except Exception as e:
-        logger.error(f"Error in find_archived task for noticia {noticia_id}: {e}")
-        return None
-
-
-@shared_task(bind=True, max_retries=3)
-@task_lock()
-def save_to_archive_org(self, noticia_id):
-    """Async task to save a URL to the Internet Archive (archive.org).
-    This task is called when no snapshot is found and we need to save the URL.
-    """
-    try:
-        noticia = Noticia.objects.get(id=noticia_id)
-        logger.info(f"Saving URL to archive.org: {noticia.enlace}")
-        
-        # Attempt to save the URL to archive.org
-        noticia.archivo_url, html = archive.save_url(noticia.enlace)
-        noticia.archivo_fecha = datetime.now()
-        noticia.save()
-        
-        # Process the saved content
-        if not noticia.markdown:
-            enrich_markdown.delay(noticia.id, html)
-        elif not noticia.resumen:
-            enrich_content.delay(noticia.id)
-        
-        noticia.update_title_image_from_archive()
-        logger.info(f"Successfully saved URL to archive.org for noticia {noticia_id}")
-        return noticia.archivo_url
-    except archive.ArchiveInProgress as e:
-        retry_count = self.request.retries
-        if retry_count < 2:  # We'll do a total of 3 attempts (0, 1, 2)
-            logger.info(
-                f"Archive save still in progress for noticia {noticia_id}, retry {retry_count+1}/3 in 5 minutes"
-            )
-            # Retry in 5 minutes (300 seconds)
-            raise self.retry(exc=e, countdown=300)
-        else:
-            logger.warning(
-                f"Archive save still in progress after 3 attempts for noticia {noticia_id}, giving up"
-            )
-            return None
-    except Exception as e:
-        logger.error(f"Error in save_to_archive_org task for noticia {noticia_id}: {e}")
-        return None
-
-
-@shared_task
 @task_lock(timeout=60 * 30)  # 30 minutes lock to avoid concurrent runs
 def refresh_proxy_list(max_proxies: int = 20, test_url: str = "https://www.google.com"):
     """
@@ -224,3 +79,115 @@ def refresh_proxy_list(max_proxies: int = 20, test_url: str = "https://www.googl
     
     logger.info(f"Proxy list refresh completed. Found {len(working_proxies)} working proxies")
     return len(working_proxies)
+
+
+@shared_task
+@task_lock()
+def enrich_from_captured_html(noticia_id):
+    """
+    Extract entities and metadata directly from captured HTML using LLM.
+    Single-step enrichment that replaces the old 2-phase approach.
+
+    Flow:
+    1. Get Noticia with captured_html
+    2. Extract entities, metadata, and fix missing title/image/desc in one call
+    3. Save entities and update metadata if needed
+
+    Args:
+        noticia_id: ID of the Noticia to enrich
+    """
+    try:
+        noticia = Noticia.objects.get(id=noticia_id)
+
+        if not noticia.captured_html:
+            logger.warning(f"No captured HTML for noticia {noticia_id}")
+            return None
+
+        # Check if already processed
+        if noticia.entidades.exists():
+            logger.info(
+                f"Noticia {noticia_id} already has entities, skipping"
+            )
+            return noticia_id
+
+        logger.info(
+            f"Extracting entities and metadata from HTML for noticia {noticia_id}"
+        )
+
+        # Extract everything in one LLM call
+        articulo = parse.parse_noticia_from_html(noticia.captured_html)
+
+        if not articulo:
+            logger.error(
+                f"Failed to parse HTML for noticia {noticia_id}"
+            )
+            return None
+
+        # Update metadata if LLM found better values
+        updated = False
+        if articulo.titulo and (
+            not noticia.meta_titulo or len(noticia.meta_titulo) < 10
+        ):
+            noticia.meta_titulo = articulo.titulo
+            updated = True
+            logger.info(
+                f"Updated title for noticia {noticia_id}: {articulo.titulo}"
+            )
+
+        if articulo.imagen and not noticia.meta_imagen:
+            noticia.meta_imagen = articulo.imagen
+            updated = True
+            logger.info(
+                f"Updated image for noticia {noticia_id}: {articulo.imagen}"
+            )
+
+        if articulo.descripcion and not noticia.meta_descripcion:
+            noticia.meta_descripcion = articulo.descripcion
+            updated = True
+            logger.info(
+                f"Updated description for noticia {noticia_id}"
+            )
+
+        if updated:
+            noticia.save()
+
+        # Save entities if found
+        if articulo.entidades:
+            for entidad_nombrada in articulo.entidades:
+                logger.info(
+                    f"Found entity: {entidad_nombrada.nombre} "
+                    f"({entidad_nombrada.tipo}, "
+                    f"{entidad_nombrada.sentimiento})"
+                )
+
+                entidad, _ = Entidad.objects.get_or_create(
+                    nombre=entidad_nombrada.nombre,
+                    tipo=entidad_nombrada.tipo
+                )
+
+                NoticiaEntidad.objects.get_or_create(
+                    noticia=noticia,
+                    entidad=entidad,
+                    defaults={"sentimiento": entidad_nombrada.sentimiento}
+                )
+
+            logger.info(
+                f"Saved {len(articulo.entidades)} entities for "
+                f"noticia {noticia_id}"
+            )
+        else:
+            logger.info(f"No entities found in noticia {noticia_id}")
+
+        return noticia_id
+
+    except Noticia.DoesNotExist:
+        logger.error(f"Noticia {noticia_id} does not exist")
+        return None
+    except Exception as e:
+        logger.exception(
+            f"Unexpected error in enrich_from_captured_html for "
+            f"noticia {noticia_id}: {e}"
+        )
+        return None
+
+

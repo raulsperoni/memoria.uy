@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Extension Icons</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Memoria.uy Extension Icons</h1>
+    <p>Right-click each icon and "Save image as..." with the names shown below.</p>
+
+    <div>
+        <h3>icon16.png (16x16)</h3>
+        <canvas id="icon16" width="16" height="16"></canvas>
+    </div>
+
+    <div>
+        <h3>icon48.png (48x48)</h3>
+        <canvas id="icon48" width="48" height="48"></canvas>
+    </div>
+
+    <div>
+        <h3>icon128.png (128x128)</h3>
+        <canvas id="icon128" width="128" height="128"></canvas>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            // Background - blue
+            ctx.fillStyle = '#2563eb';
+            ctx.fillRect(0, 0, size, size);
+
+            // Letter "M" in white
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('M', size / 2, size / 2);
+        }
+
+        // Generate all icon sizes
+        drawIcon('icon16', 16);
+        drawIcon('icon48', 48);
+        drawIcon('icon128', 128);
+    </script>
+
+    <div style="margin-top: 30px; padding: 20px; background: #f0f0f0;">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Open this file in a browser</li>
+            <li>Right-click each icon above</li>
+            <li>Select "Save image as..."</li>
+            <li>Save with names: icon16.png, icon48.png, icon128.png</li>
+            <li>Place them in the browser-extension/icons/ folder</li>
+        </ol>
+        <p><strong>Or:</strong> Use any image editor to create 16x16, 48x48, and 128x128 PNG icons with your design.</p>
+    </div>
+</body>
+</html>

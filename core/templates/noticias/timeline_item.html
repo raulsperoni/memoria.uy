@@ -1,83 +1,144 @@
 {# templates/noticias/timeline_item.html #}
 
-<div class="timeline-item bg-white shadow rounded overflow-hidden mb-4 relative" id="noticia-{{ noticia.pk }}">
-  <!-- Add the refresh overlay for just this news item -->
-  <div id="refresh-indicator-{{ noticia.pk }}" class="htmx-indicator absolute top-0 left-0 right-0 bottom-0 bg-white bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-20 transition-opacity duration-300 ease-in-out">
-    <div class="text-center transform transition-transform duration-300 ease-in-out scale-100">
-      <div class="ai-thinking-animation mb-3">
-        <span></span><span></span><span></span>
-      </div>
-      <p class="text-memoria-blue font-medium animate-pulse">Analizando la noticia...</p>
+<div class="border-2 border-black bg-white mb-4 mono" id="noticia-{{ noticia.pk }}">
+  <!-- Refresh indicator overlay -->
+  <div id="refresh-indicator-{{ noticia.pk }}" class="htmx-indicator absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-20">
+    <div class="text-center">
+      <div class="border-4 border-black border-t-transparent h-12 w-12 rounded-full animate-spin mx-auto mb-3"></div>
+      <p class="text-black font-medium mono text-sm">actualizando...</p>
     </div>
   </div>
+
+  <!-- Image with Vote Buttons Overlay OR Vote Buttons Bar -->
   {% if noticia.mostrar_imagen %}
-    <img src="{{ noticia.mostrar_imagen }}" alt="Screenshot" class="w-full object-cover">
+    <div class="relative border-b-2 border-black group">
+      <img src="{{ noticia.mostrar_imagen }}" alt="{{ noticia.mostrar_titulo }}" class="w-full object-cover">
+
+      <!-- Vote buttons overlay -->
+      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
+        <form hx-post="{% url 'vote' noticia.pk %}"
+              {% if current_filter == 'nuevas' or not current_filter %}
+              hx-target="#noticia-{{ noticia.pk }}"
+              hx-swap="outerHTML swap:1s"
+              {% else %}
+              hx-target="#vote-area-{{ noticia.pk }}"
+              hx-swap="outerHTML"
+              {% endif %}
+              class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-3">
+          {% csrf_token %}
+          <input type="hidden" name="on_nuevas_filter" value="{% if current_filter == 'nuevas' or not current_filter %}true{% else %}false{% endif %}">
+          <button type="submit" name="opinion" value="buena"
+            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
+              {% if noticia.user_vote == 'buena' %}bg-black text-white{% endif %}">
+            😊
+          </button>
+          <button type="submit" name="opinion" value="neutral"
+            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
+              {% if noticia.user_vote == 'neutral' %}bg-black text-white{% endif %}">
+            😐
+          </button>
+          <button type="submit" name="opinion" value="mala"
+            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
+              {% if noticia.user_vote == 'mala' %}bg-black text-white{% endif %}">
+            😞
+          </button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <!-- Compact vote buttons bar for news without images -->
+    <div class="border-b-2 border-black bg-gray-50 p-2">
+      <form hx-post="{% url 'vote' noticia.pk %}"
+            {% if current_filter == 'nuevas' or not current_filter %}
+            hx-target="#noticia-{{ noticia.pk }}"
+            hx-swap="outerHTML swap:1s"
+            {% else %}
+            hx-target="#vote-area-{{ noticia.pk }}"
+            hx-swap="outerHTML"
+            {% endif %}
+            class="flex gap-2 justify-center">
+        {% csrf_token %}
+        <input type="hidden" name="on_nuevas_filter" value="{% if current_filter == 'nuevas' or not current_filter %}true{% else %}false{% endif %}">
+        <button type="submit" name="opinion" value="buena"
+          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
+            {% if noticia.user_vote == 'buena' %}bg-black text-white{% endif %}">
+          😊
+        </button>
+        <button type="submit" name="opinion" value="neutral"
+          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
+            {% if noticia.user_vote == 'neutral' %}bg-black text-white{% endif %}">
+          😐
+        </button>
+        <button type="submit" name="opinion" value="mala"
+          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
+            {% if noticia.user_vote == 'mala' %}bg-black text-white{% endif %}">
+          😞
+        </button>
+      </form>
+    </div>
   {% endif %}
-  <!-- Metadata Bar with Refresh Button -->
-  <div class="bg-gray-100 px-4 py-2 flex items-center text-sm text-gray-700">
-    <div class="flex flex-wrap items-center">
-      <a href="{{ noticia.enlace }}" target="_blank" class="hover:underline">Leer Original</a>
-      {% if noticia.archivo_url %}
-        <span class="mx-2">|</span>
-        <a href="{{ noticia.archivo_url }}" target="_blank" class="hover:underline">Leer archivado</a>
-      {% endif %}
-      {% if noticia.fuente %}
-        <span class="mx-2">|</span>
-        <span>Fuente: {{ noticia.fuente }}</span>
-      {% endif %}
-      {% if noticia.categoria %}
-        <span class="mx-2">|</span>
-        <span>Categoria: {{ noticia.get_categoria_display }}</span>
-      {% endif %}
+
+  <!-- Metadata Bar -->
+  <div class="border-b-2 border-black px-3 py-1.5 bg-gray-50 flex items-center justify-between text-[10px] text-gray-700">
+    <div class="flex flex-wrap items-center gap-x-3">
+      <a href="{{ noticia.enlace }}" target="_blank" class="hover:underline">
+        → leer original
+      </a>
       {% if noticia.mostrar_fecha %}
-        <span class="mx-2">|</span>
-        <span>Fecha: {{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
+        <span>{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}
     </div>
-    {% if user.is_staff %}
-    <!-- Refresh button aligned to the right, shown only to admin users -->
-    <button 
-      hx-post="{% url 'noticia-refresh' noticia.pk %}" 
-      hx-target="#noticia-{{ noticia.pk }}" 
-      hx-swap="outerHTML"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-      hx-indicator="#refresh-indicator-{{ noticia.pk }}"
-      class="ml-auto text-gray-700 hover:text-gray-900">
-      ✨
-    </button>
-    <button 
-      hx-post="{% url 'noticia-delete' noticia.pk %}" 
-      hx-target="#timeline-container" hx-swap="outerHTML"
-      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-      class="ml-auto text-gray-700 hover:text-gray-900">
-      🚫
-    </button>
 
+    <div class="flex items-center gap-x-2 text-gray-500">
+      {% load vote_extras %}
+      <span title="Votos buenos">😊 {{ noticia.votos|vote_count:"buena" }}</span>
+      <span title="Votos neutrales">😐 {{ noticia.votos|vote_count:"neutral" }}</span>
+      <span title="Votos malos">😞 {{ noticia.votos|vote_count:"mala" }}</span>
+    </div>
+
+    <!-- Admin actions -->
+    {% if user.is_staff %}
+    <div class="ml-auto flex gap-2">
+      <button
+        hx-post="{% url 'noticia-refresh' noticia.pk %}"
+        hx-target="#noticia-{{ noticia.pk }}"
+        hx-swap="outerHTML"
+        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+        hx-indicator="#refresh-indicator-{{ noticia.pk }}"
+        class="border border-black px-2 py-1 hover:bg-black hover:text-white text-xs">
+        ↻ refresh
+      </button>
+      <button
+        hx-post="{% url 'noticia-delete' noticia.pk %}"
+        hx-target="#timeline-container"
+        hx-swap="outerHTML"
+        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+        hx-confirm="¿Eliminar esta noticia?"
+        class="border border-black px-2 py-1 hover:bg-black hover:text-white text-xs">
+        × delete
+      </button>
+    </div>
     {% endif %}
   </div>
-  <div class="p-4">
-    <!-- Title placed below the metadata bar -->
-    <h3 class="text-xl font-bold mb-2">{{ noticia.mostrar_titulo }}</h3>
 
-    <!-- If not noticia.archivo_url, we explain that url is not present in the wayback machine and provide a link for the user to save it there https://web.archive.org/save/{article}-->
-    {% if not noticia.archivo_url %}
-      <p class="text-red-500">Lamentablemente la noticia no está en Archive.today y no podemos analizarla en profundidad. Podes solicitar su archivado en el siguiente enlace: <a href="https://archive.ph/{{ noticia.enlace }}" target="_blank" class="text-blue-500 hover:underline">Archivar</a></p>
-      
+  <!-- Content -->
+  <div class="p-3">
+    <!-- Title -->
+    <h3 class="text-sm md:text-base font-bold mb-1.5 leading-tight">{{ noticia.mostrar_titulo }}</h3>
+
+    <!-- Description -->
+    {% if noticia.meta_descripcion %}
+      <p class="text-[11px] md:text-xs text-gray-700 mb-2 leading-snug">{{ noticia.meta_descripcion }}</p>
     {% endif %}
 
-    
-    
-    {% if noticia.resumen %}
-      <p class="mb-2">{{ noticia.resumen }}</p>
-    {% endif %}
-    
+    <!-- Entities (if enriched) -->
     {% if noticia.entidades.exists %}
       <div class="mb-2">
-        <p class="font-medium mb-1">Menciones:</p>
-        <div class="flex flex-wrap gap-2">
+        <p class="text-[10px] text-gray-600 mb-1">menciones:</p>
+        <div class="flex flex-wrap gap-1.5">
           {% for entidad in noticia.entidades.all %}
-            <span class="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm">
-              {{ entidad.entidad.nombre }} 
+            <span class="border border-black px-1.5 py-0.5 text-[10px]">
+              {{ entidad.entidad.nombre }}
               {% if entidad.sentimiento == "positivo" %}
                 😊
               {% elif entidad.sentimiento == "negativo" %}
@@ -91,66 +152,24 @@
       </div>
     {% endif %}
 
-    <!-- Collapsible debug section -->
-    <details class="mb-2">
-      <summary class="text-sm text-gray-700">Debug</summary>
-      <p>id {{ noticia.pk }}</p>
-      <p>meta_titulo {{ noticia.meta_titulo }}</p>
-      <p>meta_imagen {{ noticia.meta_imagen }}</p>
-
-      <p>archivo_titulo {{ noticia.archivo_titulo}}</p>
-      <p>archivo_imagen {{ noticia.archivo_imagen}}</p>
-      <p>archivo_url {{ noticia.archivo_url }}</p>
-
-      <p>markdown {{ noticia.markdown }}</p>
-      <p>entidades {{ noticia.entidades.all|length }}</p>
+    <!-- Debug section (staff only) -->
+    {% if user.is_staff %}
+    <details class="text-xs text-gray-600 mt-3 border-t border-gray-300 pt-2">
+      <summary class="cursor-pointer hover:text-black">[ debug ]</summary>
+      <div class="mt-2 font-mono space-y-1">
+        <p>> id: {{ noticia.pk }}</p>
+        <p>> enlace: {{ noticia.enlace|truncatechars:60 }}</p>
+        <p>> meta_titulo: {{ noticia.meta_titulo|default:"null" }}</p>
+        <p>> meta_imagen: {{ noticia.meta_imagen|default:"null"|truncatechars:60 }}</p>
+        <p>> meta_descripcion: {{ noticia.meta_descripcion|default:"null"|truncatechars:100 }}</p>
+        <p>> captured_html: {% if noticia.captured_html %}{{ noticia.captured_html|length }} chars{% else %}null{% endif %}</p>
+        <p>> entidades: {{ noticia.entidades.all|length }}</p>
+        <p>> votos: {{ noticia.votos.all|length }}</p>
+      </div>
     </details>
-    
-    
+    {% endif %}
   </div>
-  <div id="vote-area-{{ noticia.pk }}">
-    {% include "noticias/vote_area.html" %}
-  </div>
+
+  <!-- Hidden vote area for HTMX swap target -->
+  <div id="vote-area-{{ noticia.pk }}" class="hidden"></div>
 </div>
-
-
-
-<!-- Add CSS for the AI-like animation -->
-<style>
-  /* AI thinking animation */
-  .ai-thinking-animation {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-  }
-  
-  .ai-thinking-animation span {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin: 0 4px;
-    background-color: #3B82F6;
-    border-radius: 50%;
-    animation: ai-thinking 1.4s infinite ease-in-out both;
-  }
-  
-  .ai-thinking-animation span:nth-child(1) {
-    animation-delay: -0.32s;
-  }
-  
-  .ai-thinking-animation span:nth-child(2) {
-    animation-delay: -0.16s;
-  }
-  
-  @keyframes ai-thinking {
-    0%, 80%, 100% { 
-      transform: scale(0.4);
-      opacity: 0.2;
-    }
-    40% { 
-      transform: scale(1.0);
-      opacity: 1;
-    }
-  }
-</style>
