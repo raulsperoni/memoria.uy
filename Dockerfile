@@ -56,12 +56,22 @@ EXPOSE 8000
 
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
+set -e\n\
+echo "Starting container with command: $1"\n\
+echo "REDIS_URL: ${REDIS_URL:-not set}"\n\
+echo "DATABASE_URL: ${DATABASE_URL:-not set}"\n\
+\n\
 if [ "$1" = "web" ]; then\n\
+    echo "Starting web server..."\n\
     PORT=${PORT:-8000}\n\
-    gunicorn memoria.wsgi:application --bind 0.0.0.0:$PORT\n\
+    gunicorn memoria.wsgi:application --bind 0.0.0.0:$PORT --timeout 120\n\
 elif [ "$1" = "worker" ]; then\n\
-    celery -A memoria worker --loglevel=info\n\
+    echo "Starting Celery worker..."\n\
+    echo "Testing Redis connection..."\n\
+    python -c "import redis; r=redis.from_url(\"${REDIS_URL}\"); r.ping(); print(\"Redis OK\")" || echo "Redis connection failed!"\n\
+    celery -A memoria worker --loglevel=info --concurrency=2\n\
 elif [ "$1" = "beat" ]; then\n\
+    echo "Starting Celery beat..."\n\
     celery -A memoria beat --loglevel=info\n\
 else\n\
     exec "$@"\n\
