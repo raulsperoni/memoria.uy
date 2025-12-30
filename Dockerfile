@@ -40,14 +40,15 @@ RUN poetry install --no-interaction --no-ansi --no-root --with dev
 # Copy project
 COPY . .
 
-# Install Tailwind dependencies
+# Install Tailwind dependencies and build CSS
 RUN cd /app/theme/static_src && npm install
+RUN cd /app/theme/static_src && npm run build
+
+# Collect static files during build
+RUN python manage.py collectstatic --noinput || echo "collectstatic will run at deploy time"
 
 # Expose port
 EXPOSE 8000
-
-# Create theme/static directory if it doesn't exist
-RUN mkdir -p /app/theme/static
 
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
