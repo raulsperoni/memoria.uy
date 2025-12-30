@@ -18,7 +18,7 @@ class Noticia(models.Model):
 
     # Metadata extracted from og: / twitter: tags
     meta_titulo = models.CharField(max_length=255, blank=True, null=True)
-    meta_imagen = models.URLField(blank=True, null=True)
+    meta_imagen = models.URLField(max_length=500, blank=True, null=True)
     meta_descripcion = models.TextField(blank=True, null=True)
 
     # HTML captured from browser extension (bypasses paywalls)
@@ -136,7 +136,53 @@ class Voto(models.Model):
         if not self.usuario and not self.session_key:
             raise ValidationError("Vote must have either usuario or session_key")
         if self.usuario and self.session_key:
-            raise ValidationError("Vote cannot have both usuario and session_key")
+            raise ValidationError(
+                "Vote cannot have both usuario and session_key"
+            )
+
+    @classmethod
+    def claim_session_votes(cls, user, session_key):
+        """
+        Transfer all votes from a session to a user account.
+        Used when a user creates an account and wants to claim
+        their past anonymous votes.
+
+        Args:
+            user: Django User object
+            session_key: Session ID to claim votes from
+
+        Returns:
+            int: Number of votes claimed
+
+        Raises:
+            ValidationError: If user already has votes on same articles
+        """
+        from django.db import transaction
+
+        # Find all votes for this session
+        session_votes = cls.objects.filter(session_key=session_key)
+
+        if not session_votes.exists():
+            return 0
+
+        # Check for conflicts (user already voted on same article)
+        session_noticias = session_votes.values_list("noticia_id", flat=True)
+        user_votes = cls.objects.filter(
+            usuario=user, noticia_id__in=session_noticias
+        )
+
+        if user_votes.exists():
+            conflicting = user_votes.values_list("noticia__enlace", flat=True)
+            raise ValidationError(
+                f"User already has votes on {len(conflicting)} articles "
+                f"from this session. Cannot claim votes."
+            )
+
+        # Transfer votes atomically
+        with transaction.atomic():
+            count = session_votes.update(usuario=user, session_key=None)
+
+        return count
 
 
 class Entidad(models.Model):

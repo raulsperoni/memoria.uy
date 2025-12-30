@@ -1,6 +1,6 @@
 // popup.js - Handles popup UI and voting logic
 
-const API_BASE_URL = 'http://localhost:8000';  // Will be configurable
+const API_BASE_URL = 'https://memoria.uy';  // Production, overridden by settings
 let currentTab = null;
 let selectedVote = null;
 
@@ -115,6 +115,8 @@ async function submitArticle(data, apiUrl) {
   let { sessionId } = await chrome.storage.local.get('sessionId');
 
   console.log('[Memoria Extension] Current session ID:', sessionId);
+  console.log('[Memoria Extension] API URL:', apiUrl);
+  console.log('[Memoria Extension] Data to submit:', data);
 
   if (!sessionId) {
     sessionId = generateSessionId();
@@ -124,27 +126,45 @@ async function submitArticle(data, apiUrl) {
     console.log('[Memoria Extension] ✓ Using existing session ID:', sessionId);
   }
 
+  const url = `${apiUrl}/api/submit-from-extension/`;
+  console.log('[Memoria Extension] Full URL:', url);
   console.log('[Memoria Extension] Submitting article with headers:', {
     'X-Extension-Session': sessionId
   });
 
-  const response = await fetch(`${apiUrl}/api/submit-from-extension/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Extension-Session': sessionId
-    },
-    body: JSON.stringify(data)
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Extension-Session': sessionId
+      },
+      body: JSON.stringify(data)
+    });
 
-  console.log('[Memoria Extension] Response status:', response.status);
+    console.log('[Memoria Extension] Response status:', response.status);
+    console.log('[Memoria Extension] Response headers:',
+      Object.fromEntries(response.headers.entries()));
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || `Error ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Memoria Extension] Error response body:', errorText);
+      let errorObj;
+      try {
+        errorObj = JSON.parse(errorText);
+      } catch {
+        errorObj = { error: errorText };
+      }
+      throw new Error(errorObj.error || `Error ${response.status}: ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('[Memoria Extension] Fetch error:', error);
+    console.error('[Memoria Extension] Error type:', error.constructor.name);
+    console.error('[Memoria Extension] Error message:', error.message);
+    throw error;
   }
-
-  return await response.json();
 }
 
 async function checkExistingVote() {

@@ -7,7 +7,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 
     // Set default API URL
     chrome.storage.sync.set({
-      apiUrl: 'http://localhost:8000'
+      apiUrl: 'https://memoria.uy'  // Production URL
     });
 
     // Open welcome page
@@ -39,7 +39,7 @@ async function checkAndUpdateBadge(tab) {
   }
 
   try {
-    const { apiUrl } = await chrome.storage.sync.get({ apiUrl: 'http://localhost:8000' });
+    const { apiUrl } = await chrome.storage.sync.get({ apiUrl: 'https://memoria.uy' });
     const { sessionId } = await chrome.storage.local.get('sessionId');
 
     if (!sessionId) return;
