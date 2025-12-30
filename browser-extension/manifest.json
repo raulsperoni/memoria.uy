@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Memoria.uy",
+  "name": "Memoria.uy PROD",
   "version": "1.0.0",
   "description": "Archivá noticias. Votá anónimamente. Descubrí patrones.",
 
@@ -11,7 +11,6 @@
   ],
 
   "host_permissions": [
-    "http://localhost:8000/*",
     "https://memoria.uy/*"
   ],
 
