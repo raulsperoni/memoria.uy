@@ -46,13 +46,16 @@ This is your main Django app.
 ```
 DEBUG=False
 SECRET_KEY=<generate-a-strong-secret-key>
-ALLOWED_HOSTS=*.railway.app,memoria.uy
-CSRF_TRUSTED_ORIGINS=https://*.railway.app,https://memoria.uy
+ALLOWED_HOSTS=${{RAILWAY_PUBLIC_DOMAIN}},memoria.uy
+CSRF_TRUSTED_ORIGINS=https://${{RAILWAY_PUBLIC_DOMAIN}},https://memoria.uy
+CORS_ALLOWED_ORIGINS=https://${{RAILWAY_PUBLIC_DOMAIN}},https://memoria.uy
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
 GOOGLE_API_KEY=<your-gemini-api-key>
 OPENROUTER_API_KEY=<your-openrouter-key>
 ```
+
+**Note:** `${{RAILWAY_PUBLIC_DOMAIN}}` and service references like `${{Postgres.DATABASE_URL}}` are automatically replaced by Railway.
 
 **Build & Deploy Settings:**
 - Builder: Dockerfile

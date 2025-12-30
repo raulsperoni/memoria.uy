@@ -52,7 +52,8 @@ RUN mkdir -p /app/theme/static
 # Create entrypoint script
 RUN echo '#!/bin/sh\n\
 if [ "$1" = "web" ]; then\n\
-    gunicorn memoria.wsgi:application --bind 0.0.0.0:8000\n\
+    PORT=${PORT:-8000}\n\
+    gunicorn memoria.wsgi:application --bind 0.0.0.0:$PORT\n\
 elif [ "$1" = "worker" ]; then\n\
     celery -A memoria worker --loglevel=info\n\
 elif [ "$1" = "beat" ]; then\n\

@@ -86,130 +86,26 @@ jobs:
     needs: build_assets
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    environment: digitalocean
-    # Define the secrets needed for deployment
-    env:
-      DJANGO_SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
-      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
-      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
-      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
-      DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      DEBUG: ${{ secrets.DEBUG }}
-    
+
     steps:
-    - name: Debug secrets and environment variables
+    - uses: actions/checkout@v3
+
+    - name: Install Railway CLI
+      run: npm install -g @railway/cli
+
+    - name: Deploy to Railway
       run: |
-        echo "Checking if DIGITALOCEAN_HOST secret exists..."
-        if [ -n "${{ secrets.DIGITALOCEAN_HOST }}" ]; then
-          echo "DIGITALOCEAN_HOST is set"
-        else
-          echo "DIGITALOCEAN_HOST is not set"
-        fi
-        
-        echo "Checking if DEBUG secret exists..."
-        if [ -n "${{ secrets.DEBUG }}" ]; then
-          echo "DEBUG is set"
-        else
-          echo "DEBUG is not set"
-        fi
+        railway up --service web --detach
+        railway up --service worker --detach
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-        echo "Checking if SUPABASE_DATABASE_URL secret exists..."
-        if [ -n "${{ secrets.SUPABASE_DATABASE_URL }}" ]; then
-          echo "SUPABASE_DATABASE_URL is set"
-        else
-          echo "SUPABASE_DATABASE_URL is not set"
-        fi
-        
-        echo "Checking environment variables..."
-        echo "SUPABASE_DATABASE_URL env var: ${SUPABASE_DATABASE_URL:0:25}..." # Print first 5 chars for security
-        echo "DEBUG env var: $DEBUG"
-        
-        # Check if env vars are being properly passed
-        if [ -z "$SUPABASE_DATABASE_URL" ]; then
-          echo "ERROR: SUPABASE_DATABASE_URL environment variable is empty"
-        fi
-        
-    - name: Download static assets
-      uses: actions/download-artifact@v4
-      with:
-        name: static-assets
-        path: ./static-assets
-    
-    - name: Deploy to DigitalOcean
-      uses: appleboy/ssh-action@v1.2.1
-      with:
-        host: ${{ secrets.DIGITALOCEAN_HOST }}
-        username: ${{ secrets.DIGITALOCEAN_USERNAME }}
-        key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
-        port: 22
-        envs: DJANGO_SECRET_KEY,SUPABASE_DATABASE_URL,EMAIL_HOST,EMAIL_PORT,EMAIL_HOST_USER,EMAIL_HOST_PASSWORD,DEFAULT_FROM_EMAIL,OPENROUTER_API_KEY,DEBUG
-        script: |
-          # Create project directory if it doesn't exist
-          sudo mkdir -p /var/www/memoria.uy
-          cd /var/www/memoria.uy
-          
-          # Check if it's a git repository, if not clone it
-          if [ ! -d ".git" ]; then
-            echo "Initializing git repository..."
-            git clone https://github.com/raulsperoni/memoria.uy.git .
-          else
-            echo "Pulling latest changes..."
-            git pull
-          fi
-          
-          # Debug environment variables on the server
-          echo "Server-side environment variable check:"
-          echo "SUPABASE_DATABASE_URL length: ${#SUPABASE_DATABASE_URL}"
-          echo "DEBUG value: $DEBUG"
-          
-          # Create .env file from .env.example and replace variables
-          echo "Creating .env file from .env.example..."
-          cp .env.example .env
-          
-          # Replace variables in .env file with explicit error checking
-          echo "Setting SECRET_KEY in .env"
-          sed -i "s/SECRET_KEY=.*/SECRET_KEY=${DJANGO_SECRET_KEY}/g" .env
-          
-          echo "Setting DEBUG in .env"
-          sed -i "s/DEBUG=.*/DEBUG=${DEBUG}/g" .env
-          
-          echo "Setting SUPABASE_DATABASE_URL in .env"
-          if [ -z "$SUPABASE_DATABASE_URL" ]; then
-            echo "ERROR: SUPABASE_DATABASE_URL is empty on the server"
-          else
-            echo "SUPABASE_DATABASE_URL is set (first 5 chars): ${SUPABASE_DATABASE_URL:0:25}..."
-            sed -i "s|SUPABASE_DATABASE_URL=.*|SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}|g" .env
-          fi
-          
-          # Email settings
-          sed -i "s/EMAIL_HOST=.*/EMAIL_HOST=${EMAIL_HOST}/g" .env
-          sed -i "s/EMAIL_PORT=.*/EMAIL_PORT=${EMAIL_PORT}/g" .env
-          sed -i "s/EMAIL_HOST_USER=.*/EMAIL_HOST_USER=${EMAIL_HOST_USER}/g" .env
-          sed -i "s/EMAIL_HOST_PASSWORD=.*/EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}/g" .env
-          sed -i "s/DEFAULT_FROM_EMAIL=.*/DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}/g" .env
-          
-          # API Keys
-          sed -i "s/OPENROUTER_API_KEY=.*/OPENROUTER_API_KEY=${OPENROUTER_API_KEY}/g" .env
+    - name: Run database migrations
+      run: railway run --service web python manage.py migrate
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-          # Copy static assets to the appropriate destination folders
-          echo "Copying static assets to destination folders..."
-          mkdir -p staticfiles
-          cp -r static-assets/staticfiles/* staticfiles/ 2>/dev/null || true
-          mkdir -p theme/static
-          cp -r static-assets/theme/static/* theme/static/ 2>/dev/null || true
-          
-          # Run database migrations as a separate step
-          echo "Running database migrations..."
-          sudo docker compose run --rm web ./scripts/migrate_db.sh
-
-          # Stop the application
-          sudo docker compose down
-          
-          # Start the application
-          sudo docker compose up -d
-
-
-   
+    - name: Collect static files
+      run: railway run --service web python manage.py collectstatic --noinput
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
