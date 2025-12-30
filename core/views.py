@@ -133,9 +133,13 @@ class NewsTimelineView(ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
 
+        # Get voter identifier (handles extension session priority)
+        voter_data, lookup_data = get_voter_identifier(self.request)
+
         # Get parameters from different possible sources
         filter_param = self.request.GET.get("filter", "")
         entidad_id = self.request.GET.get("entidad", "")
+        logger.info(f"[Timeline Debug] Filter: {filter_param}")
 
         # Try to get from POST if not in GET
         if not filter_param and "filter" in self.request.POST:
@@ -152,12 +156,14 @@ class NewsTimelineView(ListView):
             entidad_id = self.request.resolver_match.kwargs.get("entidad", "")
 
         # Default filter: show news user hasn't voted on (nuevas)
+
         if not filter_param or filter_param == "nuevas":
+            logger.info(f"[Timeline Debug] Filtering with: {lookup_data}")
             if self.request.user.is_authenticated:
                 queryset = queryset.exclude(votos__usuario=self.request.user)
-            elif self.request.session.session_key:
+            elif lookup_data.get("session_key"):
                 queryset = queryset.exclude(
-                    votos__session_key=self.request.session.session_key
+                    votos__session_key=lookup_data["session_key"]
                 )
         # Show all news
         elif filter_param == "todas":
@@ -168,9 +174,9 @@ class NewsTimelineView(ListView):
                 queryset = queryset.filter(
                     votos__usuario=self.request.user, votos__opinion="buena"
                 )
-            elif self.request.session.session_key:
+            elif lookup_data.get("session_key"):
                 queryset = queryset.filter(
-                    votos__session_key=self.request.session.session_key,
+                    votos__session_key=lookup_data["session_key"],
                     votos__opinion="buena",
                 )
         elif filter_param == "mala_mi":
@@ -178,9 +184,9 @@ class NewsTimelineView(ListView):
                 queryset = queryset.filter(
                     votos__usuario=self.request.user, votos__opinion="mala"
                 )
-            elif self.request.session.session_key:
+            elif lookup_data.get("session_key"):
                 queryset = queryset.filter(
-                    votos__session_key=self.request.session.session_key,
+                    votos__session_key=lookup_data["session_key"],
                     votos__opinion="mala",
                 )
         elif filter_param == "buena_mayoria":
@@ -210,6 +216,10 @@ class NewsTimelineView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Get voter identifier (handles extension session priority)
+        voter_data, lookup_data = get_voter_identifier(self.request)
+
         # Only include the form in the initial full-page load
         if not self.request.headers.get("HX-Request"):
             context["form"] = NoticiaForm()
@@ -228,7 +238,7 @@ class NewsTimelineView(ListView):
             context["voter_session"] = None
         else:
             context["voter_user"] = None
-            context["voter_session"] = self.request.session.session_key
+            context["voter_session"] = lookup_data.get("session_key")
 
         return context
 
@@ -288,7 +298,7 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
             "noticia": noticia,
             "user": request.user,
             "voter_session": (
-                request.session.session_key
+                lookup_data.get("session_key")
                 if not request.user.is_authenticated
                 else None
             ),
@@ -345,7 +355,7 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
                     "voter_user": self.request.user
                     if self.request.user.is_authenticated
                     else None,
-                    "voter_session": self.request.session.session_key
+                    "voter_session": lookup_data.get("session_key")
                     if not self.request.user.is_authenticated
                     else None,
                 },
@@ -370,6 +380,9 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
 
             logger.error(f"Form validation error: {errors}")
 
+            # Get voter identifier (handles extension session priority)
+            voter_data, lookup_data = get_voter_identifier(self.request)
+
             response = render(
                 self.request,
                 self.template_name,
@@ -380,7 +393,7 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
                     "voter_user": self.request.user
                     if self.request.user.is_authenticated
                     else None,
-                    "voter_session": self.request.session.session_key
+                    "voter_session": lookup_data.get("session_key")
                     if not self.request.user.is_authenticated
                     else None,
                 },

@@ -1,6 +1,6 @@
 // options.js - Handles extension settings page
 
-const DEFAULT_API_URL = 'http://localhost:8000';
+const DEFAULT_API_URL = 'https://memoria.uy';
 
 // Load saved settings on page load
 document.addEventListener('DOMContentLoaded', async () => {

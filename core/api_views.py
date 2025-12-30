@@ -7,15 +7,11 @@ from django.utils.decorators import method_decorator
 from django.db import IntegrityError
 from core.models import Noticia, Voto
 from core import parse
+from core.views import get_voter_identifier
 import json
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def get_extension_session_id(request):
-    """Extract session ID from extension header."""
-    return request.headers.get("X-Extension-Session")
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -61,13 +57,16 @@ class SubmitFromExtensionView(View):
                     {"error": "Voto inválido. Usa: buena, mala o neutral"}, status=400
                 )
 
-            # Get session ID from extension
-            session_id = get_extension_session_id(request)
-            logger.info(f"[Extension API] Session ID: {session_id}")
+            # Get voter identifier (handles extension/Django session priority)
+            voter_data, lookup_data = get_voter_identifier(request)
+            logger.info(f"[Extension API] Voter data: {voter_data}")
+            logger.info(f"[Extension API] Lookup data: {lookup_data}")
 
-            if not session_id:
-                logger.error("[Extension API] No session ID provided!")
-                return JsonResponse({"error": "Session ID es requerido"}, status=400)
+            if not lookup_data.get("session_key") and not voter_data.get("usuario"):
+                logger.error("[Extension API] No session ID or user provided!")
+                return JsonResponse(
+                    {"error": "Session ID es requerido"}, status=400
+                )
 
             # Get or create Noticia
             noticia, created = Noticia.objects.get_or_create(
@@ -96,12 +95,24 @@ class SubmitFromExtensionView(View):
                 meta_desc = og.get("description") or twitter.get("description")
 
                 if meta_title and (not noticia.meta_titulo or created):
-                    noticia.meta_titulo = meta_title
-                    updated = True
+                    if len(meta_title) > 255:
+                        logger.warning(
+                            f"meta_title too long ({len(meta_title)}), "
+                            f"skipping: {meta_title[:100]}..."
+                        )
+                    else:
+                        noticia.meta_titulo = meta_title
+                        updated = True
 
                 if meta_image and not noticia.meta_imagen:
-                    noticia.meta_imagen = meta_image
-                    updated = True
+                    if len(meta_image) > 500:
+                        logger.warning(
+                            f"meta_image URL too long ({len(meta_image)}), "
+                            f"skipping: {meta_image[:100]}..."
+                        )
+                    else:
+                        noticia.meta_imagen = meta_image
+                        updated = True
 
                 if meta_desc and (not noticia.meta_descripcion or created):
                     noticia.meta_descripcion = meta_desc
@@ -115,12 +126,14 @@ class SubmitFromExtensionView(View):
                     )
 
                     if meta_title and not noticia.meta_titulo:
-                        noticia.meta_titulo = meta_title
-                        updated = True
+                        if len(meta_title) <= 255:
+                            noticia.meta_titulo = meta_title
+                            updated = True
 
                     if meta_image and not noticia.meta_imagen:
-                        noticia.meta_imagen = meta_image
-                        updated = True
+                        if len(meta_image) <= 500:
+                            noticia.meta_imagen = meta_image
+                            updated = True
 
                     if meta_desc and not noticia.meta_descripcion:
                         noticia.meta_descripcion = meta_desc
@@ -142,21 +155,11 @@ class SubmitFromExtensionView(View):
                 except Exception as e:
                     logger.warning(f"Failed to fetch meta from URL: {e}")
 
-            # Create or update vote
-            vote_data = {"session_key": session_id}
-
-            # Check if user is authenticated (via cookie/token)
-            if request.user.is_authenticated:
-                vote_data = {"usuario": request.user}
-                logger.info(
-                    f"[Extension API] Authenticated user: {request.user.username}"
-                )
-            else:
-                logger.info(f"[Extension API] Anonymous vote with session: {session_id}")
-
-            # Try to update existing vote or create new one
+            # Create or update vote (using centralized voter identifier)
             vote, vote_created = Voto.objects.update_or_create(
-                noticia=noticia, **vote_data, defaults={"opinion": vote_opinion}
+                noticia=noticia,
+                **lookup_data,
+                defaults={**voter_data, "opinion": vote_opinion}
             )
 
             logger.info(
@@ -223,17 +226,11 @@ class CheckVoteView(View):
         except Noticia.DoesNotExist:
             return JsonResponse({"voted": False})
 
-        # Check for vote
-        session_id = get_extension_session_id(request)
+        # Get voter identifier (handles extension/Django session priority)
+        voter_data, lookup_data = get_voter_identifier(request)
 
-        if request.user.is_authenticated:
-            # Check for authenticated user vote
-            vote = Voto.objects.filter(noticia=noticia, usuario=request.user).first()
-        elif session_id:
-            # Check for session-based vote
-            vote = Voto.objects.filter(noticia=noticia, session_key=session_id).first()
-        else:
-            return JsonResponse({"voted": False})
+        # Check for vote using lookup_data
+        vote = Voto.objects.filter(noticia=noticia, **lookup_data).first()
 
         if vote:
             return JsonResponse(
