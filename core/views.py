@@ -420,3 +420,9 @@ class AcercaDeView(TemplateView):
     """Static page explaining the project vision and motivation."""
 
     template_name = "acerca_de.html"
+
+
+class PrivacidadView(TemplateView):
+    """Privacy policy page."""
+
+    template_name = "privacidad.html"
