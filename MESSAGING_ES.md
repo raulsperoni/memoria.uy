@@ -201,7 +201,7 @@ MEMORIA.UY
 
 [Tarjeta de noticia con botones de voto]
 
-Votá anónimamente. Mirá patrones. Sin seguimiento.
+Archivá noticias. Votá anónimamente. Descubrí patrones.
 
 [Últimas Noticias ↓]
 ```

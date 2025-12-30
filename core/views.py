@@ -1,6 +1,6 @@
 # views.py
 
-from django.views.generic import ListView, View, FormView
+from django.views.generic import ListView, View, FormView, TemplateView
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -322,24 +322,6 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
             except Exception as e:
                 logger.warning(f"Could not fetch metadata for {enlace}: {e}")
 
-        # Trigger archive + enrichment flow for new or incomplete noticias
-        if created or not noticia.archivo_url:
-            try:
-                noticia.find_archived()
-                logger.info(
-                    f"Archive found for noticia {noticia.id}: {noticia.archivo_url}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Archive retrieval failed for noticia {noticia.id}: {e}"
-                )
-                from core.tasks import find_archived
-
-                find_archived.delay(noticia.id)
-                logger.info(
-                    f"Scheduled async archive retrieval for noticia {noticia.id}"
-                )
-
         # Get voter identifier (user or session)
         voter_data, lookup_data = get_voter_identifier(self.request)
 
@@ -432,3 +414,9 @@ class DeleteNoticiaView(LoginRequiredMixin, View):
         noticia = get_object_or_404(Noticia, pk=pk)
         noticia.delete()
         return redirect(reverse_lazy("timeline"))
+
+
+class AcercaDeView(TemplateView):
+    """Static page explaining the project vision and motivation."""
+
+    template_name = "acerca_de.html"

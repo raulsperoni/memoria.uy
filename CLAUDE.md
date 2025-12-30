@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Memoria.uy is a Django news aggregation and archival application. Users submit news URLs, which are archived via archive.ph, parsed using AI (LiteLLM), and enriched with metadata (title, summary, entities, sentiment). Users can vote on news and filter by entities or sentiment.
+Memoria.uy is a Django news aggregation application. Users submit news URLs (or capture content via browser extension), which are parsed using AI (LiteLLM) and enriched with metadata (title, summary, entities, sentiment). Users can vote on news and filter by entities or sentiment.
 
 ## Development Commands
 
@@ -34,7 +34,7 @@ poetry run pytest --cov=. --cov-report=html
 poetry run pytest core/tests/test_models.py
 
 # Run tests matching a pattern
-poetry run pytest -k "test_archive"
+poetry run pytest -k "test_vote"
 
 # Run Celery worker (requires Redis running)
 poetry run celery -A memoria worker --loglevel=info
@@ -75,35 +75,28 @@ make restart-worker
 
 ### Core Data Flow
 
-1. **URL Submission** ([core/views.py:173-226](core/views.py#L173-L226))
-   - User submits URL via `NoticiaCreateView`
+1. **URL Submission** ([core/views.py](core/views.py))
+   - User submits URL via `NoticiaCreateView` (web) or extension
    - Creates `Noticia` model with original URL
-   - Calls `noticia.find_archived()` to fetch archived version
+   - Fetches metadata from meta tags
 
-2. **Archive Retrieval** ([core/models.py:83-118](core/models.py#L83-L118))
-   - `find_archived()` attempts sync archive.ph snapshot retrieval
-   - On `ArchiveInProgress`, schedules async retry via `find_archived` Celery task
-   - On `ArchiveNotFound`, triggers `save_to_archive_org` Celery task
+2. **Content Capture**
+   - Web submission: Extracts metadata from URL
+   - Extension submission: Receives full HTML content (`captured_html`)
+   - HTML bypasses paywalls when captured by extension
 
 3. **Content Enrichment Pipeline** (Celery tasks in [core/tasks.py](core/tasks.py))
-   - `enrich_markdown`: Parses HTML to Markdown using LiteLLM (Gemini/OpenAI)
-   - `enrich_content`: Extracts structured data (title, summary, entities, sentiment)
+   - `enrich_from_captured_html`: Extracts structured data (title, summary, entities, sentiment) directly from HTML
    - All tasks use `@task_lock` decorator to prevent concurrent execution on same noticia
 
 4. **AI Parsing** ([core/parse.py](core/parse.py))
-   - `parse_noticia_markdown`: HTML → Markdown (model priority: Gemini Flash Lite → O3-mini)
-   - `parse_noticia`: Markdown → Structured JSON (Pydantic `Articulo` model)
+   - `parse_noticia_from_html`: HTML → Structured JSON (Pydantic `Articulo` model)
    - Model fallback system with priority order
-
-5. **Archive Services**
-   - `archive_ph.py`: Primary archive service (archive.ph)
-   - `archive_org.py`: Fallback (Internet Archive)
-   - Custom exceptions: `ArchiveInProgress`, `ArchiveNotFound`
 
 ### Key Models
 
-- **Noticia** ([core/models.py:13-119](core/models.py#L13-L119))
-  - Stores original URL (`enlace`), archive URL (`archivo_url`), metadata, and parsed content
+- **Noticia** ([core/models.py](core/models.py))
+  - Stores original URL (`enlace`), metadata from meta tags, and captured HTML
   - Properties: `mostrar_titulo`, `mostrar_imagen`, `mostrar_fecha` (fallback chains)
 
 - **Voto**: User opinion on news (buena/mala/neutral)
@@ -266,12 +259,7 @@ Comprehensive logging is enabled in DEBUG mode ([memoria/settings.py:122-157](me
 All Celery tasks use `@task_lock(timeout=...)` decorator to prevent duplicate execution. Lock keys include task name and arguments.
 
 ### Model Fallback in AI Parsing
-Both markdown and JSON parsing have fallback models defined in `MODELS_PRIORITY_MD` and `MODELS_PRIORITY_JSON`. If primary model fails, automatically tries next priority.
-
-### Archive Workflow
-- First attempt: Synchronous archive.ph lookup in view
-- If in progress: Async Celery retry (3 attempts, 3min intervals)
-- If not found: Attempt to save to archive.org, then retry retrieval
+AI parsing has fallback models configured in parse.py. If primary model fails, automatically tries next priority.
 
 ### Testing
 - Uses pytest with pytest-django

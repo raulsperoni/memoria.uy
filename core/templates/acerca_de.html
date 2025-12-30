@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-8 border-b-2 border-black pb-4">
+    <h1 class="text-3xl md:text-4xl font-bold mono mb-2">Acerca de memoria.uy</h1>
+    <p class="text-sm text-gray-600 mono">// visión, motivación y funcionamiento del proyecto</p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="space-y-8 text-sm md:text-base leading-relaxed">
+
+    <!-- Qué es -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> ¿Qué es memoria.uy?
+      </h2>
+      <p class="mb-3">
+        Memoria.uy es una herramienta para votar noticias uruguayas. Te permite expresar qué pensás sobre el contenido de los artículos que leés —si te parece buena o mala noticia— y ver qué opinan otras personas.
+      </p>
+      <p class="text-gray-700">
+        Es un proyecto académico y de interés social. No es un producto comercial.
+      </p>
+    </section>
+
+    <!-- Por qué existe -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> ¿Por qué existe?
+      </h2>
+      <p class="mb-3">
+        Las noticias nos impactan de diferentes maneras. El mismo artículo puede ser visto como buena noticia por algunas personas y como mala noticia por otras.
+      </p>
+      <p class="mb-3">
+        Nos interesa entender estos patrones: ¿qué noticias generan consenso en Uruguay? ¿Cuáles nos dividen? ¿Existen burbujas de opinión claramente diferenciadas?
+      </p>
+      <p class="text-gray-700">
+        Memoria.uy busca hacer visible el panorama mediático uruguayo desde la perspectiva de quienes leen las noticias, no solo de quienes las producen.
+      </p>
+    </section>
+
+    <!-- Cómo funciona -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> ¿Cómo funciona?
+      </h2>
+      <div class="space-y-3">
+        <p class="font-semibold mono text-sm">1. Captura de contenido</p>
+        <p class="pl-4 text-gray-700">
+          Cuando agregás una URL (desde el sitio web o la extensión del navegador), el sistema captura el contenido del artículo para poder procesarlo.
+        </p>
+
+        <p class="font-semibold mono text-sm">2. Votación</p>
+        <p class="pl-4 text-gray-700">
+          Podés votar si el contenido te parece buena noticia, mala noticia, o neutral. No hace falta registro. Tu voto se guarda de forma anónima usando tu sesión del navegador.
+        </p>
+
+        <p class="font-semibold mono text-sm">3. Procesamiento</p>
+        <p class="pl-4 text-gray-700">
+          El sistema usa modelos de lenguaje (LLMs) para extraer información del artículo: título, resumen, entidades mencionadas (personas, organizaciones, lugares) y sentimiento general.
+        </p>
+
+        <p class="font-semibold mono text-sm">4. Visualización</p>
+        <p class="pl-4 text-gray-700">
+          Podés filtrar noticias por tus votos, por consenso mayoritario, o explorar patrones agregados.
+        </p>
+      </div>
+    </section>
+
+    <!-- Privacidad -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> Privacidad
+      </h2>
+      <p class="mb-3">
+        No hace falta crear cuenta para votar. Los votos se vinculan a tu sesión del navegador, no a tu identidad.
+      </p>
+      <p class="text-gray-700">
+        Si usás la extensión de navegador, podés mantener tus votos sincronizados entre la extensión y el sitio web. La sesión se guarda localmente en tu navegador.
+      </p>
+    </section>
+
+    <!-- Código abierto -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> Código abierto
+      </h2>
+      <p class="mb-3">
+        El código de memoria.uy es abierto. Podés revisar cómo funciona, proponer mejoras, o usar partes del código para tus propios proyectos.
+      </p>
+      <p class="text-gray-700">
+        El proyecto está construido con Django, Celery, Tailwind CSS, y usa LiteLLM para el procesamiento de lenguaje natural.
+      </p>
+    </section>
+
+    <!-- Limitaciones -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> Limitaciones actuales
+      </h2>
+      <div class="space-y-2 text-gray-700">
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>La votación refleja tu opinión sobre el <strong>contenido/evento</strong> de la noticia, no sobre la calidad del periodismo.</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>El procesamiento con LLMs puede tomar algunos minutos. No siempre es perfecto.</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Este es un proyecto en desarrollo activo. Algunas funciones pueden cambiar o no funcionar perfectamente.</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- Próximos pasos -->
+    <section>
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> ¿Qué viene?
+      </h2>
+      <p class="mb-3">
+        A medida que se acumulen votos, queremos implementar:
+      </p>
+      <div class="space-y-2 text-gray-700">
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Visualización de clusters: agrupar votantes según patrones de voto similares</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Seguimiento de entidades: ver cómo evoluciona el sentimiento hacia políticos, organizaciones, etc.</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>Métricas de polarización: identificar qué temas dividen más a Uruguay</span>
+        </p>
+        <p class="flex items-start">
+          <span class="mr-2">•</span>
+          <span>API pública para investigadores</span>
+        </p>
+      </div>
+    </section>
+
+    <!-- Contacto -->
+    <section class="border-t-2 border-black pt-6 mt-8">
+      <h2 class="text-xl font-bold mono mb-3 flex items-center">
+        <span class="text-gray-400 mr-2">&gt;</span> Contacto
+      </h2>
+      <p class="text-gray-700">
+        ¿Tenés preguntas, comentarios o querés colaborar?
+      </p>
+      <p class="mt-2">
+        <a href="https://github.com/raulsperoni/memoria"
+           target="_blank"
+           class="mono text-sm border border-black px-3 py-2 inline-block hover:bg-black hover:text-white transition-colors">
+          github.com/raulsperoni/memoria
+        </a>
+      </p>
+    </section>
+
+  </div>
+
+  <!-- Back to timeline -->
+  <div class="mt-12 mb-8">
+    <a href="{% url 'timeline' %}"
+       class="mono text-sm border-2 border-black px-4 py-2 inline-block hover:bg-black hover:text-white transition-colors">
+      ← Volver a las noticias
+    </a>
+  </div>
+
+</div>
+{% endblock %}
