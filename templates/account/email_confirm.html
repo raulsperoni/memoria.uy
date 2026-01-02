@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load account %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white border-2 border-black p-8 mt-10 mono">
+  <h1 class="text-2xl font-bold mb-6 border-b-2 border-black pb-2">
+    > confirmar dirección de email
+  </h1>
+
+  {% if confirmation %}
+    {% user_display confirmation.email_address.user as user_display %}
+
+    <div class="mb-6 text-sm">
+      <p class="mb-4">
+        Por favor, confirmá que <span class="font-semibold">{{ confirmation.email_address.email }}</span> es una dirección de email para el usuario <span class="font-semibold">{{ user_display }}</span>.
+      </p>
+    </div>
+
+    <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+      {% csrf_token %}
+      <button type="submit" class="bg-black text-white px-6 py-3 hover:bg-gray-800 transition-colors border-2 border-black font-semibold">
+        [confirmar]
+      </button>
+    </form>
+  {% else %}
+    <div class="bg-red-50 border-2 border-red-500 p-4 mb-6">
+      <p class="font-semibold text-red-700">
+        ⚠ Error: Este enlace de confirmación de email no es válido o ya expiró.
+      </p>
+    </div>
+
+    <a href="{% url 'timeline' %}" class="inline-block border-2 border-black px-6 py-3 hover:bg-black hover:text-white transition-colors">
+      [← volver al inicio]
+    </a>
+  {% endif %}
+</div>
+{% endblock %}
