@@ -1,0 +1,25 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" fill="#FFFFFF"/>
+
+  <!-- cell size: 25 -->
+  <!-- row 1 -->
+  <rect x="0"  y="0"  width="25" height="25" fill="#000"/>
+  <rect x="25" y="0"  width="25" height="25" fill="#000"/>
+  <rect x="50" y="0"  width="25" height="25" fill="#000"/>
+  <rect x="75" y="0"  width="25" height="25" fill="#000"/>
+
+  <!-- row 2 -->
+  <rect x="0"  y="25" width="25" height="25" fill="#000"/>
+  <rect x="25" y="25" width="25" height="25" fill="#000"/>
+  <rect x="75" y="25" width="25" height="25" fill="#000"/>
+
+  <!-- row 3 -->
+  <rect x="0"  y="50" width="25" height="25" fill="#000"/>
+  <rect x="50" y="50" width="25" height="25" fill="#000"/>
+  <rect x="75" y="50" width="25" height="25" fill="#000"/>
+
+  <!-- row 4 -->
+  <rect x="0"  y="75" width="25" height="25" fill="#000"/>
+  <rect x="25" y="75" width="25" height="25" fill="#000"/>
+  <rect x="50" y="75" width="25" height="25" fill="#000"/>
+</svg>
