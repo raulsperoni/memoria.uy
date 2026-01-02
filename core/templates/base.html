@@ -7,6 +7,12 @@
   <title>memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Votá noticias anónimamente. Mirá patrones. Sin seguimiento.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'core/favicon-32x32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'core/favicon-16x16.png' %}">
+  <link rel="shortcut icon" href="{% static 'core/favicon-32x32.png' %}">
+
   {% tailwind_css %}
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
@@ -75,15 +81,20 @@
     <div class="max-w-5xl mx-auto px-4 py-4">
       <div class="flex justify-between items-center">
         <!-- Logo -->
-        <div>
-          <h1 class="text-xl md:text-2xl font-bold mono tracking-tight">
-            <a href="{% url 'timeline' %}" class="hover:bg-black hover:text-white px-2 py-1 transition-colors">
-              <span class="cursor">memoria.uy</span>
-            </a>
-          </h1>
-          <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono">
-            // ¿qué pensamos realmente los uruguayos sobre las noticias?
-          </p>
+        <div class="flex items-center gap-3">
+          <a href="{% url 'timeline' %}" class="hover:opacity-70 transition-opacity">
+            <img src="{% static 'core/logo.svg' %}" alt="memoria.uy" class="h-10 w-10">
+          </a>
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold mono tracking-tight">
+              <a href="{% url 'timeline' %}" class="hover:bg-black hover:text-white px-2 py-1 transition-colors">
+                <span class="cursor">memoria.uy</span>
+              </a>
+            </h1>
+            <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono">
+              // ¿qué pensamos realmente los uruguayos sobre las noticias?
+            </p>
+          </div>
         </div>
 
         <!-- Auth Links -->
