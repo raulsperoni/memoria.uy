@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-8 border-b-2 border-black pb-4">
+    <h1 class="text-3xl md:text-4xl font-bold mono mb-2">
+      ¡Bienvenido a memoria.uy!
+    </h1>
+    <p class="text-sm text-gray-600 mono">
+      // instalaste la extensión correctamente
+    </p>
+  </div>
+
+  <!-- Success Message -->
+  <div class="bg-black text-white p-6 mb-8 border-2 border-black">
+    <div class="flex items-start gap-4">
+      <div class="text-3xl">✓</div>
+      <div>
+        <h2 class="text-xl font-bold mono mb-2">
+          Extensión instalada
+        </h2>
+        <p class="text-sm leading-relaxed">
+          Ya podés empezar a votar noticias uruguayas de forma anónima
+          directamente desde tu navegador.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- How to Use -->
+  <section class="space-y-6">
+    <h2 class="text-2xl font-bold mono mb-4 flex items-center">
+      <span class="text-gray-400 mr-2">&gt;</span>
+      Cómo usar la extensión
+    </h2>
+
+    <div class="space-y-6">
+      <!-- Step 1 -->
+      <div class="border-2 border-black p-4">
+        <div class="flex items-start gap-3">
+          <span class="mono font-bold text-xl">1.</span>
+          <div>
+            <h3 class="font-bold mono mb-2">Lee una noticia uruguaya</h3>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              Cuando estés leyendo un artículo de cualquier medio uruguayo
+              (El País, El Observador, La Diaria, etc.), hacé click en el
+              ícono de memoria.uy en tu navegador.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="border-2 border-black p-4">
+        <div class="flex items-start gap-3">
+          <span class="mono font-bold text-xl">2.</span>
+          <div>
+            <h3 class="font-bold mono mb-2">Votá: buena, mala o neutral</h3>
+            <p class="text-sm text-gray-700 leading-relaxed mb-3">
+              Expresá tu opinión sobre el <strong>contenido</strong> de la
+              noticia (no sobre la calidad del periodismo):
+            </p>
+            <ul class="text-sm text-gray-700 space-y-1 pl-4">
+              <li class="flex items-start">
+                <span class="mr-2">•</span>
+                <span><strong>Buena noticia</strong>: contenido positivo para el país/sociedad</span>
+              </li>
+              <li class="flex items-start">
+                <span class="mr-2">•</span>
+                <span><strong>Mala noticia</strong>: contenido negativo o preocupante</span>
+              </li>
+              <li class="flex items-start">
+                <span class="mr-2">•</span>
+                <span><strong>Neutral</strong>: ni claramente buena ni mala</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="border-2 border-black p-4">
+        <div class="flex items-start gap-3">
+          <span class="mono font-bold text-xl">3.</span>
+          <div>
+            <h3 class="font-bold mono mb-2">Explorá patrones</h3>
+            <p class="text-sm text-gray-700 leading-relaxed">
+              Visitá <a href="{% url 'timeline' %}" class="underline hover:bg-black hover:text-white">memoria.uy</a>
+              para ver qué noticias generan consenso y cuáles dividen a los uruguayos.
+              Filtrá por tus votos, mayoría, o entidades mencionadas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy Note -->
+  <section class="mt-8 border-t-2 border-black pt-6">
+    <h2 class="text-xl font-bold mono mb-3 flex items-center">
+      <span class="text-gray-400 mr-2">&gt;</span>
+      Tu privacidad
+    </h2>
+    <div class="bg-gray-50 p-4 border border-gray-300">
+      <p class="text-sm text-gray-700 leading-relaxed mb-3">
+        <strong>No hace falta crear cuenta.</strong> Tus votos se vinculan
+        a una sesión anónima que se guarda localmente en tu navegador.
+      </p>
+      <p class="text-sm text-gray-700 leading-relaxed">
+        La extensión <strong>no rastrea tu navegación</strong>. Solo actúa
+        cuando hacés click en el ícono o visitás memoria.uy.
+      </p>
+      <p class="mt-3">
+        <a href="{% url 'privacidad' %}"
+           class="mono text-xs border border-black px-3 py-1 inline-block hover:bg-black hover:text-white transition-colors">
+          Ver política de privacidad →
+        </a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="mt-8">
+    <h2 class="text-xl font-bold mono mb-3 flex items-center">
+      <span class="text-gray-400 mr-2">&gt;</span>
+      Funcionalidades
+    </h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="border border-black p-4">
+        <h3 class="font-bold mono text-sm mb-2">🔒 Anónimo</h3>
+        <p class="text-xs text-gray-700">
+          No rastreamos tu identidad ni vinculamos votos a datos personales.
+        </p>
+      </div>
+      <div class="border border-black p-4">
+        <h3 class="font-bold mono text-sm mb-2">⚡ Instantáneo</h3>
+        <p class="text-xs text-gray-700">
+          Votás en un click. Los patrones se actualizan en tiempo real.
+        </p>
+      </div>
+      <div class="border border-black p-4">
+        <h3 class="font-bold mono text-sm mb-2">🧠 Inteligente</h3>
+        <p class="text-xs text-gray-700">
+          Usamos IA para extraer entidades (personas, organizaciones) y sentimiento.
+        </p>
+      </div>
+      <div class="border border-black p-4">
+        <h3 class="font-bold mono text-sm mb-2">📖 Código abierto</h3>
+        <p class="text-xs text-gray-700">
+          Todo el código es público. Podés auditar cómo funciona.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="mt-12 mb-8 text-center">
+    <a href="{% url 'timeline' %}"
+       class="inline-block bg-black text-white px-8 py-3 mono font-bold hover:bg-gray-800 transition-colors border-2 border-black">
+      Ver timeline de noticias →
+    </a>
+    <p class="mt-4 text-sm text-gray-600 mono">
+      // o abrí cualquier noticia y hacé click en el ícono de la extensión
+    </p>
+  </div>
+
+</div>
+{% endblock %}

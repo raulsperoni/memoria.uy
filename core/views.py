@@ -466,3 +466,9 @@ class PrivacidadView(TemplateView):
     """Privacy policy page."""
 
     template_name = "privacidad.html"
+
+
+class BienvenidaView(TemplateView):
+    """Welcome page for extension installation."""
+
+    template_name = "bienvenida.html"

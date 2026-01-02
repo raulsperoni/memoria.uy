@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="memoria-uy-brand/logo-256.png" alt="memoria.uy" width="128">
+</p>
+
 # Memoria.uy
 
 **Anonymous-first news sentiment aggregator.** Vote on news articles (good/bad/neutral) without login, explore polarization patterns through collective opinions.
