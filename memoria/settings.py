@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sitemaps",
     "corsheaders",
     "django_browser_reload",
     "allauth",
@@ -216,17 +217,20 @@ ACCOUNT_ADAPTER = "memoria.adapter.CustomAccountAdapter"
 # allow signups.
 ACCOUNT_ALLOW_SIGNUPS = os.getenv("ACCOUNT_ALLOW_SIGNUPS", "False") == "True"
 
-# Email configuration
+# Email configuration (Resend SMTP)
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
 )
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.resend.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "resend")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True") == "True"
-EMAIL_USE_TLS = False
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@memoria.uy")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "memoria.uy <noreply@memoria.uy>"
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Django-allauth configuration
 ACCOUNT_LOGIN_METHODS = {"email"}

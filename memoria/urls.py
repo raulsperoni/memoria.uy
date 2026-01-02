@@ -19,7 +19,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
+from core.sitemaps import NoticiaSitemap, StaticViewSitemap
 from core.views import (
     NewsTimelineView,
     VoteView,
@@ -29,22 +31,41 @@ from core.views import (
     AcercaDeView,
     PrivacidadView,
     BienvenidaView,
+    NoticiaDetailView,
 )
 from core.api_views import (
     SubmitFromExtensionView,
     CheckVoteView,
 )
-from memoria.views import health_check
+from memoria.views import health_check, robots_txt
+
+# Sitemap configuration
+sitemaps = {
+    "noticias": NoticiaSitemap,
+    "static": StaticViewSitemap,
+}
 
 urlpatterns = (
     [
         path("admin/", admin.site.urls),
+        path("robots.txt", robots_txt, name="robots_txt"),
+        path(
+            "sitemap.xml",
+            sitemap,
+            {"sitemaps": sitemaps},
+            name="django.contrib.sitemaps.views.sitemap",
+        ),
         path("", NewsTimelineView.as_view(), name="timeline"),
         path("acerca-de/", AcercaDeView.as_view(), name="acerca_de"),
         path("privacidad/", PrivacidadView.as_view(), name="privacidad"),
         path("bienvenida/", BienvenidaView.as_view(), name="bienvenida"),
         path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
         path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
+        path(
+            "noticias/<slug:slug>/",
+            NoticiaDetailView.as_view(),
+            name="noticia-detail",
+        ),
         path(
             "noticias/<int:pk>/refresh/",
             RefreshNoticiaView.as_view(),

@@ -4,9 +4,29 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?</title>
+  <title>{% block title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Votá noticias anónimamente. Mirá patrones. Sin seguimiento.">
+  <meta name="description" content="{% block meta_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="{% block canonical_url %}https://memoria.uy{{ request.path }}{% endblock %}">
+
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:site_name" content="memoria.uy">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}https://memoria.uy{{ request.path }}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{% static 'core/logo.svg' %}{% endblock %}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="es_UY">
+
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+  <meta name="twitter:title" content="{% block twitter_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}{% static 'core/logo.svg' %}{% endblock %}">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'core/favicon-32x32.png' %}">
