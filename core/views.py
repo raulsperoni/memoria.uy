@@ -1,6 +1,12 @@
 # views.py
 
-from django.views.generic import ListView, View, FormView, TemplateView
+from django.views.generic import (
+    ListView,
+    View,
+    FormView,
+    TemplateView,
+    DetailView,
+)
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -472,3 +478,45 @@ class BienvenidaView(TemplateView):
     """Welcome page for extension installation."""
 
     template_name = "bienvenida.html"
+
+
+class NoticiaDetailView(DetailView):
+    """Individual article detail page with SEO optimization."""
+
+    model = Noticia
+    template_name = "noticias/noticia_detail.html"
+    context_object_name = "noticia"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        noticia = self.get_object()
+
+        # Get voter identifier to check if user has voted
+        voter_data, lookup_data = get_voter_identifier(self.request)
+
+        # Check if current user has voted on this article
+        user_vote = Voto.objects.filter(
+            noticia=noticia, **lookup_data
+        ).first()
+        context["user_vote"] = user_vote
+
+        # Get vote counts
+        vote_stats = noticia.votos.aggregate(
+            total=Count("id"),
+            buenas=Count("id", filter=Q(opinion="buena")),
+            malas=Count("id", filter=Q(opinion="mala")),
+            neutrales=Count("id", filter=Q(opinion="neutral")),
+        )
+        context["vote_stats"] = vote_stats
+
+        # Determine majority opinion
+        if vote_stats["buenas"] > vote_stats["malas"]:
+            context["majority_opinion"] = "buena"
+        elif vote_stats["malas"] > vote_stats["buenas"]:
+            context["majority_opinion"] = "mala"
+        else:
+            context["majority_opinion"] = "neutral"
+
+        return context

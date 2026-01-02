@@ -3,6 +3,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 from core import parse
 import logging
 
@@ -15,6 +16,15 @@ class Noticia(models.Model):
     Stores the original URL and metadata extracted from meta tags.
     """
     enlace = models.URLField(unique=True, help_text="Original news article URL")
+
+    # SEO-friendly slug for URLs
+    slug = models.SlugField(
+        max_length=255,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="SEO-friendly URL slug"
+    )
 
     # Metadata extracted from og: / twitter: tags
     meta_titulo = models.CharField(max_length=255, blank=True, null=True)
@@ -41,6 +51,23 @@ class Noticia(models.Model):
 
     def __str__(self):
         return self.meta_titulo or self.enlace
+
+    def save(self, *args, **kwargs):
+        """Auto-generate slug from title if not provided."""
+        if not self.slug:
+            base_slug = slugify(self.meta_titulo or f"noticia-{self.pk or ''}")
+            slug = base_slug
+            counter = 1
+            while Noticia.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        """Return the canonical URL for this noticia."""
+        from django.urls import reverse
+        return reverse('noticia-detail', kwargs={'slug': self.slug})
 
     @property
     def mostrar_titulo(self):

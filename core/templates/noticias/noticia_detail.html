@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ noticia.mostrar_titulo }} - memoria.uy{% endblock %}
+
+{% block meta_description %}{{ noticia.meta_descripcion|default:"Votá y mirá qué piensan los uruguayos sobre esta noticia." }}{% endblock %}
+
+{% block canonical_url %}https://memoria.uy{{ noticia.get_absolute_url }}{% endblock %}
+
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ noticia.mostrar_titulo }}{% endblock %}
+{% block og_description %}{{ noticia.meta_descripcion|default:"Votá y mirá qué piensan los uruguayos sobre esta noticia." }}{% endblock %}
+{% block og_url %}https://memoria.uy{{ noticia.get_absolute_url }}{% endblock %}
+{% block og_image %}{% if noticia.mostrar_imagen %}{{ noticia.mostrar_imagen }}{% else %}{% static 'core/logo.svg' %}{% endif %}{% endblock %}
+
+{% block twitter_title %}{{ noticia.mostrar_titulo }}{% endblock %}
+{% block twitter_description %}{{ noticia.meta_descripcion|default:"Votá y mirá qué piensan los uruguayos sobre esta noticia." }}{% endblock %}
+{% block twitter_image %}{% if noticia.mostrar_imagen %}{{ noticia.mostrar_imagen }}{% else %}{% static 'core/logo.svg' %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <!-- Breadcrumb -->
+  <nav class="text-xs mono text-gray-600 mb-6">
+    <a href="{% url 'timeline' %}" class="hover:text-black">← volver al timeline</a>
+  </nav>
+
+  <!-- Article Card -->
+  <article class="border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
+    <!-- Image -->
+    {% if noticia.mostrar_imagen %}
+    <div class="border-b-2 border-black">
+      <img src="{{ noticia.mostrar_imagen }}"
+           alt="{{ noticia.mostrar_titulo }}"
+           class="w-full h-64 object-cover">
+    </div>
+    {% endif %}
+
+    <!-- Content -->
+    <div class="p-6">
+      <!-- Title -->
+      <h1 class="text-2xl md:text-3xl font-bold mono mb-4 leading-tight">
+        {{ noticia.mostrar_titulo }}
+      </h1>
+
+      <!-- Description -->
+      {% if noticia.meta_descripcion %}
+      <p class="text-base text-gray-700 mb-6 leading-relaxed">
+        {{ noticia.meta_descripcion }}
+      </p>
+      {% endif %}
+
+      <!-- Metadata -->
+      <div class="flex flex-wrap items-center gap-4 text-xs mono text-gray-600 mb-6 pb-6 border-b border-gray-300">
+        <span>📅 {{ noticia.mostrar_fecha|date:"d/m/Y H:i" }}</span>
+        <span>👁️ {{ vote_stats.total }} voto{{ vote_stats.total|pluralize }}</span>
+      </div>
+
+      <!-- Vote Stats -->
+      <div class="bg-gray-50 border border-gray-300 p-4 mb-6">
+        <h2 class="text-sm font-bold mono mb-3">Opinión de los uruguayos:</h2>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-sm mono">
+            <span class="text-green-700">👍 Buena noticia</span>
+            <span class="font-bold">{{ vote_stats.buenas }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm mono">
+            <span class="text-red-700">👎 Mala noticia</span>
+            <span class="font-bold">{{ vote_stats.malas }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm mono">
+            <span class="text-gray-600">😐 Neutral</span>
+            <span class="font-bold">{{ vote_stats.neutrales }}</span>
+          </div>
+        </div>
+
+        {% if majority_opinion != "neutral" %}
+        <div class="mt-4 pt-4 border-t border-gray-300 text-sm mono">
+          <strong>Mayoría:</strong>
+          {% if majority_opinion == "buena" %}
+          <span class="text-green-700 font-bold">👍 Buena noticia</span>
+          {% else %}
+          <span class="text-red-700 font-bold">👎 Mala noticia</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- User Vote Status -->
+      {% if user_vote %}
+      <div class="bg-blue-50 border border-blue-300 p-4 mb-6">
+        <p class="text-sm mono">
+          <strong>Tu voto:</strong>
+          {% if user_vote.opinion == "buena" %}
+          👍 Buena noticia
+          {% elif user_vote.opinion == "mala" %}
+          👎 Mala noticia
+          {% else %}
+          😐 Neutral
+          {% endif %}
+        </p>
+      </div>
+      {% else %}
+      <!-- Vote Form -->
+      <form hx-post="{% url 'vote' noticia.pk %}"
+            hx-swap="outerHTML"
+            class="bg-yellow-50 border border-yellow-300 p-4 mb-6">
+        <p class="text-sm font-bold mono mb-3">¿Qué te parece esta noticia?</p>
+        <div class="flex flex-wrap gap-2">
+          <button type="submit"
+                  name="opinion"
+                  value="buena"
+                  class="flex-1 min-w-[100px] bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition-colors mono text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            👍 Buena
+          </button>
+          <button type="submit"
+                  name="opinion"
+                  value="mala"
+                  class="flex-1 min-w-[100px] bg-red-600 text-white px-4 py-2 hover:bg-red-700 transition-colors mono text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            👎 Mala
+          </button>
+          <button type="submit"
+                  name="opinion"
+                  value="neutral"
+                  class="flex-1 min-w-[100px] bg-gray-500 text-white px-4 py-2 hover:bg-gray-600 transition-colors mono text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            😐 Neutral
+          </button>
+        </div>
+      </form>
+      {% endif %}
+
+      <!-- Original Link -->
+      <div class="pt-6 border-t border-gray-300">
+        <a href="{{ noticia.enlace }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="inline-flex items-center gap-2 text-sm mono text-blue-700 hover:text-blue-900 hover:underline">
+          🔗 Ver noticia original →
+        </a>
+      </div>
+    </div>
+  </article>
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": "{{ noticia.mostrar_titulo|escapejs }}",
+    "description": "{{ noticia.meta_descripcion|default:'Noticia compartida en memoria.uy'|escapejs }}",
+    "url": "https://memoria.uy{{ noticia.get_absolute_url }}",
+    "datePublished": "{{ noticia.fecha_agregado|date:'c' }}",
+    {% if noticia.mostrar_imagen %}
+    "image": "{{ noticia.mostrar_imagen }}",
+    {% endif %}
+    "publisher": {
+      "@type": "Organization",
+      "name": "memoria.uy",
+      "url": "https://memoria.uy",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://memoria.uy{% static 'core/logo.svg' %}"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://memoria.uy{{ noticia.get_absolute_url }}"
+    }
+  }
+  </script>
+</div>
+{% endblock %}
