@@ -19,10 +19,20 @@ class Command(BaseCommand):
         recipient = options["recipient"]
 
         self.stdout.write(f"Sending test email to: {recipient}")
-        self.stdout.write(f"Using SMTP: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}")
-        self.stdout.write(f"From: {settings.DEFAULT_FROM_EMAIL}")
-        self.stdout.write(f"TLS: {settings.EMAIL_USE_TLS}")
-        self.stdout.write(f"SSL: {settings.EMAIL_USE_SSL}")
+        self.stdout.write(f"Email backend: {settings.EMAIL_BACKEND}")
+
+        if settings.EMAIL_BACKEND.endswith("ResendEmailBackend"):
+            api_status = "set" if settings.RESEND_API_KEY else "missing"
+            self.stdout.write(f"Resend API URL: {settings.RESEND_API_URL}")
+            self.stdout.write(f"Resend API key: {api_status}")
+            self.stdout.write(f"From: {settings.DEFAULT_FROM_EMAIL}")
+        else:
+            self.stdout.write(
+                f"Using SMTP: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}"
+            )
+            self.stdout.write(f"From: {settings.DEFAULT_FROM_EMAIL}")
+            self.stdout.write(f"TLS: {settings.EMAIL_USE_TLS}")
+            self.stdout.write(f"SSL: {settings.EMAIL_USE_SSL}")
 
         try:
             send_mail(
