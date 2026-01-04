@@ -752,6 +752,47 @@ def test_kmeans_convergence():
 
 ---
 
+## Phase 6 Implementation Notes
+
+### Timeline Integration Features
+
+**What Was Built:**
+
+1. **Cluster Consensus Badges** ([core/templates/noticias/timeline_item.html:124-179](core/templates/noticias/timeline_item.html#L124-L179))
+   - Shows cluster voting breakdown for each noticia
+   - Displays majority opinion with color-coded badges (green/red/gray)
+   - Shows vote counts (buena/mala/neutral) from cluster members
+   - Includes consensus score with progress bar visualization
+   - Only visible when voter is in a cluster and cluster has voted on that noticia
+
+2. **Cluster Info Sidebar** ([core/templates/noticias/timeline_fragment.html:232-287](core/templates/noticias/timeline_fragment.html#L232-L287))
+   - Displays cluster membership details
+   - Shows cluster ID, size, and consensus score
+   - Includes links to visualization and stats pages
+   - "Recommended news" button for cluster-based filtering
+
+3. **Cluster-Based Filtering** ([core/views.py:230-275](core/views.py#L230-L275))
+   - New filter: `cluster_consenso_buena`
+   - Shows noticias with high consensus (≥0.7) as "buena" in voter's cluster
+   - Integrated with existing HTMX-based filtering system
+   - Filter description: "Estás viendo noticias con alto consenso (buenas) en tu cluster"
+
+4. **Custom Template Filters** ([core/templatetags/vote_extras.py:15-50](core/templatetags/vote_extras.py#L15-L50))
+   - `get_item`: Dictionary lookup in templates
+   - `mul`: Multiply values for percentage calculations
+   - `div`: Divide values for percentage calculations
+   - Used for displaying "X% buena" indicators
+
+**Key Implementation Decisions:**
+
+- Cluster patterns fetched in `get_context_data()` to avoid N+1 queries
+- Patterns stored in dictionary keyed by `noticia_id` for O(1) template lookup
+- Consensus badges only show when both cluster membership and voting pattern exist
+- Filter uses `consensus_score__gte=0.7` threshold for recommendations
+- Blue color scheme distinguishes cluster features from other UI elements
+
+---
+
 ## Phase 5 Implementation Notes
 
 ### Bug Fix: Missing `extra_head` Block

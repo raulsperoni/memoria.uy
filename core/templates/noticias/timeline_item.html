@@ -84,6 +84,9 @@
       <a href="{{ noticia.enlace }}" target="_blank" class="hover:underline">
         → leer original
       </a>
+      <a href="{% url 'noticia-detail' noticia.slug %}" class="hover:underline">
+        ↗ compartir
+      </a>
       {% if noticia.mostrar_fecha %}
         <span>{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}
@@ -110,8 +113,8 @@
       </button>
       <button
         hx-post="{% url 'noticia-delete' noticia.pk %}"
-        hx-target="#timeline-container"
-        hx-swap="outerHTML"
+        hx-target="#noticia-{{ noticia.pk }}"
+        hx-swap="outerHTML swap:1s"
         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
         hx-confirm="¿Eliminar esta noticia?"
         class="border border-black px-2 py-1 hover:bg-black hover:text-white text-xs">
@@ -120,6 +123,63 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- Cluster Consensus Badge (if in cluster) -->
+  {% if has_cluster and cluster_patterns and noticia.id in cluster_patterns %}
+    {% with pattern=cluster_patterns|get_item:noticia.id %}
+      <div class="border-b-2 border-black px-3 py-2 bg-blue-50">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-gray-700 mono">
+            tu cluster (#{{ my_cluster.id }}) votó:
+          </span>
+          <div class="flex items-center gap-2">
+            <div class="flex gap-1.5">
+              <span class="text-[10px] text-gray-600">
+                😊{{ pattern.count_buena }}
+              </span>
+              <span class="text-[10px] text-gray-600">
+                😐{{ pattern.count_neutral }}
+              </span>
+              <span class="text-[10px] text-gray-600">
+                😞{{ pattern.count_mala }}
+              </span>
+            </div>
+            {% if pattern.majority_opinion %}
+              <span class="border-2 px-2 py-0.5 font-bold text-xs
+                {% if pattern.majority_opinion == 'buena' %}
+                  border-green-600 bg-green-100 text-green-800
+                {% elif pattern.majority_opinion == 'mala' %}
+                  border-red-600 bg-red-100 text-red-800
+                {% else %}
+                  border-gray-600 bg-gray-100 text-gray-800
+                {% endif %}">
+                {% if pattern.majority_opinion == 'buena' %}
+                  😊 {{ pattern.count_buena|mul:100|div:pattern.total_votes }}% buena
+                {% elif pattern.majority_opinion == 'mala' %}
+                  😞 {{ pattern.count_mala|mul:100|div:pattern.total_votes }}% mala
+                {% else %}
+                  😐 neutral
+                {% endif %}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+        {% if pattern.consensus_score %}
+          <div class="mt-1 flex items-center gap-2">
+            <span class="text-[10px] text-gray-600 mono">consenso:</span>
+            <div class="flex-1 bg-gray-200 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-blue-600 h-full transition-all"
+                   style="width: {{ pattern.consensus_score|mul:100 }}%">
+              </div>
+            </div>
+            <span class="text-[10px] font-bold text-gray-700">
+              {{ pattern.consensus_score|floatformat:2 }}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+    {% endwith %}
+  {% endif %}
 
   <!-- Content -->
   <div class="p-3">

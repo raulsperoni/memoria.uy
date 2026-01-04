@@ -228,6 +228,64 @@
     </div>
   </div>
 
+  <!-- Cluster Info Section (if in cluster) -->
+  {% if has_cluster %}
+  <div class="border-2 border-blue-600 bg-blue-50 mb-4 mono">
+    <div class="p-3 border-b-2 border-blue-600 bg-blue-100">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold flex items-center text-xs text-blue-900">
+          <span class="mr-2">◆</span> tu cluster de votantes
+        </h3>
+        <a href="{% url 'cluster-visualization' %}"
+           class="border border-blue-800 px-2 py-1 text-[10px] text-blue-800 hover:bg-blue-800 hover:text-white transition-colors">
+          [ver mapa]
+        </a>
+      </div>
+    </div>
+
+    <div class="p-3 bg-white">
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div>
+          <div class="text-[10px] text-gray-600 mb-1">cluster #</div>
+          <div class="text-xl font-bold text-blue-600">
+            {{ my_cluster.id }}
+          </div>
+        </div>
+        <div>
+          <div class="text-[10px] text-gray-600 mb-1">votantes</div>
+          <div class="text-xl font-bold text-gray-900">
+            {{ my_cluster.size }}
+          </div>
+        </div>
+        <div>
+          <div class="text-[10px] text-gray-600 mb-1">consenso</div>
+          <div class="text-xl font-bold text-gray-900">
+            {{ my_cluster.consensus|floatformat:2|default:"N/A" }}
+          </div>
+        </div>
+      </div>
+
+      <p class="text-[10px] text-gray-700 leading-relaxed">
+        Estás en un grupo de <strong>{{ my_cluster.size }} votantes</strong> que votan de forma similar.
+        Los badges azules en las noticias muestran cómo votó tu cluster.
+      </p>
+
+      <div class="mt-3 flex gap-2">
+        <button hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
+                hx-target="#timeline-items"
+                hx-swap="innerHTML"
+                class="border-2 border-blue-600 bg-white px-3 py-1.5 text-xs text-blue-800 hover:bg-blue-600 hover:text-white transition-colors">
+          noticias recomendadas →
+        </button>
+        <a href="{% url 'cluster-stats' %}"
+           class="border-2 border-blue-600 bg-white px-3 py-1.5 text-xs text-blue-800 hover:bg-blue-600 hover:text-white transition-colors">
+          ver estadísticas →
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Timeline Items -->
   <div id="timeline-items">
     {% include "noticias/timeline_items.html" %}

@@ -2,7 +2,7 @@
 
 **Branch:** `login`
 **Date:** 2026-01-04
-**Status:** ✅ Phase 1-5 Complete, Production Ready
+**Status:** ✅ Phase 1-6 Complete, Production Ready
 
 ---
 
@@ -53,6 +53,13 @@ Successfully ported Polis clustering functionality to Memoria.uy, enabling voter
 - Cluster statistics and analytics page
 - Timeline enhancement with cluster membership context
 - JSON API endpoint for lightweight data delivery
+
+**8. Timeline Integration** ([core/views.py](core/views.py), [core/templates/noticias/](core/templates/noticias/))
+- Cluster consensus badges on news cards showing cluster voting patterns
+- "Your cluster voted X%" indicators with consensus scores
+- Cluster info sidebar with membership details
+- Cluster-based filtering (recommended news with high consensus)
+- Custom template filters for percentage calculations
 
 ---
 
@@ -201,8 +208,11 @@ curl -X POST http://localhost:8000/api/clustering/trigger/ \
 ### Modified Files
 - `core/models.py` - Added 5 clustering models
 - `core/tasks.py` - Added `update_voter_clusters()` task
-- `core/views.py` - Enhanced NewsTimelineView with cluster context
+- `core/views.py` - Enhanced NewsTimelineView with cluster context & filtering
+- `core/templatetags/vote_extras.py` - Added `get_item`, `mul`, `div` filters
 - `core/templates/base.html` - Added `extra_head` block for custom scripts
+- `core/templates/noticias/timeline_item.html` - Added cluster consensus badges
+- `core/templates/noticias/timeline_fragment.html` - Added cluster info section
 - `memoria/urls.py` - Added 7 clustering routes (4 API + 3 UI)
 - `pyproject.toml` - Added numpy, scipy, scikit-learn
 - `CLAUDE.md` - Added clustering documentation section
@@ -238,12 +248,6 @@ poetry run pytest core/tests/test_clustering.py -v
 ## Next Steps (Future Work)
 
 See [POLIS_CLUSTERING_PLAN.md](POLIS_CLUSTERING_PLAN.md) and [CLAUDE.md](CLAUDE.md) for detailed roadmap.
-
-### Phase 6: Enhanced UI Features (1-2 days)
-- Add cluster consensus badges to timeline news cards
-- Show "Your cluster voted X% buena" indicators
-- Add cluster-based filtering to timeline
-- Create voter profile cluster section
 
 ### Phase 7: Advanced Features (1-2 weeks)
 - Periodic scheduling (Celery beat)
@@ -360,5 +364,5 @@ For questions about this implementation:
 
 **Implementation Date:** 2026-01-04
 **Branch:** `login`
-**Status:** ✅ Production Ready (Phases 1-5 Complete)
-**Next Milestone:** Enhanced UI Features (Phase 6)
+**Status:** ✅ Production Ready (Phases 1-6 Complete)
+**Next Milestone:** Advanced Features & Optimization (Phase 7)
