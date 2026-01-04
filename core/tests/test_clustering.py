@@ -233,3 +233,55 @@ def test_build_vote_matrix_empty_database():
     assert vote_matrix.shape == (0, 0)
     assert len(voter_ids) == 0
     assert len(noticia_ids) == 0
+
+
+@pytest.mark.django_db
+def test_similar_profiles_cluster_together():
+    """
+    Voters with nearly identical vote patterns should land in the same cluster.
+    Create two mirrored groups of voters and verify k-means separates them.
+    """
+    # Four noticias with clear opposing opinions
+    noticias = [
+        Noticia.objects.create(enlace=f"http://test{i}.com", meta_titulo=f"Test {i}")
+        for i in range(4)
+    ]
+
+    pattern_a = ["buena", "buena", "mala", "mala"]
+    pattern_b = ["mala", "mala", "buena", "buena"]
+
+    def create_user_with_votes(username, pattern):
+        user = User.objects.create_user(username, f"{username}@test.com", "pass")
+        for noticia, opinion in zip(noticias, pattern):
+            Voto.objects.create(usuario=user, noticia=noticia, opinion=opinion)
+        return user
+
+    group_a = [create_user_with_votes(f"group_a_{i}", pattern_a) for i in range(3)]
+    group_b = [create_user_with_votes(f"group_b_{i}", pattern_b) for i in range(3)]
+
+    vote_matrix, voter_ids, _ = build_vote_matrix(
+        time_window_days=365,
+        min_votes_per_voter=4,
+    )
+
+    # 6 voters × 4 noticias, all voters qualify
+    assert vote_matrix.shape == (6, 4)
+    assert len(voter_ids) == 6
+
+    _, projections, _, vote_counts = compute_sparsity_aware_pca(vote_matrix)
+    labels, _, _ = cluster_voters(projections, vote_counts, k=2)
+
+    # Map user IDs to matrix row indices
+    user_index = {
+        voter_id[1]: idx for idx, voter_id in enumerate(voter_ids) if voter_id[0] == "user"
+    }
+
+    label_a = labels[user_index[str(group_a[0].id)]]
+    label_b = labels[user_index[str(group_b[0].id)]]
+
+    # All A users share label_a, all B users share label_b, and they differ
+    assert label_a != label_b
+    for user in group_a:
+        assert labels[user_index[str(user.id)]] == label_a
+    for user in group_b:
+        assert labels[user_index[str(user.id)]] == label_b

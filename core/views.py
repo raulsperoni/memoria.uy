@@ -127,9 +127,11 @@ class NewsTimelineView(ListView):
         elif filter_param == "mala_mayoria":
             return "Estás viendo las noticias que la mayoría considera malas"
 
-        # Cluster filters
+        # Bubble filters
         elif filter_param == "cluster_consenso_buena":
-            return "Estás viendo noticias con alto consenso (buenas) en tu cluster"
+            return "Estás viendo noticias con alto consenso (buenas) en tu burbuja"
+        elif filter_param == "otras_burbujas":
+            return "Estás viendo noticias desde perspectivas diferentes a tu burbuja"
 
         # Entity filters
         elif filter_param.startswith("mencionan_") and entidad_id:
@@ -277,6 +279,75 @@ class NewsTimelineView(ListView):
             else:
                 # No clustering data, return empty
                 queryset = queryset.none()
+        # Other bubbles filter
+        elif filter_param == "otras_burbujas":
+            from core.models import (
+                VoterClusterRun,
+                VoterClusterMembership,
+                ClusterVotingPattern,
+                Voto,
+            )
+
+            cluster_run = VoterClusterRun.objects.filter(
+                status='completed'
+            ).order_by('-created_at').first()
+
+            if cluster_run:
+                voter_type = (
+                    'user' if self.request.user.is_authenticated else 'session'
+                )
+                voter_id = (
+                    str(self.request.user.id)
+                    if self.request.user.is_authenticated
+                    else lookup_data.get("session_key")
+                )
+
+                membership = VoterClusterMembership.objects.filter(
+                    cluster__run=cluster_run,
+                    cluster__cluster_type='base',
+                    voter_type=voter_type,
+                    voter_id=voter_id
+                ).select_related('cluster').first()
+
+                if membership:
+                    # Get noticias where this voter's opinion differs
+                    # from their bubble's majority
+                    my_cluster = membership.cluster
+
+                    # Get all votes by this voter
+                    my_votes = Voto.objects.filter(**lookup_data)
+                    my_votes_dict = {
+                        v.noticia_id: v.opinion for v in my_votes
+                    }
+
+                    # Get cluster patterns
+                    cluster_patterns = ClusterVotingPattern.objects.filter(
+                        cluster=my_cluster,
+                        noticia_id__in=my_votes_dict.keys()
+                    )
+
+                    # Find noticias where voter disagrees with bubble
+                    different_noticias = []
+                    for pattern in cluster_patterns:
+                        my_opinion = my_votes_dict.get(pattern.noticia_id)
+                        if (my_opinion and
+                            pattern.majority_opinion and
+                            my_opinion != pattern.majority_opinion):
+                            different_noticias.append(pattern.noticia_id)
+
+                    if different_noticias:
+                        queryset = queryset.filter(id__in=different_noticias)
+                    else:
+                        # No disagreements found, show unvoted news
+                        queryset = queryset.exclude(
+                            votos__in=Voto.objects.filter(**lookup_data)
+                        )
+                else:
+                    # No cluster membership
+                    queryset = queryset.none()
+            else:
+                # No clustering data
+                queryset = queryset.none()
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -419,10 +490,27 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
         logger.info(f"[Vote Debug] On nuevas filter: {on_nuevas_filter}")
 
         if on_nuevas_filter:
-            logger.info("[Vote Debug] Returning empty response (item will be removed)")
+            logger.info(
+                "[Vote Debug] Returning empty response "
+                "(item will be removed)"
+            )
             return HttpResponse("")
 
-        # Render the updated vote area partial
+        # Check if voting from detail page
+        from_detail_page = (
+            request.headers.get("HX-Target") == "vote-form-detail"
+            or "vote-form-detail" in request.POST.get("hx-target", "")
+        )
+
+        if from_detail_page:
+            # Return post-vote message with CTA to more news
+            context = {
+                "noticia": noticia,
+                "vote": vote,
+            }
+            return render(request, "noticias/vote_confirmed.html", context)
+
+        # Render the updated vote area partial (for timeline)
         context = {
             "noticia": noticia,
             "user": request.user,
