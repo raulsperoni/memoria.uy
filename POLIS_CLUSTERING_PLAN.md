@@ -611,7 +611,7 @@ def test_kmeans_convergence():
 
 ## Implementation Status
 
-### ✅ Completed (Phase 1-4)
+### ✅ Completed (Phase 1-5)
 
 **Phase 1: Foundation & Data Models** ✓
 - Created 5 Django models for clustering data
@@ -635,59 +635,59 @@ def test_kmeans_convergence():
 - `GET /api/clustering/voter/me/` - Voter cluster membership
 - `GET /api/clustering/clusters/<id>/votes/` - Cluster voting patterns
 - `POST /api/clustering/trigger/` - Manual clustering trigger
+- `GET /api/clustering/data/json/` - Lightweight JSON for visualization
 - Caching and ETag support
+
+**Phase 5: UI Integration** ✓
+- Cluster visualization page with Plotly.js interactive scatter plot
+  - Route: `/clusters/visualization/`
+  - Features: hover details, cluster highlighting, current voter marker
+  - Real-time data fetching from API
+- Cluster statistics page with detailed analytics
+  - Route: `/clusters/stats/`
+  - Displays: cluster sizes, consensus scores, top noticias per cluster
+- Timeline view enhancement
+  - Added cluster membership to voter context
+  - `my_cluster` data available in templates
+- Views: `ClusterVisualizationView`, `ClusterStatsView`, `cluster_data_json`
 
 **Testing** ✓
 - 8 comprehensive unit tests (all passing)
 - Coverage: 53-91% on clustering modules
+- Django checks: All passing
 
 ---
 
 ## Future Work
 
-### Phase 5: UI Integration (Next Priority)
+### Phase 6: Advanced Features (Next Priority)
 
-**5.1 Timeline View Enhancement**
-- Add cluster consensus indicators to news cards
-- Show "Your cluster voted X% buena" badges
-- Highlight when user is in minority/majority within cluster
-- Filter option: "Show cluster consensus news"
+**6.1 Timeline Cluster Indicators** (Remaining from Phase 5)
+- Add cluster consensus badges to news cards in timeline
+- Show "Your cluster voted X% buena" on each noticia
+- Highlight when voter is in minority/majority within cluster
+- Add filter option: "Show high-consensus news in my cluster"
 
-**5.2 Cluster Visualization Page**
-- New route: `/clusters/visualization/`
-- 2D scatter plot using D3.js or Plotly.js
-- Interactive features:
-  - Hover over point → Show voter info
-  - Click cluster → Filter timeline
-  - Color-code by cluster, size by vote count
-  - Convex hulls showing cluster boundaries
+**6.2 Voter Profile Enhancement** (Remaining from Phase 5)
+- Add "Your Voting Cluster" section to user profile
+- Display: cluster ID, size, consensus score, similar voters
+- Show cluster's top agreed/disagreed noticias
+- "Voters like you also liked..." recommendations
 
-**5.3 Voter Profile Enhancement**
-- Section: "Your Voting Cluster"
-- Display: cluster ID, size, consensus score
-- List similar voters in cluster
-- Cluster's top agreed/disagreed noticias
-
-**Estimated Effort**: 2-3 days
-
----
-
-### Phase 6: Advanced Features
-
-**6.1 Periodic Clustering Scheduler**
+**6.3 Periodic Clustering Scheduler**
 - Celery beat for automatic daily clustering
 - Configuration in `memoria/celery.py`
 
-**6.2 Temporal Drift Tracking**
+**6.4 Temporal Drift Tracking**
 - Track voter movement between clusters
 - Detect opinion shifts over time
 - Polarization metrics
 
-**6.3 Cluster-Based Recommendations**
+**6.5 Cluster-Based Recommendations**
 - Find noticias with high consensus in user's cluster
 - "Recommended for your cluster" section
 
-**6.4 Bridge-Builder Detection**
+**6.6 Bridge-Builder Detection**
 - Find voters connecting multiple clusters
 - Identify consensus-building potential
 
@@ -744,9 +744,32 @@ def test_kmeans_convergence():
 
 ## Total Timeline Estimate
 
-- ✅ **Phase 1-4: Foundation & Core** - COMPLETED
-- 🔄 **Phase 5: UI Integration** - 2-3 days
-- 📅 **Phase 6: Advanced Features** - 1-2 weeks
+- ✅ **Phase 1-5: Foundation, Core, & UI** - COMPLETED
+- 🔄 **Phase 6: Advanced Features** - 1-2 weeks (timeline indicators, scheduler, recommendations)
 - 📅 **Phase 7: Optimization** - 1 week
 
-**Total Remaining**: ~3-4 weeks for full feature set
+**Total Remaining**: ~2-3 weeks for full feature set
+
+---
+
+## Phase 5 Implementation Notes
+
+### Bug Fix: Missing `extra_head` Block
+
+**Issue**: Initial Phase 5 implementation failed with "Error cargando datos de clustering" because Plotly.js script wasn't loading.
+
+**Root Cause**: Base template ([core/templates/base.html](core/templates/base.html)) didn't have an `{% block extra_head %}{% endblock %}` block, preventing child templates from injecting custom scripts.
+
+**Fix**: Added `extra_head` block before closing `</head>` tag in base template:
+```django
+<script defer src="https://cloud.umami.is/script.js" ...></script>
+
+{% block extra_head %}{% endblock %}
+</head>
+```
+
+**Verification**:
+- Plotly.js CDN now loads correctly
+- Visualization page renders interactive scatter plot
+- Stats page displays cluster analytics
+- All 8 clustering tests pass

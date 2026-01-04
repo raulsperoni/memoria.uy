@@ -10,7 +10,15 @@ from django.views.generic import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
-from core.models import Noticia, Voto, Entidad
+from core.models import (
+    Noticia,
+    Voto,
+    Entidad,
+    VoterClusterRun,
+    VoterClusterMembership,
+)
+
+
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.db.models import Count, Q, F
@@ -242,9 +250,45 @@ class NewsTimelineView(ListView):
         if self.request.user.is_authenticated:
             context["voter_user"] = self.request.user
             context["voter_session"] = None
+            voter_type = 'user'
+            voter_id = str(self.request.user.id)
         else:
             context["voter_user"] = None
             context["voter_session"] = lookup_data.get("session_key")
+            voter_type = 'session'
+            voter_id = lookup_data.get("session_key")
+
+        # Add cluster information if available
+        cluster_run = VoterClusterRun.objects.filter(
+            status='completed'
+        ).order_by('-created_at').first()
+
+        if cluster_run and voter_id:
+            # Try to find voter's cluster membership
+            try:
+                membership = VoterClusterMembership.objects.filter(
+                    cluster__run=cluster_run,
+                    cluster__cluster_type='base',
+                    voter_type=voter_type,
+                    voter_id=voter_id
+                ).select_related('cluster').first()
+
+                if membership:
+                    context["my_cluster"] = {
+                        'id': membership.cluster.cluster_id,
+                        'size': membership.cluster.size,
+                        'consensus': membership.cluster.consensus_score,
+                        'centroid_x': membership.cluster.centroid_x,
+                        'centroid_y': membership.cluster.centroid_y,
+                    }
+                    context["has_cluster"] = True
+                else:
+                    context["has_cluster"] = False
+            except Exception as e:
+                logger.error(f"Error fetching cluster membership: {e}")
+                context["has_cluster"] = False
+        else:
+            context["has_cluster"] = False
 
         return context
 

@@ -43,6 +43,11 @@ from core.api_clustering import (
     cluster_voting_patterns,
     trigger_clustering,
 )
+from core.views_clustering import (
+    ClusterVisualizationView,
+    ClusterStatsView,
+    cluster_data_json,
+)
 from memoria.views import health_check, robots_txt
 
 # Sitemap configuration
@@ -113,6 +118,22 @@ urlpatterns = (
             "api/clustering/trigger/",
             trigger_clustering,
             name="api-trigger-clustering",
+        ),
+        path(
+            "api/clustering/data/json/",
+            cluster_data_json,
+            name="api-cluster-data-json",
+        ),
+        # Clustering UI endpoints
+        path(
+            "clusters/visualization/",
+            ClusterVisualizationView.as_view(),
+            name="cluster-visualization",
+        ),
+        path(
+            "clusters/stats/",
+            ClusterStatsView.as_view(),
+            name="cluster-stats",
         ),
         path("accounts/", include("allauth.urls")),
         path("__reload__/", include("django_browser_reload.urls")),
