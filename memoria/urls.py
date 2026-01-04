@@ -37,6 +37,12 @@ from core.api_views import (
     SubmitFromExtensionView,
     CheckVoteView,
 )
+from core.api_clustering import (
+    cluster_data,
+    voter_cluster_membership,
+    cluster_voting_patterns,
+    trigger_clustering,
+)
 from memoria.views import health_check, robots_txt
 
 # Sitemap configuration
@@ -86,6 +92,27 @@ urlpatterns = (
             "api/check-vote/",
             CheckVoteView.as_view(),
             name="api-check-vote",
+        ),
+        # Clustering API endpoints
+        path(
+            "api/clustering/data/",
+            cluster_data,
+            name="api-cluster-data",
+        ),
+        path(
+            "api/clustering/voter/me/",
+            voter_cluster_membership,
+            name="api-voter-cluster",
+        ),
+        path(
+            "api/clustering/clusters/<int:cluster_id>/votes/",
+            cluster_voting_patterns,
+            name="api-cluster-votes",
+        ),
+        path(
+            "api/clustering/trigger/",
+            trigger_clustering,
+            name="api-trigger-clustering",
         ),
         path("accounts/", include("allauth.urls")),
         path("__reload__/", include("django_browser_reload.urls")),

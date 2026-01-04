@@ -264,8 +264,121 @@ AI parsing has fallback models configured in parse.py. If primary model fails, a
 ### Testing
 - Uses pytest with pytest-django
 - Fixtures defined in `conftest.py` (root and per-app)
-- Tests in `core/tests/`: `test_models.py`, `test_views.py`, `test_basic.py`
+- Tests in `core/tests/`: `test_models.py`, `test_views.py`, `test_basic.py`, `test_clustering.py`
 - Coverage configured in `.coveragerc` and `pytest.ini`
+
+## Voter Clustering (Polis-Style)
+
+Memoria.uy implements Polis-inspired clustering to identify voting patterns and group voters based on their opinions. This enables visualization of opinion clusters and consensus analysis.
+
+### Architecture
+
+**Models** ([core/models.py:260-463](core/models.py#L260-L463)):
+- `VoterClusterRun`: Tracks clustering computation runs
+- `VoterCluster`: Stores cluster results (base/group/subgroup)
+- `VoterProjection`: 2D PCA projections for visualization
+- `VoterClusterMembership`: Voter-to-cluster assignments
+- `ClusterVotingPattern`: Aggregated voting patterns per cluster
+
+**Math Engine** ([core/clustering/](core/clustering/)):
+- **Vote Matrix Builder** ([matrix_builder.py](core/clustering/matrix_builder.py)): Converts votes to sparse matrices (voters × noticias)
+- **Sparsity-Aware PCA** ([pca.py](core/clustering/pca.py)): 2D projection with scaling for sparse voters (Polis approach)
+- **K-Means Clustering** ([kmeans.py](core/clustering/kmeans.py)): Base clustering with auto k-selection
+- **Hierarchical Clustering** ([hierarchical.py](core/clustering/hierarchical.py)): Group/subgroup detection with silhouette-based k-selection
+- **Metrics** ([metrics.py](core/clustering/metrics.py)): Consensus scores, similarity, distance calculations
+
+### Clustering Pipeline
+
+1. **Build Vote Matrix**: Convert votes to sparse matrix (buena=+1, neutral=0, mala=-1)
+2. **PCA Projection**: Reduce to 2D for visualization (handles sparse voting patterns)
+3. **Base Clustering**: K-means with k≈100 (auto-selected based on voter count)
+4. **Group Clustering**: Hierarchical grouping (k=2-5, auto-selected via silhouette score)
+5. **Consensus Metrics**: Calculate within-cluster agreement scores
+6. **Save to Database**: Store clusters, projections, voting patterns
+
+### Running Clustering
+
+**Manual Trigger**:
+```bash
+# With default parameters (30 days, min 50 voters)
+poetry run python manage.py cluster_voters
+
+# Custom parameters
+poetry run python manage.py cluster_voters --days 60 --min-voters 100 --min-votes-per-voter 5
+
+# Async (Celery task)
+poetry run python manage.py cluster_voters --async
+```
+
+**Programmatic Trigger**:
+```python
+from core.tasks import update_voter_clusters
+
+# Sync
+result = update_voter_clusters(time_window_days=30, min_voters=50)
+
+# Async (Celery)
+task = update_voter_clusters.delay(time_window_days=30, min_voters=50)
+```
+
+### API Endpoints
+
+**Clustering Data** ([core/api_clustering.py](core/api_clustering.py)):
+- `GET /api/clustering/data/` - Full clustering results (Polis-compatible format)
+  - Returns: projections, clusters, centroids, consensus scores, parameters
+  - Cached for 1 hour
+  - Optional `?run_id=<id>` parameter for specific run
+
+- `GET /api/clustering/voter/me/` - Current voter's cluster membership
+  - Returns: cluster_id, projection coordinates, consensus score, distance to centroid
+  - Uses `get_voter_identifier()` for session/user detection
+
+- `GET /api/clustering/clusters/<cluster_id>/votes/` - Voting patterns for cluster
+  - Returns: vote counts by opinion, majority opinion, consensus per noticia
+
+- `POST /api/clustering/trigger/` - Manually trigger clustering
+  - Optional params: `time_window_days`, `min_voters`, `min_votes_per_voter`
+  - Returns: task_id for async tracking
+
+### Key Features from Polis
+
+✓ **Sparsity-Aware PCA**: Scales projections by `sqrt(n_noticias / n_votes_cast)` to prevent sparse voters from clustering at center
+✓ **Hierarchical Clustering**: Base clusters (k≈100) → Group clusters (k=2-5) → Subgroups
+✓ **Silhouette-Based K-Selection**: Auto-selects optimal k using silhouette coefficient
+✓ **Consensus Metrics**: Measures within-cluster agreement (0-1 score)
+✓ **Anonymous Voting Support**: Works with both session-based and authenticated voters
+✓ **Background Processing**: Celery task with locking to prevent duplicate computation
+
+### Performance Characteristics
+
+- **Time Window**: Default 30 days (configurable)
+- **Minimum Voters**: 50 (configurable, prevents poor clustering on small datasets)
+- **Minimum Votes per Voter**: 3 (configurable, filters out sparse voters)
+- **Computation Time**: ~0.3-5 seconds for 5-1000 voters
+- **Caching**: API responses cached for 1 hour
+- **Task Locking**: 30-minute lock prevents concurrent runs
+
+### Future Enhancements
+
+See [POLIS_CLUSTERING_PLAN.md](POLIS_CLUSTERING_PLAN.md) for detailed implementation plan.
+
+**Phase 5: UI Integration** (Planned)
+- Timeline view: Show cluster consensus indicators
+- Cluster visualization page: D3.js/Plotly.js scatter plot
+- Voter profile: Display cluster membership and similar voters
+
+**Phase 6: Advanced Features** (Planned)
+- Periodic scheduling: Celery beat for automatic daily clustering
+- Temporal tracking: Monitor opinion drift over time
+- Recommendations: Suggest news based on cluster preferences
+- Polarization metrics: Identify divisive topics
+- Bridge-builder detection: Find voters connecting multiple clusters
+
+**Phase 7: Optimization** (Planned)
+- Incremental PCA: Update existing model with new votes
+- Mini-batch k-means: For very large datasets (>10k voters)
+- Sampling strategy: Cluster subset, assign remainder
+- Database query optimization: Reduce vote fetching overhead
 
 ## Environment Configuration
 
