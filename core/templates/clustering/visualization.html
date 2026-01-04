@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Visualización de Clusters - Memoria.uy{% endblock %}
+{% block title %}Visualización de Burbujas - Memoria.uy{% endblock %}
 
 {% block extra_head %}
 <!-- Plotly.js for interactive visualization -->
@@ -14,10 +14,10 @@
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                Visualización de Clusters de Votantes
+                Mapa de Burbujas
             </h1>
             <p class="text-gray-600">
-                Explora cómo se agrupan los votantes según sus patrones de votación en las noticias.
+                Explorá cómo se agrupan los votantes según sus patrones de votación.
             </p>
         </div>
 
@@ -29,7 +29,7 @@
                 <div class="text-2xl font-bold text-blue-600">{{ n_voters }}</div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
-                <div class="text-sm text-gray-600">Clusters</div>
+                <div class="text-sm text-gray-600">Burbujas</div>
                 <div class="text-2xl font-bold text-green-600">{{ n_clusters }}</div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
@@ -48,7 +48,7 @@
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <div class="mb-4 flex justify-between items-center">
                 <h2 class="text-xl font-bold text-gray-900">
-                    Mapa de Clusters
+                    Mapa de Burbujas
                 </h2>
                 <div class="text-sm text-gray-600">
                     Varianza explicada:
@@ -66,9 +66,9 @@
                 <h3 class="text-sm font-semibold text-gray-700 mb-2">Leyenda:</h3>
                 <ul class="text-sm text-gray-600 space-y-1">
                     <li>• <strong>Puntos</strong>: Cada punto representa un votante</li>
-                    <li>• <strong>Colores</strong>: Diferentes colores indican diferentes clusters</li>
+                    <li>• <strong>Colores</strong>: Diferentes colores indican diferentes burbujas</li>
                     <li>• <strong>Tamaño</strong>: El tamaño del punto representa la cantidad de votos</li>
-                    <li>• <strong>Hover</strong>: Pasa el mouse sobre un punto para ver detalles</li>
+                    <li>• <strong>Hover</strong>: Pasá el mouse sobre un punto para ver detalles</li>
                     <li>• <strong>Tu posición</strong>: Marcada con un borde destacado si estás en el mapa</li>
                 </ul>
             </div>
@@ -81,9 +81,9 @@
             </h3>
             <ul class="text-sm text-blue-800 space-y-2">
                 <li>• <strong>Proximidad</strong>: Votantes cercanos tienden a votar de manera similar</li>
-                <li>• <strong>Clusters</strong>: Grupos de votantes con patrones de votación compartidos</li>
+                <li>• <strong>Burbujas</strong>: Grupos de votantes con patrones de votación compartidos</li>
                 <li>• <strong>Aislamiento</strong>: Votantes alejados tienen opiniones únicas</li>
-                <li>• <strong>Densidad</strong>: Áreas densas indican consenso fuerte en ese grupo</li>
+                <li>• <strong>Densidad</strong>: Áreas densas indican consenso fuerte en esa burbuja</li>
             </ul>
         </div>
 
@@ -162,9 +162,9 @@ function renderClusterPlot(data) {
         clusterGroups[clusterId].y.push(proj.y);
         clusterGroups[clusterId].text.push(
             `Votante: ${proj.voter_type}:${proj.voter_id.substring(0, 8)}...<br>` +
-            `Cluster: ${proj.cluster_id !== undefined ? proj.cluster_id : 'N/A'}<br>` +
+            `Burbuja: ${proj.cluster_id !== undefined ? proj.cluster_id : 'N/A'}<br>` +
             `Votos: ${proj.n_votes}<br>` +
-            `Tamaño cluster: ${proj.cluster_size || 'N/A'}`
+            `Tamaño burbuja: ${proj.cluster_size || 'N/A'}`
         );
         clusterGroups[clusterId].marker.size.push(Math.sqrt(proj.n_votes) * 3 + 5);
 
@@ -178,14 +178,14 @@ function renderClusterPlot(data) {
         }
     });
 
-    // Create traces for each cluster
+    // Create traces for each bubble
     const traces = Object.entries(clusterGroups).map(([clusterId, group]) => ({
         x: group.x,
         y: group.y,
         text: group.text,
         mode: 'markers',
         type: 'scatter',
-        name: clusterId === '-1' ? 'Sin cluster' : `Cluster ${clusterId}`,
+        name: clusterId === '-1' ? 'Sin burbuja' : `Burbuja ${clusterId}`,
         marker: group.marker,
         hovertemplate: '%{text}<extra></extra>'
     }));
@@ -196,13 +196,13 @@ function renderClusterPlot(data) {
             x: data.centroids.map(c => c.x),
             y: data.centroids.map(c => c.y),
             text: data.centroids.map(c =>
-                `Centroide Cluster ${c.cluster_id}<br>` +
+                `Centro Burbuja ${c.cluster_id}<br>` +
                 `Tamaño: ${c.size}<br>` +
                 `Consenso: ${c.consensus ? c.consensus.toFixed(3) : 'N/A'}`
             ),
             mode: 'markers',
             type: 'scatter',
-            name: 'Centroides',
+            name: 'Centros',
             marker: {
                 symbol: 'diamond',
                 size: 15,
@@ -218,7 +218,7 @@ function renderClusterPlot(data) {
 
     const layout = {
         title: {
-            text: `Clusters de Votantes (${data.n_voters} votantes, ${data.n_clusters} clusters)`,
+            text: `Burbujas de Votantes (${data.n_voters} votantes, ${data.n_clusters} burbujas)`,
             font: { size: 16 }
         },
         xaxis: {

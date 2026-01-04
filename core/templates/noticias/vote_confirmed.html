@@ -1,0 +1,19 @@
+<!-- templates/noticias/vote_confirmed.html -->
+<div class="bg-blue-50 border border-blue-300 p-4 mb-6">
+  <p class="text-sm mono mb-3">
+    <strong>✓ Tu voto:</strong>
+    {% if vote.opinion == "buena" %}
+    😊 Buena noticia
+    {% elif vote.opinion == "mala" %}
+    😞 Mala noticia
+    {% else %}
+    😐 Neutral
+    {% endif %}
+  </p>
+  <a href="{% url 'timeline' %}?filter=nuevas"
+     class="inline-block bg-black text-white px-4 py-2 text-sm mono
+     border-2 border-black hover:bg-white hover:text-black
+     transition-colors">
+    → Otras noticias que aún no votaste
+  </a>
+</div>

@@ -42,61 +42,11 @@
   <!-- Hero / Value Prop -->
   <div class="border-0 border-black bg-white p-4 mb-4">
     <h2 class="text-lg md:text-xl font-bold mb-2">
-      Archivá noticias. Votá anónimamente. Descubrí patrones.
+      Votá noticias. Descubrí patrones. Salí de tu burbuja.
     </h2>
-    <p class="text-xs md:text-sm text-gray-700 mb-2">
-      Votá noticias existentes, o agregá una nueva. Sin registro. Sin seguimiento.
+    <p class="text-xs md:text-sm text-gray-700">
+      Votá anónimamente y explorá cómo votan otras burbujas. Sin registro. Sin seguimiento.
     </p>
-  </div>
-
-  <!-- News Entry Form -->
-  <div class="border-2 border-black bg-white p-3 md:p-4 mb-4 relative">
-    <h3 class="text-xs font-bold mb-2">[ agregar noticia ]</h3>
-
-    <form method="post" action="{% url 'noticia-create' %}"
-          hx-post="{% url 'noticia-create' %}"
-          hx-target="#timeline-container"
-          hx-swap="outerHTML"
-          hx-indicator="#form-overlay">
-      {% csrf_token %}
-
-      <!-- URL Input -->
-      <div class="mb-2">
-        <label class="block text-[10px] text-gray-600 mb-1">
-          
-        </label>
-        {{ form.enlace }}
-      </div>
-
-      <!-- Opinion Buttons -->
-      <div>
-        <label class="block text-[10px] text-gray-600 mb-1">
-          
-        </label>
-        <div class="grid grid-cols-3 gap-2">
-          <button type="submit" name="opinion" value="buena"
-            class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
-            <span class="text-[11px] font-medium">😊 buena noticia</span>
-          </button>
-          <button type="submit" name="opinion" value="neutral"
-            class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
-            <span class="text-[11px] font-medium">😐 neutral</span>
-          </button>
-          <button type="submit" name="opinion" value="mala"
-            class="border-2 border-black px-2 py-2 hover:bg-black hover:text-white transition-colors">
-            <span class="text-[11px] font-medium">😞 mala noticia</span>
-          </button>
-        </div>
-      </div>
-    </form>
-
-    <!-- Loading overlay -->
-    <div id="form-overlay" class="htmx-indicator absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
-      <div class="text-center">
-        <div class="border-4 border-black border-t-transparent h-12 w-12 rounded-full animate-spin mx-auto mb-3"></div>
-        <p class="text-black font-medium text-sm">procesando...</p>
-      </div>
-    </div>
   </div>
 
   <!-- Filter bar -->
@@ -147,6 +97,39 @@
           </button>
         </div>
       </div>
+
+      <!-- Bubble Mode Selector -->
+      {% if has_cluster %}
+      <div class="mb-4 pb-4 border-b border-gray-300">
+        <h4 class="text-[10px] text-gray-600 mb-2">// modo de exploración</h4>
+        <div class="grid grid-cols-3 gap-2">
+          <button hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-blue-600 px-3 py-2 text-xs
+                  hover:bg-blue-600 hover:text-white transition-colors">
+            <div class="font-bold">mi burbuja</div>
+            <div class="text-[9px] text-gray-600">alineado con vos</div>
+          </button>
+          <button hx-get="{% url 'timeline' %}?filter=todas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-black px-3 py-2 text-xs
+                  hover:bg-black hover:text-white transition-colors">
+            <div class="font-bold">todo</div>
+            <div class="text-[9px] text-gray-600">sin sesgo</div>
+          </button>
+          <button hx-get="{% url 'timeline' %}?filter=otras_burbujas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  class="border-2 border-orange-600 px-3 py-2 text-xs
+                  hover:bg-orange-600 hover:text-white transition-colors">
+            <div class="font-bold">otras burbujas</div>
+            <div class="text-[9px] text-gray-600">perspectivas diferentes</div>
+          </button>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Opinion filters -->
       <div>
@@ -228,13 +211,13 @@
     </div>
   </div>
 
-  <!-- Cluster Info Section (if in cluster) -->
+  <!-- Bubble Info Section (if in bubble) -->
   {% if has_cluster %}
   <div class="border-2 border-blue-600 bg-blue-50 mb-4 mono">
     <div class="p-3 border-b-2 border-blue-600 bg-blue-100">
       <div class="flex items-center justify-between">
         <h3 class="font-bold flex items-center text-xs text-blue-900">
-          <span class="mr-2">◆</span> tu cluster de votantes
+          <span class="mr-2">◆</span> tu burbuja
         </h3>
         <a href="{% url 'cluster-visualization' %}"
            class="border border-blue-800 px-2 py-1 text-[10px] text-blue-800 hover:bg-blue-800 hover:text-white transition-colors">
@@ -246,7 +229,7 @@
     <div class="p-3 bg-white">
       <div class="grid grid-cols-3 gap-3 mb-3">
         <div>
-          <div class="text-[10px] text-gray-600 mb-1">cluster #</div>
+          <div class="text-[10px] text-gray-600 mb-1">burbuja #</div>
           <div class="text-xl font-bold text-blue-600">
             {{ my_cluster.id }}
           </div>
@@ -266,8 +249,8 @@
       </div>
 
       <p class="text-[10px] text-gray-700 leading-relaxed">
-        Estás en un grupo de <strong>{{ my_cluster.size }} votantes</strong> que votan de forma similar.
-        Los badges azules en las noticias muestran cómo votó tu cluster.
+        Estás votando desde esta burbuja de <strong>{{ my_cluster.size }} votantes</strong> con patrones similares.
+        Los badges azules muestran cómo votó tu burbuja.
       </p>
 
       <div class="mt-3 flex gap-2">

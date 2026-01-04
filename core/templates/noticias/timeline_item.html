@@ -9,74 +9,55 @@
     </div>
   </div>
 
-  <!-- Image with Vote Buttons Overlay OR Vote Buttons Bar -->
+  <!-- Image (if exists) -->
   {% if noticia.mostrar_imagen %}
-    <div class="relative border-b-2 border-black group">
-      <img src="{{ noticia.mostrar_imagen }}" alt="{{ noticia.mostrar_titulo }}" class="w-full object-cover">
-
-      <!-- Vote buttons overlay -->
-      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
-        <form hx-post="{% url 'vote' noticia.pk %}"
-              {% if current_filter == 'nuevas' or not current_filter %}
-              hx-target="#noticia-{{ noticia.pk }}"
-              hx-swap="outerHTML swap:1s"
-              {% else %}
-              hx-target="#vote-area-{{ noticia.pk }}"
-              hx-swap="outerHTML"
-              {% endif %}
-              class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-3">
-          {% csrf_token %}
-          <input type="hidden" name="on_nuevas_filter" value="{% if current_filter == 'nuevas' or not current_filter %}true{% else %}false{% endif %}">
-          <button type="submit" name="opinion" value="buena"
-            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
-              {% if noticia.user_vote == 'buena' %}bg-black text-white{% endif %}">
-            😊
-          </button>
-          <button type="submit" name="opinion" value="neutral"
-            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
-              {% if noticia.user_vote == 'neutral' %}bg-black text-white{% endif %}">
-            😐
-          </button>
-          <button type="submit" name="opinion" value="mala"
-            class="bg-white border-2 border-black w-16 h-16 flex items-center justify-center text-2xl hover:bg-black hover:text-white hover:scale-110 transform transition-all
-              {% if noticia.user_vote == 'mala' %}bg-black text-white{% endif %}">
-            😞
-          </button>
-        </form>
-      </div>
-    </div>
-  {% else %}
-    <!-- Compact vote buttons bar for news without images -->
-    <div class="border-b-2 border-black bg-gray-50 p-2">
-      <form hx-post="{% url 'vote' noticia.pk %}"
-            {% if current_filter == 'nuevas' or not current_filter %}
-            hx-target="#noticia-{{ noticia.pk }}"
-            hx-swap="outerHTML swap:1s"
-            {% else %}
-            hx-target="#vote-area-{{ noticia.pk }}"
-            hx-swap="outerHTML"
-            {% endif %}
-            class="flex gap-2 justify-center">
-        {% csrf_token %}
-        <input type="hidden" name="on_nuevas_filter" value="{% if current_filter == 'nuevas' or not current_filter %}true{% else %}false{% endif %}">
-        <button type="submit" name="opinion" value="buena"
-          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
-            {% if noticia.user_vote == 'buena' %}bg-black text-white{% endif %}">
-          😊
-        </button>
-        <button type="submit" name="opinion" value="neutral"
-          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
-            {% if noticia.user_vote == 'neutral' %}bg-black text-white{% endif %}">
-          😐
-        </button>
-        <button type="submit" name="opinion" value="mala"
-          class="bg-white border-2 border-black w-12 h-12 flex items-center justify-center text-xl hover:bg-black hover:text-white transition-all
-            {% if noticia.user_vote == 'mala' %}bg-black text-white{% endif %}">
-          😞
-        </button>
-      </form>
+    <div class="border-b-2 border-black">
+      <img src="{{ noticia.mostrar_imagen }}"
+           alt="{{ noticia.mostrar_titulo }}"
+           class="w-full object-cover h-48 md:h-64">
     </div>
   {% endif %}
+
+  <!-- Vote Buttons - Always Visible -->
+  <div class="border-b-2 border-black bg-yellow-50 p-3">
+    <form hx-post="{% url 'vote' noticia.pk %}"
+          {% if current_filter == 'nuevas' or not current_filter %}
+          hx-target="#noticia-{{ noticia.pk }}"
+          hx-swap="outerHTML swap:1s"
+          {% else %}
+          hx-target="#vote-area-{{ noticia.pk }}"
+          hx-swap="outerHTML"
+          {% endif %}
+          class="grid grid-cols-3 gap-2">
+      {% csrf_token %}
+      <input type="hidden" name="on_nuevas_filter"
+             value="{% if current_filter == 'nuevas' or not current_filter %}true{% else %}false{% endif %}">
+
+      <button type="submit" name="opinion" value="buena"
+              class="border-2 border-black px-3 py-2
+              hover:bg-black hover:text-white transition-all
+              {% if noticia.user_vote == 'buena' %}bg-green-600 text-white border-green-600{% else %}bg-white{% endif %}">
+        <span class="text-lg">😊</span>
+        <span class="block text-[10px] font-bold mt-1">Buena</span>
+      </button>
+
+      <button type="submit" name="opinion" value="neutral"
+              class="border-2 border-black px-3 py-2
+              hover:bg-black hover:text-white transition-all
+              {% if noticia.user_vote == 'neutral' %}bg-gray-500 text-white border-gray-500{% else %}bg-white{% endif %}">
+        <span class="text-lg">😐</span>
+        <span class="block text-[10px] font-bold mt-1">Neutral</span>
+      </button>
+
+      <button type="submit" name="opinion" value="mala"
+              class="border-2 border-black px-3 py-2
+              hover:bg-black hover:text-white transition-all
+              {% if noticia.user_vote == 'mala' %}bg-red-600 text-white border-red-600{% else %}bg-white{% endif %}">
+        <span class="text-lg">😞</span>
+        <span class="block text-[10px] font-bold mt-1">Mala</span>
+      </button>
+    </form>
+  </div>
 
   <!-- Metadata Bar -->
   <div class="border-b-2 border-black px-3 py-1.5 bg-gray-50 flex items-center justify-between text-[10px] text-gray-700">
@@ -124,13 +105,13 @@
     {% endif %}
   </div>
 
-  <!-- Cluster Consensus Badge (if in cluster) -->
+  <!-- Bubble Consensus Badge (if in bubble) -->
   {% if has_cluster and cluster_patterns and noticia.id in cluster_patterns %}
     {% with pattern=cluster_patterns|get_item:noticia.id %}
       <div class="border-b-2 border-black px-3 py-2 bg-blue-50">
         <div class="flex items-center justify-between text-xs">
           <span class="font-semibold text-gray-700 mono">
-            tu cluster (#{{ my_cluster.id }}) votó:
+            tu burbuja (#{{ my_cluster.id }}) votó:
           </span>
           <div class="flex items-center gap-2">
             <div class="flex gap-1.5">
