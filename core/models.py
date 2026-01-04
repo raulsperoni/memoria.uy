@@ -255,3 +255,209 @@ class NoticiaEntidad(models.Model):
 
     def __str__(self):
         return f"{self.noticia} - {self.entidad.nombre}"
+
+
+class VoterClusterRun(models.Model):
+    """
+    Track clustering computation runs (Polis-style).
+    Each run represents a complete clustering computation at a point in time.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("running", "Running"),
+            ("completed", "Completed"),
+            ("failed", "Failed"),
+        ],
+        default="pending"
+    )
+    n_voters = models.IntegerField(default=0)
+    n_noticias = models.IntegerField(default=0)
+    n_clusters = models.IntegerField(default=0)
+    computation_time = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Computation time in seconds"
+    )
+    parameters = models.JSONField(
+        default=dict,
+        help_text="Clustering parameters (k, time_window, etc.)"
+    )
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at', 'status']),
+        ]
+
+    def __str__(self):
+        return (
+            f"ClusterRun {self.id} - "
+            f"{self.status} - {self.n_voters} voters"
+        )
+
+
+class VoterCluster(models.Model):
+    """
+    Store cluster results from a clustering run.
+    Supports hierarchical clustering: base → group → subgroup.
+    """
+    run = models.ForeignKey(
+        VoterClusterRun,
+        on_delete=models.CASCADE,
+        related_name='clusters'
+    )
+    cluster_id = models.IntegerField(
+        help_text="Cluster identifier within this run"
+    )
+    cluster_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("base", "Base cluster"),
+            ("group", "Group cluster"),
+            ("subgroup", "Subgroup cluster"),
+        ]
+    )
+    parent_cluster = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='subclusters',
+        help_text="Parent cluster for hierarchical structure"
+    )
+    size = models.IntegerField(help_text="Number of voters in this cluster")
+    centroid_x = models.FloatField(help_text="X coordinate of cluster center")
+    centroid_y = models.FloatField(help_text="Y coordinate of cluster center")
+    consensus_score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Within-cluster agreement (0-1)"
+    )
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional cluster metadata (radius, variance, etc.)"
+    )
+
+    class Meta:
+        unique_together = [['run', 'cluster_type', 'cluster_id']]
+        indexes = [
+            models.Index(fields=['run', 'cluster_type']),
+            models.Index(fields=['run', 'consensus_score']),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.cluster_type.capitalize()} Cluster "
+            f"{self.cluster_id} (size={self.size})"
+        )
+
+
+class VoterProjection(models.Model):
+    """
+    Store 2D PCA projections for each voter in a clustering run.
+    Allows visualization of voter positions in 2D space.
+    """
+    run = models.ForeignKey(
+        VoterClusterRun,
+        on_delete=models.CASCADE,
+        related_name='projections'
+    )
+    voter_type = models.CharField(
+        max_length=10,
+        choices=[
+            ("session", "Session-based voter"),
+            ("user", "Authenticated user"),
+        ]
+    )
+    voter_id = models.CharField(
+        max_length=255,
+        help_text="Session key or user ID"
+    )
+    projection_x = models.FloatField(help_text="X coordinate in PCA space")
+    projection_y = models.FloatField(help_text="Y coordinate in PCA space")
+    n_votes_cast = models.IntegerField(
+        help_text="Number of votes cast by this voter"
+    )
+
+    class Meta:
+        unique_together = [['run', 'voter_type', 'voter_id']]
+        indexes = [
+            models.Index(fields=['voter_type', 'voter_id']),
+            models.Index(fields=['run', 'voter_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.voter_type}:{self.voter_id} at ({self.projection_x:.2f}, {self.projection_y:.2f})"
+
+
+class VoterClusterMembership(models.Model):
+    """
+    Junction table linking voters to their assigned clusters.
+    A voter can be in one cluster per cluster_type per run.
+    """
+    cluster = models.ForeignKey(
+        VoterCluster,
+        on_delete=models.CASCADE,
+        related_name='members'
+    )
+    voter_type = models.CharField(max_length=10)
+    voter_id = models.CharField(max_length=255)
+    distance_to_centroid = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Euclidean distance to cluster centroid"
+    )
+
+    class Meta:
+        unique_together = [['cluster', 'voter_type', 'voter_id']]
+        indexes = [
+            models.Index(fields=['voter_type', 'voter_id']),
+            models.Index(fields=['cluster']),
+        ]
+
+    def __str__(self):
+        return f"{self.voter_type}:{self.voter_id} in cluster {self.cluster.cluster_id}"
+
+
+class ClusterVotingPattern(models.Model):
+    """
+    Aggregated voting patterns for a cluster on a specific noticia.
+    Shows how a cluster collectively voted on each news article.
+    """
+    cluster = models.ForeignKey(
+        VoterCluster,
+        on_delete=models.CASCADE,
+        related_name='voting_patterns'
+    )
+    noticia = models.ForeignKey(Noticia, on_delete=models.CASCADE)
+    count_buena = models.IntegerField(default=0)
+    count_mala = models.IntegerField(default=0)
+    count_neutral = models.IntegerField(default=0)
+    consensus_score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Degree of agreement on this noticia (0-1)"
+    )
+    majority_opinion = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="buena/mala/neutral"
+    )
+
+    class Meta:
+        unique_together = [['cluster', 'noticia']]
+        indexes = [
+            models.Index(fields=['cluster', 'consensus_score']),
+            models.Index(fields=['cluster', 'majority_opinion']),
+        ]
+
+    def __str__(self):
+        return (
+            f"Cluster {self.cluster.cluster_id} on {self.noticia.mostrar_titulo[:30]}: "
+            f"{self.majority_opinion or 'no consensus'}"
+        )
