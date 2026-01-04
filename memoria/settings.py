@@ -217,10 +217,14 @@ ACCOUNT_ADAPTER = "memoria.adapter.CustomAccountAdapter"
 # allow signups.
 ACCOUNT_ALLOW_SIGNUPS = os.getenv("ACCOUNT_ALLOW_SIGNUPS", "False") == "True"
 
-# Email configuration (Resend SMTP)
+# Email configuration (Resend HTTP API by default)
 EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+    "EMAIL_BACKEND", "core.email_backends.resend.ResendEmailBackend"
 )
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails")
+
+# SMTP fallback configuration (not used by default)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.resend.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "resend")
