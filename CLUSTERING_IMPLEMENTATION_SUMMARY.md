@@ -2,7 +2,7 @@
 
 **Branch:** `login`
 **Date:** 2026-01-04
-**Status:** ✅ Phase 1-4 Complete, Production Ready
+**Status:** ✅ Phase 1-6 Complete, Production Ready
 
 ---
 
@@ -47,6 +47,19 @@ Successfully ported Polis clustering functionality to Memoria.uy, enabling voter
 - 8 comprehensive unit tests (100% passing)
 - Coverage: 53-91% on clustering modules
 - Tests matrix building, PCA, k-means, hierarchical clustering, metrics
+
+**7. UI Integration** ([core/views_clustering.py](core/views_clustering.py), [core/templates/clustering/](core/templates/clustering/))
+- Interactive visualization page with Plotly.js scatter plot
+- Cluster statistics and analytics page
+- Timeline enhancement with cluster membership context
+- JSON API endpoint for lightweight data delivery
+
+**8. Timeline Integration** ([core/views.py](core/views.py), [core/templates/noticias/](core/templates/noticias/))
+- Cluster consensus badges on news cards showing cluster voting patterns
+- "Your cluster voted X%" indicators with consensus scores
+- Cluster info sidebar with membership details
+- Cluster-based filtering (recommended news with high consensus)
+- Custom template filters for percentage calculations
 
 ---
 
@@ -184,6 +197,9 @@ curl -X POST http://localhost:8000/api/clustering/trigger/ \
 - `core/clustering/hierarchical.py` - Hierarchical clustering
 - `core/clustering/metrics.py` - Consensus & similarity metrics
 - `core/api_clustering.py` - API endpoints
+- `core/views_clustering.py` - UI views for visualization and stats
+- `core/templates/clustering/visualization.html` - Interactive Plotly.js visualization
+- `core/templates/clustering/stats.html` - Cluster statistics page
 - `core/management/commands/cluster_voters.py` - CLI command
 - `core/tests/test_clustering.py` - Unit tests
 - `POLIS_CLUSTERING_PLAN.md` - Detailed implementation plan
@@ -192,7 +208,12 @@ curl -X POST http://localhost:8000/api/clustering/trigger/ \
 ### Modified Files
 - `core/models.py` - Added 5 clustering models
 - `core/tasks.py` - Added `update_voter_clusters()` task
-- `memoria/urls.py` - Added 4 clustering API routes
+- `core/views.py` - Enhanced NewsTimelineView with cluster context & filtering
+- `core/templatetags/vote_extras.py` - Added `get_item`, `mul`, `div` filters
+- `core/templates/base.html` - Added `extra_head` block for custom scripts
+- `core/templates/noticias/timeline_item.html` - Added cluster consensus badges
+- `core/templates/noticias/timeline_fragment.html` - Added cluster info section
+- `memoria/urls.py` - Added 7 clustering routes (4 API + 3 UI)
 - `pyproject.toml` - Added numpy, scipy, scikit-learn
 - `CLAUDE.md` - Added clustering documentation section
 - Migration: `core/migrations/0014_voterclusterrun_votercluster_voterprojection_and_more.py`
@@ -228,12 +249,7 @@ poetry run pytest core/tests/test_clustering.py -v
 
 See [POLIS_CLUSTERING_PLAN.md](POLIS_CLUSTERING_PLAN.md) and [CLAUDE.md](CLAUDE.md) for detailed roadmap.
 
-### Phase 5: UI Integration (2-3 days)
-- Timeline view: Cluster consensus indicators
-- Visualization page: D3.js/Plotly.js scatter plot
-- Voter profile: Display cluster membership
-
-### Phase 6: Advanced Features (1-2 weeks)
+### Phase 7: Advanced Features (1-2 weeks)
 - Periodic scheduling (Celery beat)
 - Temporal drift tracking
 - Cluster-based recommendations
@@ -348,5 +364,5 @@ For questions about this implementation:
 
 **Implementation Date:** 2026-01-04
 **Branch:** `login`
-**Status:** ✅ Production Ready (Phases 1-4 Complete)
-**Next Milestone:** UI Integration (Phase 5)
+**Status:** ✅ Production Ready (Phases 1-6 Complete)
+**Next Milestone:** Advanced Features & Optimization (Phase 7)

@@ -55,6 +55,69 @@
         <span>👁️ {{ vote_stats.total }} voto{{ vote_stats.total|pluralize }}</span>
       </div>
 
+      <!-- Cluster Badge (if in cluster) -->
+      {% if has_cluster and cluster_pattern %}
+        {% load vote_extras %}
+        <div class="bg-blue-50 border-2 border-blue-600 p-4 mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold mono text-blue-900">
+              Tu cluster (#{{ my_cluster.id }}) votó:
+            </h2>
+            <div class="flex gap-2">
+              <a href="{% url 'cluster-visualization' %}"
+                 class="text-xs border border-blue-800 px-2 py-1 text-blue-800 hover:bg-blue-800 hover:text-white transition-colors">
+                [ver mapa]
+              </a>
+              <a href="{% url 'cluster-stats' %}"
+                 class="text-xs border border-blue-800 px-2 py-1 text-blue-800 hover:bg-blue-800 hover:text-white transition-colors">
+                [estadísticas]
+              </a>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 mb-3">
+            <div class="flex gap-2 text-xs text-gray-700">
+              <span>😊 {{ cluster_pattern.count_buena }}</span>
+              <span>😐 {{ cluster_pattern.count_neutral }}</span>
+              <span>😞 {{ cluster_pattern.count_mala }}</span>
+            </div>
+
+            {% if cluster_pattern.majority_opinion %}
+              <span class="border-2 px-3 py-1 font-bold text-sm
+                {% if cluster_pattern.majority_opinion == 'buena' %}
+                  border-green-600 bg-green-100 text-green-800
+                {% elif cluster_pattern.majority_opinion == 'mala' %}
+                  border-red-600 bg-red-100 text-red-800
+                {% else %}
+                  border-gray-600 bg-gray-100 text-gray-800
+                {% endif %}">
+                {% if cluster_pattern.majority_opinion == 'buena' %}
+                  😊 {{ cluster_pattern.count_buena|mul:100|div:cluster_pattern.total_votes }}% buena
+                {% elif cluster_pattern.majority_opinion == 'mala' %}
+                  😞 {{ cluster_pattern.count_mala|mul:100|div:cluster_pattern.total_votes }}% mala
+                {% else %}
+                  😐 neutral
+                {% endif %}
+              </span>
+            {% endif %}
+          </div>
+
+          {% if cluster_pattern.consensus_score %}
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-gray-700 mono">consenso:</span>
+              <div class="flex-1 bg-gray-200 h-2 rounded-full overflow-hidden">
+                <div class="bg-blue-600 h-full transition-all"
+                     style="width: {{ cluster_pattern.consensus_score|mul:100 }}%">
+                </div>
+              </div>
+              <span class="font-bold text-gray-800">
+                {{ cluster_pattern.consensus_score|floatformat:2 }}
+              </span>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
       <!-- Vote Stats -->
       <div class="bg-gray-50 border border-gray-300 p-4 mb-6">
         <h2 class="text-sm font-bold mono mb-3">Opinión de los uruguayos:</h2>

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Visualización de Clusters - Memoria.uy{% endblock %}
+
+{% block extra_head %}
+<!-- Plotly.js for interactive visualization -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                Visualización de Clusters de Votantes
+            </h1>
+            <p class="text-gray-600">
+                Explora cómo se agrupan los votantes según sus patrones de votación en las noticias.
+            </p>
+        </div>
+
+        {% if has_clustering %}
+        <!-- Statistics Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600">Votantes</div>
+                <div class="text-2xl font-bold text-blue-600">{{ n_voters }}</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600">Clusters</div>
+                <div class="text-2xl font-bold text-green-600">{{ n_clusters }}</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600">Noticias</div>
+                <div class="text-2xl font-bold text-purple-600">{{ n_noticias }}</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600">Calidad (Silhouette)</div>
+                <div class="text-2xl font-bold text-orange-600">
+                    {{ silhouette_score|floatformat:3 }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Visualization -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="mb-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">
+                    Mapa de Clusters
+                </h2>
+                <div class="text-sm text-gray-600">
+                    Varianza explicada:
+                    {% for var in variance_explained %}
+                        PC{{ forloop.counter }}: {{ var|floatformat:1 }}%{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Plotly chart container -->
+            <div id="cluster-plot" class="w-full" style="height: 600px;"></div>
+
+            <!-- Legend -->
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Leyenda:</h3>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>• <strong>Puntos</strong>: Cada punto representa un votante</li>
+                    <li>• <strong>Colores</strong>: Diferentes colores indican diferentes clusters</li>
+                    <li>• <strong>Tamaño</strong>: El tamaño del punto representa la cantidad de votos</li>
+                    <li>• <strong>Hover</strong>: Pasa el mouse sobre un punto para ver detalles</li>
+                    <li>• <strong>Tu posición</strong>: Marcada con un borde destacado si estás en el mapa</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
+            <h3 class="text-lg font-semibold text-blue-900 mb-2">
+                ¿Cómo interpretar este mapa?
+            </h3>
+            <ul class="text-sm text-blue-800 space-y-2">
+                <li>• <strong>Proximidad</strong>: Votantes cercanos tienden a votar de manera similar</li>
+                <li>• <strong>Clusters</strong>: Grupos de votantes con patrones de votación compartidos</li>
+                <li>• <strong>Aislamiento</strong>: Votantes alejados tienen opiniones únicas</li>
+                <li>• <strong>Densidad</strong>: Áreas densas indican consenso fuerte en ese grupo</li>
+            </ul>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-4">
+            <a href="{% url 'cluster-stats' %}"
+               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Ver Estadísticas Detalladas
+            </a>
+            <a href="{% url 'timeline' %}"
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                Volver al Timeline
+            </a>
+        </div>
+
+        {% else %}
+        <!-- No Data State -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg">
+            <h2 class="text-xl font-bold text-yellow-900 mb-2">
+                No hay datos de clustering disponibles
+            </h2>
+            <p class="text-yellow-800 mb-4">
+                {{ message }}
+            </p>
+            <a href="{% url 'timeline' %}"
+               class="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
+                Ir a Votar Noticias
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if has_clustering %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch cluster data
+    fetch('/api/clustering/data/json/')
+        .then(response => response.json())
+        .then(data => {
+            renderClusterPlot(data);
+        })
+        .catch(error => {
+            console.error('Error loading cluster data:', error);
+            document.getElementById('cluster-plot').innerHTML =
+                '<div class="text-center text-red-600 p-8">Error cargando datos de clustering</div>';
+        });
+});
+
+function renderClusterPlot(data) {
+    // Group projections by cluster
+    const clusterGroups = {};
+    const currentVoterPoint = [];
+
+    data.projections.forEach(proj => {
+        const clusterId = proj.cluster_id !== undefined ? proj.cluster_id : -1;
+
+        if (!clusterGroups[clusterId]) {
+            clusterGroups[clusterId] = {
+                x: [],
+                y: [],
+                text: [],
+                marker: {
+                    size: [],
+                    color: clusterId,
+                    colorscale: 'Viridis',
+                    line: {
+                        color: [],
+                        width: []
+                    }
+                }
+            };
+        }
+
+        clusterGroups[clusterId].x.push(proj.x);
+        clusterGroups[clusterId].y.push(proj.y);
+        clusterGroups[clusterId].text.push(
+            `Votante: ${proj.voter_type}:${proj.voter_id.substring(0, 8)}...<br>` +
+            `Cluster: ${proj.cluster_id !== undefined ? proj.cluster_id : 'N/A'}<br>` +
+            `Votos: ${proj.n_votes}<br>` +
+            `Tamaño cluster: ${proj.cluster_size || 'N/A'}`
+        );
+        clusterGroups[clusterId].marker.size.push(Math.sqrt(proj.n_votes) * 3 + 5);
+
+        // Highlight current voter
+        if (proj.is_current_voter) {
+            clusterGroups[clusterId].marker.line.color.push('red');
+            clusterGroups[clusterId].marker.line.width.push(3);
+        } else {
+            clusterGroups[clusterId].marker.line.color.push('white');
+            clusterGroups[clusterId].marker.line.width.push(0.5);
+        }
+    });
+
+    // Create traces for each cluster
+    const traces = Object.entries(clusterGroups).map(([clusterId, group]) => ({
+        x: group.x,
+        y: group.y,
+        text: group.text,
+        mode: 'markers',
+        type: 'scatter',
+        name: clusterId === '-1' ? 'Sin cluster' : `Cluster ${clusterId}`,
+        marker: group.marker,
+        hovertemplate: '%{text}<extra></extra>'
+    }));
+
+    // Add centroids
+    if (data.centroids && data.centroids.length > 0) {
+        traces.push({
+            x: data.centroids.map(c => c.x),
+            y: data.centroids.map(c => c.y),
+            text: data.centroids.map(c =>
+                `Centroide Cluster ${c.cluster_id}<br>` +
+                `Tamaño: ${c.size}<br>` +
+                `Consenso: ${c.consensus ? c.consensus.toFixed(3) : 'N/A'}`
+            ),
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Centroides',
+            marker: {
+                symbol: 'diamond',
+                size: 15,
+                color: 'red',
+                line: {
+                    color: 'darkred',
+                    width: 2
+                }
+            },
+            hovertemplate: '%{text}<extra></extra>'
+        });
+    }
+
+    const layout = {
+        title: {
+            text: `Clusters de Votantes (${data.n_voters} votantes, ${data.n_clusters} clusters)`,
+            font: { size: 16 }
+        },
+        xaxis: {
+            title: `PC1 (${data.variance_explained && data.variance_explained[0] ? (data.variance_explained[0] * 100).toFixed(1) : '?'}% var.)`,
+            zeroline: true,
+            showgrid: true
+        },
+        yaxis: {
+            title: `PC2 (${data.variance_explained && data.variance_explained[1] ? (data.variance_explained[1] * 100).toFixed(1) : '?'}% var.)`,
+            zeroline: true,
+            showgrid: true
+        },
+        hovermode: 'closest',
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            yanchor: 'bottom',
+            y: -0.2,
+            xanchor: 'center',
+            x: 0.5
+        },
+        height: 600
+    };
+
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+        displaylogo: false
+    };
+
+    Plotly.newPlot('cluster-plot', traces, layout, config);
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -10,7 +10,15 @@ from django.views.generic import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
-from core.models import Noticia, Voto, Entidad
+from core.models import (
+    Noticia,
+    Voto,
+    Entidad,
+    VoterClusterRun,
+    VoterClusterMembership,
+)
+
+
 from core.forms import NoticiaForm
 from django.urls import reverse_lazy
 from django.db.models import Count, Q, F
@@ -119,6 +127,10 @@ class NewsTimelineView(ListView):
         elif filter_param == "mala_mayoria":
             return "Estás viendo las noticias que la mayoría considera malas"
 
+        # Cluster filters
+        elif filter_param == "cluster_consenso_buena":
+            return "Estás viendo noticias con alto consenso (buenas) en tu cluster"
+
         # Entity filters
         elif filter_param.startswith("mencionan_") and entidad_id:
             try:
@@ -218,6 +230,53 @@ class NewsTimelineView(ListView):
             queryset = queryset.filter(
                 entidades__entidad__pk=entidad_id, entidades__sentimiento="negativo"
             )
+        # Cluster filters
+        elif filter_param == "cluster_consenso_buena":
+            # Show news with high consensus as "buena" in voter's cluster
+            from core.models import (
+                VoterClusterRun,
+                VoterClusterMembership,
+                ClusterVotingPattern,
+            )
+
+            cluster_run = VoterClusterRun.objects.filter(
+                status='completed'
+            ).order_by('-created_at').first()
+
+            if cluster_run:
+                voter_type = (
+                    'user' if self.request.user.is_authenticated else 'session'
+                )
+                voter_id = (
+                    str(self.request.user.id)
+                    if self.request.user.is_authenticated
+                    else lookup_data.get("session_key")
+                )
+
+                membership = VoterClusterMembership.objects.filter(
+                    cluster__run=cluster_run,
+                    cluster__cluster_type='base',
+                    voter_type=voter_type,
+                    voter_id=voter_id
+                ).select_related('cluster').first()
+
+                if membership:
+                    # Get noticias with high consensus in this cluster
+                    high_consensus_patterns = ClusterVotingPattern.objects.filter(
+                        cluster=membership.cluster,
+                        majority_opinion='buena',
+                        consensus_score__gte=0.7
+                    ).values_list('noticia_id', flat=True)
+
+                    queryset = queryset.filter(
+                        id__in=high_consensus_patterns
+                    )
+                else:
+                    # No cluster membership, return empty
+                    queryset = queryset.none()
+            else:
+                # No clustering data, return empty
+                queryset = queryset.none()
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -242,9 +301,73 @@ class NewsTimelineView(ListView):
         if self.request.user.is_authenticated:
             context["voter_user"] = self.request.user
             context["voter_session"] = None
+            voter_type = 'user'
+            voter_id = str(self.request.user.id)
         else:
             context["voter_user"] = None
             context["voter_session"] = lookup_data.get("session_key")
+            voter_type = 'session'
+            voter_id = lookup_data.get("session_key")
+
+        # Add cluster information if available
+        cluster_run = VoterClusterRun.objects.filter(
+            status='completed'
+        ).order_by('-created_at').first()
+
+        if cluster_run and voter_id:
+            # Try to find voter's cluster membership
+            try:
+                membership = VoterClusterMembership.objects.filter(
+                    cluster__run=cluster_run,
+                    cluster__cluster_type='base',
+                    voter_type=voter_type,
+                    voter_id=voter_id
+                ).select_related('cluster').first()
+
+                if membership:
+                    my_cluster_obj = membership.cluster
+                    context["my_cluster"] = {
+                        'id': my_cluster_obj.cluster_id,
+                        'size': my_cluster_obj.size,
+                        'consensus': my_cluster_obj.consensus_score,
+                        'centroid_x': my_cluster_obj.centroid_x,
+                        'centroid_y': my_cluster_obj.centroid_y,
+                    }
+                    context["has_cluster"] = True
+
+                    # Fetch cluster voting patterns for noticias
+                    # in timeline
+                    from core.models import ClusterVotingPattern
+                    noticia_ids = [n.id for n in context['noticias']]
+                    patterns = ClusterVotingPattern.objects.filter(
+                        cluster=my_cluster_obj,
+                        noticia_id__in=noticia_ids
+                    ).select_related('noticia')
+
+                    # Create lookup dict for templates
+                    cluster_patterns = {
+                        p.noticia_id: {
+                            'majority_opinion': p.majority_opinion,
+                            'consensus_score': p.consensus_score,
+                            'count_buena': p.count_buena,
+                            'count_mala': p.count_mala,
+                            'count_neutral': p.count_neutral,
+                            'total_votes': (
+                                p.count_buena +
+                                p.count_mala +
+                                p.count_neutral
+                            ),
+                        }
+                        for p in patterns
+                    }
+                    context["cluster_patterns"] = cluster_patterns
+                else:
+                    context["has_cluster"] = False
+            except Exception as e:
+                logger.error(f"Error fetching cluster membership: {e}")
+                context["has_cluster"] = False
+        else:
+            context["has_cluster"] = False
 
         return context
 
@@ -459,6 +582,11 @@ class DeleteNoticiaView(LoginRequiredMixin, View):
     def post(self, request, pk):
         noticia = get_object_or_404(Noticia, pk=pk)
         noticia.delete()
+
+        # For HTMX requests, return empty HTML (item removed)
+        if request.headers.get("HX-Request"):
+            return HttpResponse("")
+
         return redirect(reverse_lazy("timeline"))
 
 
@@ -518,5 +646,70 @@ class NoticiaDetailView(DetailView):
             context["majority_opinion"] = "mala"
         else:
             context["majority_opinion"] = "neutral"
+
+        # Add cluster information if available
+        voter_type = 'user' if self.request.user.is_authenticated else 'session'
+        voter_id = (
+            str(self.request.user.id)
+            if self.request.user.is_authenticated
+            else lookup_data.get("session_key")
+        )
+
+        if voter_id:
+            cluster_run = VoterClusterRun.objects.filter(
+                status='completed'
+            ).order_by('-created_at').first()
+
+            if cluster_run:
+                try:
+                    from core.models import (
+                        VoterClusterMembership,
+                        ClusterVotingPattern,
+                    )
+
+                    membership = VoterClusterMembership.objects.filter(
+                        cluster__run=cluster_run,
+                        cluster__cluster_type='base',
+                        voter_type=voter_type,
+                        voter_id=voter_id
+                    ).select_related('cluster').first()
+
+                    if membership:
+                        my_cluster_obj = membership.cluster
+                        context["my_cluster"] = {
+                            'id': my_cluster_obj.cluster_id,
+                            'size': my_cluster_obj.size,
+                            'consensus': my_cluster_obj.consensus_score,
+                        }
+                        context["has_cluster"] = True
+
+                        # Get cluster voting pattern for this noticia
+                        pattern = ClusterVotingPattern.objects.filter(
+                            cluster=my_cluster_obj,
+                            noticia=noticia
+                        ).first()
+
+                        if pattern:
+                            context["cluster_pattern"] = {
+                                'majority_opinion': pattern.majority_opinion,
+                                'consensus_score': pattern.consensus_score,
+                                'count_buena': pattern.count_buena,
+                                'count_mala': pattern.count_mala,
+                                'count_neutral': pattern.count_neutral,
+                                'total_votes': (
+                                    pattern.count_buena +
+                                    pattern.count_mala +
+                                    pattern.count_neutral
+                                ),
+                            }
+                    else:
+                        context["has_cluster"] = False
+                except Exception as e:
+                    logger.error(f"Error fetching cluster data: {e}")
+                    context["has_cluster"] = False
+            else:
+                context["has_cluster"] = False
+        else:
+            context["has_cluster"] = False
 
         return context
