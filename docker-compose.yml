@@ -52,20 +52,20 @@ services:
         condition: service_healthy
     restart: always
 
-  # celery_beat:
-  #   image: memoria-web
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: beat
-  #   volumes:
-  #     - .:/app
-  #   env_file:
-  #     - ./.env
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   restart: always
+  celery_beat:
+    image: memoria-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: beat
+    volumes:
+      - .:/app
+    env_file:
+      - ./.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
 
   nginx:
     image: nginx:1.21-alpine

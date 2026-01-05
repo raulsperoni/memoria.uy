@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "memoria.settings")
 
@@ -18,3 +19,16 @@ app = Celery(
 )
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
+
+# Periodic task schedule
+app.conf.beat_schedule = {
+    'update-voter-clusters-daily': {
+        'task': 'core.tasks.update_voter_clusters',
+        'schedule': crontab(hour=2, minute=0),  # Run at 2 AM every day
+        'kwargs': {
+            'time_window_days': 30,
+            'min_voters': 50,
+            'min_votes_per_voter': 3,
+        },
+    },
+}
