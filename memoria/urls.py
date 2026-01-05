@@ -48,7 +48,7 @@ from core.views_clustering import (
     ClusterStatsView,
     cluster_data_json,
 )
-from memoria.views import health_check, robots_txt
+from memoria.views import health_check, robots_txt, favicon
 
 # Sitemap configuration
 sitemaps = {
@@ -59,6 +59,7 @@ sitemaps = {
 urlpatterns = (
     [
         path("admin/", admin.site.urls),
+        path("favicon.ico", favicon, name="favicon"),
         path("robots.txt", robots_txt, name="robots_txt"),
         path(
             "sitemap.xml",
