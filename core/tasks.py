@@ -261,7 +261,7 @@ def check_and_trigger_clustering():
 
 @shared_task
 @task_lock(timeout=60 * 30)  # 30 min lock
-def update_voter_clusters(time_window_days=30, min_voters=50, min_votes_per_voter=3):
+def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_voter=3):
     """
     Compute voter clusters based on voting patterns (Polis-style).
 
