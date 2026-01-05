@@ -389,8 +389,37 @@ See [POLIS_CLUSTERING_PLAN.md](POLIS_CLUSTERING_PLAN.md) for detailed implementa
 
 ## Deployment
 
+### Local Docker Deployment
+
 - Docker-based deployment via docker-compose.yml
 - Nginx reverse proxy (config in `nginx/conf.d`)
 - Gunicorn WSGI server
-- Services: web, celery_worker, redis, nginx
+- Services: web, celery_worker, celery_beat, redis, nginx
 - Health check endpoint: `/health/`
+
+### Railway Deployment
+
+Railway requires 3 separate services:
+
+1. **Web Service** (main app)
+   - Start Command: `/entrypoint.sh web`
+   - Handles HTTP requests via Gunicorn
+
+2. **Worker Service** (Celery worker)
+   - Start Command: `/entrypoint.sh worker`
+   - Processes async tasks (enrichment, clustering)
+
+3. **Beat Service** (Celery beat scheduler) ⚠️ NEW
+   - Start Command: `/entrypoint.sh beat`
+   - Runs scheduled tasks (daily clustering at 2 AM)
+   - Required for automatic cluster recalculation
+
+All three services must share the same `REDIS_URL` environment variable.
+
+**To add Beat service on Railway:**
+1. Create new service from same GitHub repo
+2. In service settings, point to `railway.beat.toml` (or `railway.beat.json`)
+3. Add same environment variables as web/worker (especially `REDIS_URL`)
+4. Deploy
+
+Note: Railway automatically detects `railway.<name>.toml` files for multi-service repos.
