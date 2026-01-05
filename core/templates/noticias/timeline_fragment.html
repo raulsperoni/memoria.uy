@@ -52,9 +52,19 @@
   <!-- Filter bar -->
   <div x-data="{
     openFilters: false,
-    audience: 'mi',
-    advancedFilter: '',
-    entity: ''
+    primaryFilter: {% if current_filter == 'todas' %}'todas'{% elif current_filter == 'nuevas' or not current_filter %}'nuevas'{% elif current_filter in 'buena_mi,buena_mayoria,cluster_consenso_buena' %}'buenas'{% elif current_filter in 'mala_mi,mala_mayoria' %}'malas'{% elif current_filter in 'mencionan_a,mencionan_positiva,mencionan_negativa' %}''{% else %}'nuevas'{% endif %},
+    perspective: {% if current_filter in 'buena_mi,mala_mi' %}'mi'{% elif current_filter == 'cluster_consenso_buena' %}'burbuja'{% elif current_filter in 'buena_mayoria,mala_mayoria' %}'mayoria'{% else %}'mi'{% endif %},
+    entity: '{% if request.GET.entidad %}{{ request.GET.entidad }}{% endif %}',
+    showPerspectiveSelector() {
+      return this.primaryFilter === 'buenas' || this.primaryFilter === 'malas';
+    },
+    clearEntityFilter() {
+      this.entity = '';
+    },
+    clearPrimaryFilter() {
+      this.primaryFilter = '';
+      this.perspective = 'mi';
+    }
   }" class="border-2 border-black bg-white mb-4">
 
     <!-- Filter header -->
@@ -71,7 +81,7 @@
       </div>
 
       <!-- Active filter indicator -->
-      <div class="mt-2 text-[10px] text-gray-600">
+      <div id="active-filter-text" class="mt-2 text-[10px] text-gray-600">
         > {{ filter_description|default:"sin filtros activos" }}
       </div>
     </div>
@@ -79,135 +89,96 @@
     <!-- Filter options (collapsible) -->
     <div x-show="openFilters" x-transition class="p-3 bg-white space-y-4">
 
-      <!-- Basic filters -->
+      <!-- Primary filters -->
       <div>
-        <h4 class="text-[10px] text-gray-600 mb-2">// filtro básico</h4>
-        <div class="flex gap-2 flex-wrap">
-          <button hx-get="{% url 'timeline' %}?filter=nuevas"
+        <h4 class="text-[10px] text-gray-600 mb-2">// filtro principal</h4>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button @click="primaryFilter = 'todas'; clearEntityFilter()"
+                  hx-get="{% url 'timeline' %}?filter=todas"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
-                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs {% if current_filter == 'nuevas' or not current_filter %}bg-black text-white{% else %}hover:bg-black hover:text-white{% endif %}">
-            noticias nuevas
-          </button>
-          <button hx-get="{% url 'timeline' %}?filter=todas"
-                  hx-target="#timeline-items"
-                  hx-swap="innerHTML"
-                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs {% if current_filter == 'todas' %}bg-black text-white{% else %}hover:bg-black hover:text-white{% endif %}">
+                  hx-push-url="true"
+                  :class="primaryFilter === 'todas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
             todas las noticias
           </button>
+          <button @click="primaryFilter = 'nuevas'; clearEntityFilter()"
+                  hx-get="{% url 'timeline' %}?filter=nuevas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-push-url="true"
+                  :class="primaryFilter === 'nuevas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
+            noticias nuevas
+          </button>
+          <button @click="primaryFilter = 'buenas'; perspective = 'mi'; clearEntityFilter()"
+                  hx-get="{% url 'timeline' %}?filter=buena_mi"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-push-url="true"
+                  :class="primaryFilter === 'buenas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
+            😊 buenas noticias
+          </button>
+          <button @click="primaryFilter = 'malas'; perspective = 'mi'; clearEntityFilter()"
+                  hx-get="{% url 'timeline' %}?filter=mala_mi"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-push-url="true"
+                  :class="primaryFilter === 'malas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
+                  class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
+            😞 malas noticias
+          </button>
         </div>
       </div>
 
-      <!-- Bubble Mode Selector -->
-      {% if has_cluster %}
-      <div class="mb-4 pb-4 border-b border-gray-300">
-        <h4 class="text-[10px] text-gray-600 mb-2">// modo de exploración</h4>
-        <div class="grid grid-cols-3 gap-2">
-          <button hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
+      <!-- Perspective selector (shown only when buenas/malas selected) -->
+      <div x-show="showPerspectiveSelector()" x-transition class="pb-4 border-b border-gray-300">
+        <h4 class="text-[10px] text-gray-600 mb-2">// según quién?</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <button @click="perspective = 'mi'; clearEntityFilter()"
+                  x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mi'"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
-                  class="border-2 border-blue-600 px-3 py-2 text-xs
-                  hover:bg-blue-600 hover:text-white transition-colors">
+                  hx-push-url="true"
+                  :class="perspective === 'mi' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
+                  class="border-2 border-black px-3 py-2 transition-colors text-xs">
+            <div class="font-bold">mi opinión</div>
+            <div class="text-[9px] text-gray-600">según lo que voté</div>
+          </button>
+          <button @click="perspective = 'burbuja'; clearEntityFilter()"
+                  hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-push-url="true"
+                  :class="perspective === 'burbuja' ? 'bg-blue-600 text-white' : 'hover:bg-blue-600 hover:text-white'"
+                  class="border-2 border-blue-600 px-3 py-2 transition-colors text-xs {% if not has_cluster %}opacity-50 cursor-not-allowed{% endif %}"
+                  {% if not has_cluster %}disabled{% endif %}>
             <div class="font-bold">mi burbuja</div>
-            <div class="text-[9px] text-gray-600">alineado con vos</div>
+            <div class="text-[9px] text-gray-600">según votantes similares</div>
           </button>
-          <button hx-get="{% url 'timeline' %}?filter=todas"
+          <button @click="perspective = 'mayoria'; clearEntityFilter()"
+                  x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mayoria'"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
-                  class="border-2 border-black px-3 py-2 text-xs
-                  hover:bg-black hover:text-white transition-colors">
-            <div class="font-bold">todo</div>
-            <div class="text-[9px] text-gray-600">sin sesgo</div>
-          </button>
-          <button hx-get="{% url 'timeline' %}?filter=otras_burbujas"
-                  hx-target="#timeline-items"
-                  hx-swap="innerHTML"
-                  class="border-2 border-orange-600 px-3 py-2 text-xs
-                  hover:bg-orange-600 hover:text-white transition-colors">
-            <div class="font-bold">otras burbujas</div>
-            <div class="text-[9px] text-gray-600">perspectivas diferentes</div>
+                  hx-push-url="true"
+                  :class="perspective === 'mayoria' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
+                  class="border-2 border-black px-3 py-2 transition-colors text-xs">
+            <div class="font-bold">la mayoría</div>
+            <div class="text-[9px] text-gray-600">según todos los votos</div>
           </button>
         </div>
+        {% if not has_cluster %}
+        <p class="text-[9px] text-gray-500 mt-2">
+          * La opción "mi burbuja" estará disponible cuando se genere el próximo análisis de clusters
+        </p>
+        {% endif %}
       </div>
-      {% endif %}
 
-      <!-- Opinion filters -->
+      <!-- Entity filters (dynamically updated) -->
       <div>
-        <h4 class="text-[10px] text-gray-600 mb-2">// filtro por opinión</h4>
-
-        <!-- Audience selector -->
-        <div class="mb-2">
-          <span class="text-[10px] text-gray-600 block mb-1">perspectiva:</span>
-          <div class="inline-flex border-2 border-black">
-            <button @click="audience = 'mi'"
-                    :class="{'bg-black text-white': audience === 'mi', 'bg-white text-black': audience !== 'mi'}"
-                    class="px-3 py-1.5 text-xs border-r-2 border-black transition-colors">
-              mi opinión
-            </button>
-            <button @click="audience = 'mayoria'"
-                    :class="{'bg-black text-white': audience === 'mayoria', 'bg-white text-black': audience !== 'mayoria'}"
-                    class="px-3 py-1.5 text-xs transition-colors">
-              mayoría
-            </button>
-          </div>
-        </div>
-
-        <!-- Opinion buttons -->
-        <div class="grid grid-cols-2 gap-2">
-          <button x-bind:hx-get="'{% url 'timeline' %}?filter=buena_' + audience"
-                  hx-target="#timeline-items"
-                  hx-swap="innerHTML"
-                  class="border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors text-xs">
-            😊 buenas
-          </button>
-          <button x-bind:hx-get="'{% url 'timeline' %}?filter=mala_' + audience"
-                  hx-target="#timeline-items"
-                  hx-swap="innerHTML"
-                  class="border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors text-xs">
-            😞 malas
-          </button>
-        </div>
+        {% include "noticias/entity_filter.html" %}
       </div>
-
-      <!-- Entity filters (if entities exist) -->
-      {% if entidades %}
-      <div>
-        <h4 class="text-xs text-gray-600 mb-3">// filtro por entidad</h4>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs text-gray-600 mb-1">tipo:</label>
-            <select x-model="advancedFilter"
-                    class="w-full border-2 border-black px-2 py-2 bg-white text-sm">
-              <option value="">seleccionar</option>
-              <option value="mencionan_a">cualquier mención</option>
-              <option value="mencionan_positiva">mención positiva</option>
-              <option value="mencionan_negativa">mención negativa</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-600 mb-1">entidad:</label>
-            <select x-model="entity"
-                    class="w-full border-2 border-black px-2 py-2 bg-white text-sm">
-              <option value="">seleccionar</option>
-              {% for entidad in entidades %}
-                <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="flex items-end">
-            <button @click="
-                      const url = '{% url 'timeline' %}?filter=' + advancedFilter + '&entidad=' + entity;
-                      htmx.ajax('GET', url, {target:'#timeline-items', swap:'innerHTML'});
-                    "
-                    :disabled="advancedFilter === '' || entity === ''"
-                    :class="{'opacity-50 cursor-not-allowed': advancedFilter === '' || entity === ''}"
-                    class="w-full border-2 border-black px-4 py-2 hover:bg-black hover:text-white transition-colors text-sm">
-              aplicar
-            </button>
-          </div>
-        </div>
-      </div>
-      {% endif %}
     </div>
   </div>
 
@@ -401,5 +372,13 @@
 
   document.addEventListener('htmx:timeout', function(event) {
     showNotification('timeout: intentá de nuevo', 'error');
+  });
+
+  // Update active filter description when filter changes
+  document.body.addEventListener('updateActiveFilters', function(event) {
+    const filterText = document.getElementById('active-filter-text');
+    if (filterText && event.detail && event.detail.description) {
+      filterText.textContent = '> ' + event.detail.description;
+    }
   });
 </script>

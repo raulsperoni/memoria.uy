@@ -109,29 +109,29 @@ class NewsTimelineView(ListView):
 
         # Default: show new news (unvoted)
         if not filter_param or filter_param == "nuevas":
-            return "Estás viendo las noticias que aún no votaste"
+            return "noticias nuevas"
 
         # Show all news
         if filter_param == "todas":
-            return "Estás viendo todas las noticias"
+            return "todas las noticias"
 
         # User opinion filters (authenticated or session-based)
         if filter_param == "buena_mi":
-            return "Estás viendo solo las noticias que marcaste como buenas"
+            return "buenas noticias según mi opinión"
         elif filter_param == "mala_mi":
-            return "Estás viendo solo las noticias que marcaste como malas"
+            return "malas noticias según mi opinión"
 
         # Majority opinion filters
         elif filter_param == "buena_mayoria":
-            return "Estás viendo las noticias que la mayoría considera buenas"
+            return "buenas noticias según la mayoría"
         elif filter_param == "mala_mayoria":
-            return "Estás viendo las noticias que la mayoría considera malas"
+            return "malas noticias según la mayoría"
 
         # Bubble filters
         elif filter_param == "cluster_consenso_buena":
-            return "Estás viendo noticias con alto consenso (buenas) en tu burbuja"
+            return "buenas noticias según mi burbuja"
         elif filter_param == "otras_burbujas":
-            return "Estás viendo noticias desde perspectivas diferentes a tu burbuja"
+            return "noticias desde otras burbujas"
 
         # Entity filters
         elif filter_param.startswith("mencionan_") and entidad_id:
@@ -139,16 +139,16 @@ class NewsTimelineView(ListView):
                 entidad = Entidad.objects.get(id=entidad_id)
 
                 if filter_param == "mencionan_a":
-                    return f"Estás viendo las noticias que mencionan a {entidad.nombre}"
+                    return f"todas las menciones de {entidad.nombre}"
                 elif filter_param == "mencionan_positiva":
-                    return f"Estás viendo las noticias que mencionan positivamente a {entidad.nombre}"
+                    return f"menciones positivas de {entidad.nombre}"
                 elif filter_param == "mencionan_negativa":
-                    return f"Estás viendo las noticias que mencionan negativamente a {entidad.nombre}"
+                    return f"menciones negativas de {entidad.nombre}"
             except (Entidad.DoesNotExist, ValueError):
-                return "Estás viendo noticias filtradas por entidad"
+                return "noticias filtradas por entidad"
 
         # Default for unknown filters
-        return "Estás viendo noticias filtradas"
+        return "noticias filtradas"
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -366,7 +366,15 @@ class NewsTimelineView(ListView):
 
         # Add filter description to context
         context["filter_description"] = self.get_filter_description()
-        context["entidades"] = Entidad.objects.all()
+
+        # Get entities available in the current filtered queryset
+        queryset = self.get_queryset()
+        available_entity_ids = queryset.values_list(
+            'entidades__entidad_id', flat=True
+        ).distinct()
+        context["entidades"] = Entidad.objects.filter(
+            id__in=available_entity_ids
+        ).order_by('nombre')
 
         # Add voter identifier to context (for templates to check votes)
         if self.request.user.is_authenticated:
@@ -457,16 +465,47 @@ class NewsTimelineView(ListView):
     def render_to_response(self, context, **response_kwargs):
         # If the request is via HTMX, return just the list items partial
         if self.request.headers.get("HX-Request"):
+            from django.template.loader import render_to_string
+
             self.template_name = "noticias/timeline_items.html"
 
-            # When loading just the items via HTMX, update the active filters section
+            # When loading just the items via HTMX, also update entity filter
             if self.request.headers.get("HX-Target") == "timeline-items":
-                response_kwargs.setdefault("headers", {})
-                response_kwargs["headers"]["HX-Trigger"] = (
-                    '{"updateActiveFilters": {"description": "'
-                    + context["filter_description"]
-                    + '"}}'
+                # Get the main response
+                response = super().render_to_response(
+                    context, **response_kwargs
                 )
+
+                # Render the response to make content accessible
+                response.render()
+
+                # Render entity filter partial with OOB swap attribute
+                entity_filter_html = render_to_string(
+                    "noticias/entity_filter.html",
+                    {"entidades": context.get("entidades", [])},
+                    request=self.request
+                )
+
+                # Add hx-swap-oob to the entity filter section
+                entity_filter_with_oob = entity_filter_html.replace(
+                    '<div id="entity-filter-section">',
+                    '<div id="entity-filter-section" hx-swap-oob="true">'
+                )
+
+                # Append out-of-band swap for entity filter
+                response.content = (
+                    response.content + entity_filter_with_oob.encode()
+                )
+
+                # Send filter description update via HX-Trigger
+                import json
+                response["HX-Trigger"] = json.dumps({
+                    "updateActiveFilters": {
+                        "description": context["filter_description"]
+                    }
+                })
+                return response
+
         return super().render_to_response(context, **response_kwargs)
 
 
