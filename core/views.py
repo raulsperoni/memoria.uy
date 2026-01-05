@@ -380,6 +380,18 @@ class NewsTimelineView(ListView):
             voter_type = 'session'
             voter_id = lookup_data.get("session_key")
 
+        # Add user votes to noticias
+        if 'noticias' in context:
+            noticia_ids = [n.id for n in context['noticias']]
+            user_votes = Voto.objects.filter(
+                noticia_id__in=noticia_ids,
+                **lookup_data
+            ).values('noticia_id', 'opinion')
+            votes_dict = {v['noticia_id']: v['opinion'] for v in user_votes}
+
+            for noticia in context['noticias']:
+                noticia.user_vote = votes_dict.get(noticia.id)
+
         # Add cluster information if available
         cluster_run = VoterClusterRun.objects.filter(
             status='completed'
@@ -484,6 +496,11 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
         logger.info(
             f"[Vote Debug] Vote {'created' if created else 'updated'}: {vote.id}"
         )
+
+        # Trigger clustering check asynchronously after vote
+        if created or opinion != vote.opinion:
+            from core.tasks import check_and_trigger_clustering
+            check_and_trigger_clustering.apply_async(countdown=5)
 
         # If voting from the "nuevas" filter, return empty to remove item
         on_nuevas_filter = request.POST.get("on_nuevas_filter") == "true"

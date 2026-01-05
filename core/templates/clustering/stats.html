@@ -20,7 +20,7 @@
         <!-- Overview -->
         <div class="bg-white rounded-lg shadow p-6 mb-8">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Resumen General</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <div class="text-sm text-gray-600">Total de Burbujas</div>
                     <div class="text-2xl font-bold text-blue-600">
@@ -39,8 +39,126 @@
                         {{ cluster_run.computation_time|floatformat:2 }}s
                     </div>
                 </div>
+                <div>
+                    <div class="text-sm text-gray-600">Total de Votantes</div>
+                    <div class="text-2xl font-bold text-green-600">
+                        {{ cluster_run.n_voters }}
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Votes Over Time -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                Actividad de Votación
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <div class="text-sm text-gray-600">Total de Votos</div>
+                    <div class="text-2xl font-bold text-purple-600">
+                        {{ total_votes }}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">Últimos 7 Días</div>
+                    <div class="text-2xl font-bold text-blue-600">
+                        {{ votes_last_7_days }}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">Últimos 30 Días</div>
+                    <div class="text-2xl font-bold text-green-600">
+                        {{ votes_last_30_days }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Votes by Day Chart -->
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    Votos por Día (Últimos 30 Días)
+                </h3>
+                <div class="h-64" id="votes-chart"></div>
+            </div>
+        </div>
+
+        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+        <script>
+            // Prepare data for chart
+            const votesData = {{ votes_by_day|safe }};
+            const votesByOpinionData = {{ votes_by_opinion_day|safe }};
+
+            // Total votes per day
+            const dates = votesData.map(d => d.day);
+            const counts = votesData.map(d => d.count);
+
+            // Votes by opinion
+            const opinionMap = {};
+            votesByOpinionData.forEach(d => {
+                if (!opinionMap[d.opinion]) {
+                    opinionMap[d.opinion] = { dates: [], counts: [] };
+                }
+                opinionMap[d.opinion].dates.push(d.day);
+                opinionMap[d.opinion].counts.push(d.count);
+            });
+
+            // Create traces
+            const traces = [
+                {
+                    x: dates,
+                    y: counts,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Total',
+                    line: { color: '#8b5cf6', width: 2 },
+                    marker: { size: 6 }
+                }
+            ];
+
+            // Add opinion traces
+            const opinionColors = {
+                'buena': '#10b981',
+                'mala': '#ef4444',
+                'neutral': '#6b7280'
+            };
+
+            Object.keys(opinionMap).forEach(opinion => {
+                traces.push({
+                    x: opinionMap[opinion].dates,
+                    y: opinionMap[opinion].counts,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: opinion.charAt(0).toUpperCase() + opinion.slice(1),
+                    line: { color: opinionColors[opinion], width: 2 },
+                    marker: { size: 5 }
+                });
+            });
+
+            // Layout
+            const layout = {
+                xaxis: {
+                    title: 'Fecha',
+                    type: 'date'
+                },
+                yaxis: {
+                    title: 'Cantidad de Votos'
+                },
+                hovermode: 'x unified',
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: 1,
+                    bgcolor: 'rgba(255,255,255,0.8)'
+                },
+                margin: { l: 50, r: 30, t: 30, b: 50 }
+            };
+
+            // Plot
+            Plotly.newPlot('votes-chart', traces, layout, {
+                responsive: true
+            });
+        </script>
 
         <!-- Bubble Details -->
         <div class="space-y-6">

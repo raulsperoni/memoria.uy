@@ -4,8 +4,12 @@ Views for cluster visualization and analysis.
 
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from core.models import VoterClusterRun
+from core.models import VoterClusterRun, Voto
 from core.views import get_voter_identifier
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from datetime import timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -108,6 +112,53 @@ class ClusterStatsView(TemplateView):
             context['cluster_stats'] = cluster_stats
             context['cluster_run'] = run
             context['has_data'] = True
+
+            # Add votes over time statistics
+            thirty_days_ago = timezone.now() - timedelta(days=30)
+            votes_by_day = Voto.objects.filter(
+                fecha_voto__gte=thirty_days_ago
+            ).annotate(
+                day=TruncDate('fecha_voto')
+            ).values('day').annotate(
+                count=Count('id')
+            ).order_by('day')
+
+            # Also get votes by opinion over time
+            votes_by_opinion_day = Voto.objects.filter(
+                fecha_voto__gte=thirty_days_ago
+            ).annotate(
+                day=TruncDate('fecha_voto')
+            ).values('day', 'opinion').annotate(
+                count=Count('id')
+            ).order_by('day', 'opinion')
+
+            # Convert to JSON-serializable format
+            import json
+            context['votes_by_day'] = json.dumps([
+                {'day': v['day'].isoformat(), 'count': v['count']}
+                for v in votes_by_day
+            ])
+            context['votes_by_opinion_day'] = json.dumps([
+                {
+                    'day': v['day'].isoformat(),
+                    'opinion': v['opinion'],
+                    'count': v['count']
+                }
+                for v in votes_by_opinion_day
+            ])
+
+            # Calculate total votes
+            total_votes = Voto.objects.count()
+            votes_last_7_days = Voto.objects.filter(
+                fecha_voto__gte=timezone.now() - timedelta(days=7)
+            ).count()
+            votes_last_30_days = Voto.objects.filter(
+                fecha_voto__gte=thirty_days_ago
+            ).count()
+
+            context['total_votes'] = total_votes
+            context['votes_last_7_days'] = votes_last_7_days
+            context['votes_last_30_days'] = votes_last_30_days
         else:
             context['has_data'] = False
 
