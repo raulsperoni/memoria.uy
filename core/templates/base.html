@@ -29,9 +29,10 @@
   <meta name="twitter:image" content="{% block twitter_image %}{% static 'core/logo.svg' %}{% endblock %}">
 
   <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'core/favicon-32x32.png' %}">
   <link rel="icon" type="image/png" sizes="16x16" href="{% static 'core/favicon-16x16.png' %}">
-  <link rel="shortcut icon" href="{% static 'core/favicon-32x32.png' %}">
+  <link rel="shortcut icon" href="/favicon.ico">
 
   {% tailwind_css %}
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
@@ -149,6 +150,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Sticky Content (appears below header, outside main padding) -->
+  {% block sticky_content %}{% endblock %}
 
   <!-- Main Content -->
   <main class="max-w-5xl mx-auto px-4 py-8 min-h-screen">

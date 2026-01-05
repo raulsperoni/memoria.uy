@@ -17,6 +17,31 @@
 {% block twitter_description %}{{ noticia.meta_descripcion|default:"Votá y mirá qué piensan los uruguayos sobre esta noticia." }}{% endblock %}
 {% block twitter_image %}{% if noticia.mostrar_imagen %}{{ noticia.mostrar_imagen }}{% else %}{% static 'core/logo.svg' %}{% endif %}{% endblock %}
 
+{% block sticky_content %}
+<!-- Mobile Ticker (sticky below header) -->
+{% if has_cluster %}
+<div id="bubble-ticker-mobile"
+     class="md:hidden sticky top-0 z-40 bg-blue-600 border-b-2 border-black text-white mono"
+     x-data="{ collapsed: false }"
+     x-show="!collapsed"
+     x-transition>
+  <div class="flex items-center">
+    <a href="{% url 'cluster-stats' %}#{{ my_cluster.id }}"
+       class="flex items-center gap-2 flex-1 min-w-0 px-4 py-2 hover:bg-blue-700 transition-colors">
+      <span class="text-xs font-bold whitespace-nowrap">TU BURBUJA</span>
+      <span class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
+        #{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
+      </span>
+    </a>
+    <button @click="collapsed = !collapsed"
+            class="px-4 py-2 border-l border-blue-400 text-[10px] hover:bg-blue-700 transition-colors flex-shrink-0">
+      [×]
+    </button>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto">
   <!-- Site Intro (for new visitors) -->
@@ -140,7 +165,7 @@
       </form>
       {% endif %}
 
-      <!-- Bubble Badge (if in bubble) -->
+      <!-- Inline Bubble Info (minimized on detail page) -->
       {% if has_cluster and cluster_pattern %}
         {% load vote_extras %}
         <div class="bg-blue-50 border-2 border-blue-600 p-4 mb-6">
@@ -148,16 +173,6 @@
             <h2 class="text-sm font-bold mono text-blue-900">
               Tu burbuja (#{{ my_cluster.id }}) votó:
             </h2>
-            <div class="flex gap-2">
-              <a href="{% url 'cluster-visualization' %}"
-                 class="text-xs border border-blue-800 px-2 py-1 text-blue-800 hover:bg-blue-800 hover:text-white transition-colors">
-                [ver mapa]
-              </a>
-              <a href="{% url 'cluster-stats' %}"
-                 class="text-xs border border-blue-800 px-2 py-1 text-blue-800 hover:bg-blue-800 hover:text-white transition-colors">
-                [estadísticas]
-              </a>
-            </div>
           </div>
 
           <div class="flex items-center gap-4 mb-3">
@@ -280,5 +295,67 @@
     }
   }
   </script>
+
+  <!-- Desktop Floating Badge -->
+  {% if has_cluster %}
+  <div id="bubble-badge-desktop"
+       class="hidden md:block fixed top-24 right-6 z-40 mono"
+       x-data="{ expanded: false }"
+       @mouseenter="expanded = true"
+       @mouseleave="expanded = false">
+
+    <!-- Collapsed State -->
+    <div x-show="!expanded"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100"
+         class="bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+      <div class="text-center">
+        <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
+        <div class="text-xl font-bold leading-none">🔵</div>
+        <div class="text-xs font-bold mt-1">#{{ my_cluster.id }}</div>
+      </div>
+    </div>
+
+    <!-- Expanded State -->
+    <div x-show="expanded"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100"
+         class="bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px]">
+
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-400">
+        <h3 class="text-xs font-bold">TU BURBUJA</h3>
+        <span class="text-xl font-bold">#{{ my_cluster.id }}</span>
+      </div>
+
+      <div class="space-y-2 mb-3 text-[10px]">
+        <div class="flex justify-between">
+          <span class="text-blue-200">VOTANTES:</span>
+          <span class="font-bold">{{ my_cluster.size }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-blue-200">CONSENSO:</span>
+          <span class="font-bold">{{ my_cluster.consensus|floatformat:2 }}</span>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <a href="{% url 'cluster-visualization' %}"
+           class="block text-center border border-white px-3 py-1.5 text-[10px] font-bold hover:bg-white hover:text-blue-600 transition-colors">
+          [VER MAPA]
+        </a>
+        <a href="{% url 'cluster-stats' %}"
+           class="block text-center border border-white px-3 py-1.5 text-[10px] font-bold hover:bg-white hover:text-blue-600 transition-colors">
+          [ESTADÍSTICAS]
+        </a>
+        <a href="{% url 'timeline' %}?filter=cluster_consenso_buena"
+           class="block text-center bg-white text-blue-600 px-3 py-1.5 text-[10px] font-bold hover:bg-blue-100 transition-colors">
+          [RECOMENDADAS]
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

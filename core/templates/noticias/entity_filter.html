@@ -1,0 +1,72 @@
+{# templates/noticias/entity_filter.html #}
+<!-- Entity filters (if entities exist) -->
+{% if entidades %}
+<div id="entity-filter-section">
+  <h4 class="text-[10px] text-gray-600 mb-2">// filtro por entidad</h4>
+  <div class="space-y-2">
+    <select x-model="entity"
+            class="w-full border-2 border-black px-3 py-2 bg-white text-xs">
+      <option value="">seleccionar entidad</option>
+      {% for entidad in entidades %}
+        <option value="{{ entidad.id }}">{{ entidad.nombre }}</option>
+      {% endfor %}
+    </select>
+    <div class="grid grid-cols-3 gap-2">
+      <button @click="
+                if (entity) {
+                  clearPrimaryFilter();
+                  htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_a&entidad=' + entity, {
+                    target: '#timeline-items',
+                    swap: 'innerHTML'
+                  });
+                  history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_a&entidad=' + entity);
+                }
+              "
+              :disabled="entity === ''"
+              :class="entity === '' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black hover:text-white'"
+              class="border-2 border-black px-3 py-2 transition-colors text-xs">
+        <div class="font-bold">todas</div>
+        <div class="text-[9px] text-gray-600">menciones</div>
+      </button>
+      <button @click="
+                if (entity) {
+                  clearPrimaryFilter();
+                  htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_positiva&entidad=' + entity, {
+                    target: '#timeline-items',
+                    swap: 'innerHTML'
+                  });
+                  history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_positiva&entidad=' + entity);
+                }
+              "
+              :disabled="entity === ''"
+              :class="entity === '' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600 hover:text-white'"
+              class="border-2 border-green-600 px-3 py-2 transition-colors text-xs">
+        <div class="font-bold">positivas</div>
+        <div class="text-[9px] text-gray-600">menciones</div>
+      </button>
+      <button @click="
+                if (entity) {
+                  clearPrimaryFilter();
+                  htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_negativa&entidad=' + entity, {
+                    target: '#timeline-items',
+                    swap: 'innerHTML'
+                  });
+                  history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_negativa&entidad=' + entity);
+                }
+              "
+              :disabled="entity === ''"
+              :class="entity === '' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600 hover:text-white'"
+              class="border-2 border-red-600 px-3 py-2 transition-colors text-xs">
+        <div class="font-bold">negativas</div>
+        <div class="text-[9px] text-gray-600">menciones</div>
+      </button>
+    </div>
+  </div>
+</div>
+{% else %}
+<div id="entity-filter-section">
+  <p class="text-[9px] text-gray-500">
+    No hay entidades disponibles en las noticias filtradas
+  </p>
+</div>
+{% endif %}

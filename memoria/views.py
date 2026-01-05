@@ -1,4 +1,7 @@
 from django.http import JsonResponse, HttpResponse
+from django.views.static import serve
+from django.conf import settings
+import os
 
 def health_check(request):
     """
@@ -6,6 +9,15 @@ def health_check(request):
     Returns a 200 OK response to indicate the service is healthy.
     """
     return JsonResponse({"status": "healthy"})
+
+
+def favicon(request):
+    """Serve favicon from static files"""
+    return serve(
+        request,
+        'core/favicon.ico',
+        document_root=os.path.join(settings.BASE_DIR, 'core/static')
+    )
 
 
 def robots_txt(request):
