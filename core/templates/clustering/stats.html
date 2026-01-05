@@ -163,7 +163,7 @@
         <!-- Bubble Details -->
         <div class="space-y-6">
             {% for stat in cluster_stats %}
-            <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div id="{{ stat.cluster.cluster_id }}" class="bg-white rounded-lg shadow overflow-hidden scroll-mt-20">
                 <!-- Bubble Header -->
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
                     <div class="flex justify-between items-center">

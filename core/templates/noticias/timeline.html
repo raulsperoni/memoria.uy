@@ -1,7 +1,32 @@
 {# templates/noticias/timeline.html #}
 
 {% extends "base.html" %}
-{% block content %}
 
+{% block sticky_content %}
+<!-- Mobile Ticker (sticky below header) -->
+{% if has_cluster %}
+<div id="bubble-ticker-mobile"
+     class="md:hidden sticky top-0 z-40 bg-blue-600 border-b-2 border-black text-white mono"
+     x-data="{ collapsed: false }"
+     x-show="!collapsed"
+     x-transition>
+  <div class="flex items-center">
+    <a href="{% url 'cluster-stats' %}#{{ my_cluster.id }}"
+       class="flex items-center gap-2 flex-1 min-w-0 px-4 py-2 hover:bg-blue-700 transition-colors">
+      <span class="text-xs font-bold whitespace-nowrap">TU BURBUJA</span>
+      <span class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
+        #{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
+      </span>
+    </a>
+    <button @click="collapsed = !collapsed"
+            class="px-4 py-2 border-l border-blue-400 text-[10px] hover:bg-blue-700 transition-colors flex-shrink-0">
+      [×]
+    </button>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
 {% include "noticias/timeline_fragment.html" %}
 {% endblock %}

@@ -151,6 +151,9 @@
     </div>
   </header>
 
+  <!-- Sticky Content (appears below header, outside main padding) -->
+  {% block sticky_content %}{% endblock %}
+
   <!-- Main Content -->
   <main class="max-w-5xl mx-auto px-4 py-8 min-h-screen">
     {% block content %}{% endblock %}
