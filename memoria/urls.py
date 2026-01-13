@@ -56,6 +56,9 @@ sitemaps = {
     "static": StaticViewSitemap,
 }
 
+# Custom error handlers
+handler500 = "core.error_handlers.server_error"
+
 urlpatterns = (
     [
         path("admin/", admin.site.urls),

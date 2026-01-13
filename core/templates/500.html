@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Error 500 - memoria.uy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+    body {
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+      background: #ffffff;
+      color: #0a0a0a;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .error-container {
+      max-width: 600px;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .error-code {
+      font-size: 6rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .error-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 1rem 0;
+    }
+
+    .error-message {
+      font-size: 0.875rem;
+      color: #666;
+      margin: 1rem 0 2rem;
+      line-height: 1.6;
+    }
+
+    .error-id {
+      font-size: 0.75rem;
+      color: #999;
+      background: #f5f5f5;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+      word-break: break-all;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 0.75rem 1.5rem;
+      border: 2px solid #0a0a0a;
+      background: #ffffff;
+      color: #0a0a0a;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #0a0a0a;
+      color: #ffffff;
+    }
+
+    .btn-primary {
+      background: #0a0a0a;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #333;
+    }
+
+    .details-section {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .details-toggle {
+      font-size: 0.75rem;
+      color: #999;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .details-content {
+      display: none;
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 0.75rem;
+      color: #666;
+      background: #f9f9f9;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .details-content.show {
+      display: block;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-container">
+    <h1 class="error-code">500</h1>
+    <h2 class="error-title">Error Interno del Servidor</h2>
+    <p class="error-message">
+      Ups, algo salió mal. El error fue registrado automáticamente y lo
+      revisaremos pronto. Si querés ayudarnos a solucionarlo más rápido,
+      podés reportarlo en GitHub.
+    </p>
+
+    {% if error_id %}
+    <div class="error-id">
+      ID del error: {{ error_id }}
+    </div>
+    {% endif %}
+
+    <div class="button-group">
+      <a href="/" class="btn">← Volver al inicio</a>
+      {% if github_issue_url %}
+      <a href="{{ github_issue_url }}"
+         target="_blank"
+         class="btn btn-primary">
+        Reportar en GitHub
+      </a>
+      {% endif %}
+    </div>
+
+    {% if debug_info %}
+    <div class="details-section">
+      <span class="details-toggle" onclick="toggleDetails()">
+        Ver detalles técnicos
+      </span>
+      <div id="details" class="details-content">
+        <pre>{{ debug_info }}</pre>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    function toggleDetails() {
+      document.getElementById('details').classList.toggle('show');
+    }
+  </script>
+</body>
+</html>
