@@ -111,20 +111,20 @@
 
       <!-- User Vote Status / Vote Form -->
       {% if user_vote %}
-      <div class="bg-blue-50 border border-blue-300 p-4 mb-6">
-        <p class="text-sm mono mb-3">
-          <strong>Tu voto:</strong>
+      <div class="bg-blue-50 border-2 border-blue-600 p-5 mb-6">
+        <p class="text-sm mono mb-4">
+          <strong class="text-blue-800">Tu voto:</strong>
           {% if user_vote.opinion == "buena" %}
-          👍 Buena noticia
+          <span class="font-bold text-green-700">😊 Buena noticia</span>
           {% elif user_vote.opinion == "mala" %}
-          👎 Mala noticia
+          <span class="font-bold text-red-700">😞 Mala noticia</span>
           {% else %}
-          😐 Neutral
+          <span class="font-bold text-gray-700">😐 Neutral</span>
           {% endif %}
         </p>
         <a href="{% url 'timeline' %}?filter=nuevas"
-           class="inline-block bg-black text-white px-4 py-2 text-sm mono border-2 border-black hover:bg-white hover:text-black transition-colors">
-          → Otras noticias que aún no votaste
+           class="block text-center bg-black text-white px-5 py-3 text-sm mono font-bold border-2 border-black hover:bg-blue-600 hover:border-blue-600 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          → Ver más noticias para votar
         </a>
       </div>
       {% else %}
@@ -306,10 +306,8 @@
 
     <!-- Collapsed State -->
     <div x-show="!expanded"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-90"
-         x-transition:enter-end="opacity-100 scale-100"
-         class="bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+         x-transition
+         class="bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-shadow">
       <div class="text-center">
         <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
         <div class="text-xl font-bold leading-none">🔵</div>
@@ -319,9 +317,7 @@
 
     <!-- Expanded State -->
     <div x-show="expanded"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-90"
-         x-transition:enter-end="opacity-100 scale-100"
+         x-transition
          class="bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px]">
 
       <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-400">

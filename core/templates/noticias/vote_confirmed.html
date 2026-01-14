@@ -1,19 +1,49 @@
 <!-- templates/noticias/vote_confirmed.html -->
-<div class="bg-blue-50 border border-blue-300 p-4 mb-6">
-  <p class="text-sm mono mb-3">
-    <strong>✓ Tu voto:</strong>
-    {% if vote.opinion == "buena" %}
-    😊 Buena noticia
-    {% elif vote.opinion == "mala" %}
-    😞 Mala noticia
-    {% else %}
-    😐 Neutral
-    {% endif %}
-  </p>
-  <a href="{% url 'timeline' %}?filter=nuevas"
-     class="inline-block bg-black text-white px-4 py-2 text-sm mono
-     border-2 border-black hover:bg-white hover:text-black
-     transition-colors">
-    → Otras noticias que aún no votaste
-  </a>
+<div class="bg-green-50 border-2 border-green-600 p-6 mb-6 animate-[slideIn_0.3s_ease-out]">
+  <!-- Success Message -->
+  <div class="flex items-start gap-3 mb-4">
+    <div class="text-2xl">✓</div>
+    <div>
+      <p class="text-sm mono font-bold text-green-800 mb-1">
+        ¡Voto registrado!
+      </p>
+      <p class="text-sm mono text-gray-700">
+        Tu opinión:
+        {% if vote.opinion == "buena" %}
+        <span class="font-bold text-green-700">😊 Buena noticia</span>
+        {% elif vote.opinion == "mala" %}
+        <span class="font-bold text-red-700">😞 Mala noticia</span>
+        {% else %}
+        <span class="font-bold text-gray-700">😐 Neutral</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Prominent CTA -->
+  <div class="border-t-2 border-green-200 pt-4">
+    <p class="text-xs mono text-gray-600 mb-3">
+      Ayudanos a entender mejor la opinión pública uruguaya
+    </p>
+    <a href="{% url 'timeline' %}?filter=nuevas"
+       class="block text-center bg-black text-white px-6 py-3 text-base mono font-bold
+       border-2 border-black hover:bg-green-600 hover:border-green-600
+       transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+       hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      → Ver más noticias para votar
+    </a>
+  </div>
 </div>
+
+<style>
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
