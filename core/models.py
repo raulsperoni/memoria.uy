@@ -392,7 +392,50 @@ class VoterProjection(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.voter_type}:{self.voter_id} at ({self.projection_x:.2f}, {self.projection_y:.2f})"
+        return (
+            f"{self.voter_type}:{self.voter_id} "
+            f"at ({self.projection_x:.2f}, {self.projection_y:.2f})"
+        )
+
+
+class NoticiaProjection(models.Model):
+    """
+    Store 2D PCA projections for each noticia in a clustering run.
+    Part of the biplot visualization: noticias and voters in the same space.
+
+    Noticias are projected using SVD dual projection:
+    - Voters: U @ S (rows of vote matrix)
+    - Noticias: Vt.T @ S (columns of vote matrix)
+
+    This places noticias near the voters who voted positively on them.
+    """
+    run = models.ForeignKey(
+        VoterClusterRun,
+        on_delete=models.CASCADE,
+        related_name='noticia_projections'
+    )
+    noticia = models.ForeignKey(
+        Noticia,
+        on_delete=models.CASCADE,
+        related_name='cluster_projections'
+    )
+    projection_x = models.FloatField(help_text="X coordinate in PCA space")
+    projection_y = models.FloatField(help_text="Y coordinate in PCA space")
+    n_votes = models.IntegerField(
+        help_text="Total votes received by this noticia"
+    )
+
+    class Meta:
+        unique_together = [['run', 'noticia']]
+        indexes = [
+            models.Index(fields=['run']),
+        ]
+
+    def __str__(self):
+        return (
+            f"Noticia {self.noticia_id} "
+            f"at ({self.projection_x:.2f}, {self.projection_y:.2f})"
+        )
 
 
 class VoterClusterMembership(models.Model):

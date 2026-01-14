@@ -1,148 +1,263 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Visualización de Burbujas - Memoria.uy{% endblock %}
+{% block title %}Mapa de Burbujas - Memoria.uy{% endblock %}
 
 {% block extra_head %}
-<!-- Plotly.js for interactive visualization -->
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+<!-- D3.js for visualization -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- D3 Delaunay for hull calculations -->
+<script src="https://cdn.jsdelivr.net/npm/d3-delaunay@6"></script>
+<style>
+    .bubble-map {
+        background: linear-gradient(180deg, #f5f0e6 0%, #e8e0d0 100%);
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+    }
+    .bubble-map::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c4b89a' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        pointer-events: none;
+        opacity: 0.5;
+    }
+    .cluster-hull {
+        stroke-width: 2;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+    .voter-point {
+        cursor: pointer;
+        transition: r 0.2s ease;
+    }
+    .voter-point:hover {
+        filter: brightness(1.2);
+    }
+    .news-point {
+        cursor: pointer;
+    }
+    .news-point:hover {
+        filter: brightness(1.3);
+    }
+    .current-voter-marker {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { filter: drop-shadow(0 0 4px gold); }
+        50% { filter: drop-shadow(0 0 12px gold); }
+    }
+    .map-label {
+        font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+        font-style: italic;
+        fill: #5a4a3a;
+        pointer-events: none;
+    }
+    .tooltip {
+        position: absolute;
+        background: #fffef5;
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+        padding: 8px 12px;
+        font-size: 13px;
+        box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        max-width: 250px;
+        z-index: 100;
+    }
+    .tooltip.visible {
+        opacity: 1;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+    }
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid #5a4a3a;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-2 md:px-4 py-4 md:py-8">
     <div class="max-w-6xl mx-auto">
         <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        <div class="mb-4 md:mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
                 Mapa de Burbujas
             </h1>
-            <p class="text-gray-600">
-                Explorá cómo se agrupan los votantes según sus patrones de votación.
+            <p class="text-sm md:text-base text-gray-600">
+                Explorá las burbujas de opinión: cada una agrupa participantes
+                con perspectivas similares.
             </p>
         </div>
 
         {% if has_clustering %}
         <!-- Statistics Bar -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="text-sm text-gray-600">Votantes</div>
-                <div class="text-2xl font-bold text-blue-600">{{ n_voters }}</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-8">
+            <div class="bg-white rounded-lg shadow p-2 md:p-4">
+                <div class="text-xs md:text-sm text-gray-600">Participantes</div>
+                <div class="text-xl md:text-2xl font-bold text-amber-700">{{ n_voters }}</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="text-sm text-gray-600">Burbujas</div>
-                <div class="text-2xl font-bold text-green-600">{{ n_clusters }}</div>
+            <div class="bg-white rounded-lg shadow p-2 md:p-4">
+                <div class="text-xs md:text-sm text-gray-600">Burbujas</div>
+                <div class="text-xl md:text-2xl font-bold text-emerald-700">{{ n_clusters }}</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="text-sm text-gray-600">Noticias</div>
-                <div class="text-2xl font-bold text-purple-600">{{ n_noticias }}</div>
+            <div class="bg-white rounded-lg shadow p-2 md:p-4">
+                <div class="text-xs md:text-sm text-gray-600">Noticias</div>
+                <div class="text-xl md:text-2xl font-bold text-blue-700">{{ n_noticias }}</div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="text-sm text-gray-600">Calidad (Silhouette)</div>
-                <div class="text-2xl font-bold text-orange-600">
-                    {{ silhouette_score|floatformat:3 }}
+            <div class="bg-white rounded-lg shadow p-2 md:p-4">
+                <div class="text-xs md:text-sm text-gray-600">Cohesión</div>
+                <div class="text-xl md:text-2xl font-bold text-purple-700">
+                    {{ silhouette_score|floatformat:2 }}
                 </div>
             </div>
         </div>
 
         <!-- Main Visualization -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <div class="mb-4 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-900">
-                    Mapa de Burbujas
-                </h2>
-                <div class="text-sm text-gray-600">
-                    Varianza explicada:
-                    {% for var in variance_explained %}
-                        PC{{ forloop.counter }}: {{ var|floatformat:1 }}%{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
+        <div class="bg-white rounded-lg shadow-lg p-2 md:p-4 mb-4 md:mb-8">
+            <!-- Controls -->
+            <div class="mb-2 md:mb-4 flex flex-wrap gap-2 md:gap-4 items-center justify-between">
+                <div class="flex gap-2">
+                    <button id="toggle-news"
+                            class="px-2 md:px-3 py-1 md:py-1.5 bg-blue-100 text-blue-800 rounded
+                                   hover:bg-blue-200 text-xs md:text-sm font-medium">
+                        Mostrar noticias
+                    </button>
+                    <button id="toggle-labels"
+                            class="px-2 md:px-3 py-1 md:py-1.5 bg-amber-100 text-amber-800 rounded
+                                   hover:bg-amber-200 text-xs md:text-sm font-medium">
+                        Mostrar etiquetas
+                    </button>
+                </div>
+                <div class="text-xs md:text-sm text-gray-500 italic hidden md:block">
+                    Hacé zoom con la rueda del mouse
                 </div>
             </div>
 
-            <!-- Plotly chart container -->
-            <div id="cluster-plot" class="w-full" style="height: 600px;"></div>
+            <!-- Map container -->
+            <div class="relative">
+                <div id="bubble-map" class="bubble-map w-full" style="height: 70vh; min-height: 350px; max-height: 600px;">
+                </div>
+                <div id="tooltip" class="tooltip"></div>
+            </div>
 
-            <!-- Legend and User Info -->
-            <div class="mt-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Legend (always visible) -->
-                    <div class="p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-2 mono">Leyenda:</h3>
-                        <ul class="text-sm text-gray-600 space-y-1 mono">
-                            <li>• <strong>Puntos</strong>: Cada punto representa un votante</li>
-                            <li>• <strong>Colores</strong>: Diferentes colores = diferentes burbujas</li>
-                            <li>• <strong>Tamaño</strong>: Más grande = más votos</li>
-                            <li>• <strong>⬥ Diamantes rojos</strong>: Centro de cada burbuja</li>
-                        </ul>
-                    </div>
-
-                    <!-- User position (shown if found) -->
-                    <div id="user-position-info" class="p-4 bg-blue-50 rounded-lg border-2 border-blue-600 hidden">
-                        <h3 class="text-sm font-semibold text-blue-900 mb-2 mono flex items-center gap-2">
-                            <span class="text-xl">📍</span> TU POSICIÓN
-                        </h3>
-                        <div id="user-cluster-details" class="text-sm text-blue-800 space-y-1 mono">
-                            <!-- Populated by JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- User not found message (shown if not in clustering) -->
-                    <div id="user-not-found-info" class="p-4 bg-yellow-50 rounded-lg border-2 border-yellow-500 hidden">
-                        <h3 class="text-sm font-semibold text-yellow-900 mb-2 mono flex items-center gap-2">
-                            <span class="text-xl">ℹ️</span> AÚN NO ESTÁS EN EL MAPA
-                        </h3>
-                        <div class="text-sm text-yellow-800 space-y-2 mono">
-                            <p>Este mapa muestra votantes activos cuando se calculó el clustering.</p>
-                            <p class="text-xs">Para aparecer en el próximo clustering:</p>
-                            <ul class="text-xs space-y-1 ml-3">
-                                <li>• Votá al menos <strong>3 noticias</strong></li>
-                                <li>• Esperá el próximo recálculo automático</li>
-                            </ul>
-                            <a href="{% url 'timeline' %}?filter=nuevas" class="inline-block mt-2 px-3 py-1.5 bg-yellow-600 text-white text-xs font-bold border border-yellow-700 hover:bg-yellow-700 transition-colors">
-                                → Ir a votar noticias
-                            </a>
-                        </div>
-                    </div>
+            <!-- Legend -->
+            <div class="mt-2 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 p-2 md:p-4
+                        bg-stone-50 rounded-lg border border-stone-200">
+                <div class="legend-item text-xs md:text-sm">
+                    <svg width="12" height="18" viewBox="-6 -16 12 26">
+                        <path d="M0,-14 C5,-14 9,-10 9,-5 C9,0 0,9 0,9 C0,9 -9,0 -9,-5 C-9,-10 -5,-14 0,-14 Z"
+                              fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                        <circle cy="-5" r="2.5" fill="#fff"/>
+                    </svg>
+                    <span>Tu posición</span>
+                </div>
+                <div class="legend-item text-xs md:text-sm">
+                    <div class="w-3 h-3 rounded-full bg-stone-400 opacity-60"></div>
+                    <span>Otros participantes</span>
+                </div>
+                <div class="legend-item text-xs md:text-sm">
+                    <div class="w-3 h-3 bg-blue-500 rotate-45"></div>
+                    <span>Noticias</span>
+                </div>
+                <div class="legend-item text-xs md:text-sm">
+                    <div class="w-8 h-5 rounded-full bg-emerald-300/50 border-2
+                                border-emerald-600/70"></div>
+                    <span>Burbuja</span>
                 </div>
             </div>
         </div>
 
-        <!-- Instructions -->
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
-            <h3 class="text-lg font-semibold text-blue-900 mb-2">
-                ¿Cómo interpretar este mapa?
+        <!-- User position info -->
+        <div id="user-position-info"
+             class="p-3 md:p-4 bg-amber-50 rounded-lg border-2 border-amber-400 mb-4 md:mb-8 hidden">
+            <h3 class="text-base md:text-lg font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                <span class="text-lg md:text-xl">📍</span> Tu ubicación en el mapa
             </h3>
-            <ul class="text-sm text-blue-800 space-y-2">
-                <li>• <strong>Proximidad</strong>: Votantes cercanos tienden a votar de manera similar</li>
-                <li>• <strong>Burbujas</strong>: Grupos de votantes con patrones de votación compartidos</li>
-                <li>• <strong>Aislamiento</strong>: Votantes alejados tienen opiniones únicas</li>
-                <li>• <strong>Densidad</strong>: Áreas densas indican consenso fuerte en esa burbuja</li>
+            <div id="user-cluster-details" class="text-sm md:text-base text-amber-800">
+            </div>
+        </div>
+
+        <!-- User not found -->
+        <div id="user-not-found-info"
+             class="p-3 md:p-4 bg-stone-100 rounded-lg border border-stone-300 mb-4 md:mb-8 hidden">
+            <h3 class="text-base md:text-lg font-semibold text-stone-700 mb-2">
+                Aún no estás en el mapa
+            </h3>
+            <p class="text-sm md:text-base text-stone-600 mb-3">
+                Para aparecer necesitás votar al menos 3 noticias.
+            </p>
+            <a href="{% url 'timeline' %}?filter=nuevas"
+               class="inline-block px-4 py-2 bg-amber-600 text-white rounded
+                      hover:bg-amber-700 text-sm md:text-base">
+                Ir a votar
+            </a>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-stone-50 border-l-4 border-stone-400 p-3 md:p-4 mb-4 md:mb-8">
+            <h3 class="text-base md:text-lg font-semibold text-stone-800 mb-2">
+                ¿Cómo leer este mapa?
+            </h3>
+            <ul class="text-xs md:text-sm text-stone-700 space-y-1 md:space-y-2">
+                <li>
+                    <strong>Burbujas coloreadas:</strong>
+                    Cada color representa un grupo con opiniones similares
+                </li>
+                <li>
+                    <strong>Cercanía:</strong>
+                    Participantes cercanos tienden a coincidir en sus votos
+                </li>
+                <li>
+                    <strong>Noticias:</strong>
+                    Aparecen cerca de quienes las votaron positivamente
+                </li>
+                <li>
+                    <strong>Fronteras difusas:</strong>
+                    Las opiniones no tienen límites rígidos
+                </li>
             </ul>
         </div>
 
         <!-- Actions -->
-        <div class="flex gap-4">
+        <div class="flex gap-2 md:gap-4">
             <a href="{% url 'cluster-stats' %}"
-               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Ver Estadísticas Detalladas
+               class="px-3 md:px-4 py-2 bg-stone-700 text-white rounded-lg hover:bg-stone-800 text-sm md:text-base">
+                Ver estadísticas
             </a>
             <a href="{% url 'timeline' %}"
-               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                Volver al Timeline
+               class="px-3 md:px-4 py-2 bg-stone-200 text-stone-700 rounded-lg
+                      hover:bg-stone-300 text-sm md:text-base">
+                Volver al timeline
             </a>
         </div>
 
         {% else %}
         <!-- No Data State -->
-        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg">
-            <h2 class="text-xl font-bold text-yellow-900 mb-2">
-                No hay datos de clustering disponibles
+        <div class="bg-stone-100 border-l-4 border-stone-400 p-6 rounded-lg">
+            <h2 class="text-xl font-bold text-stone-800 mb-2">
+                Mapa aún no disponible
             </h2>
-            <p class="text-yellow-800 mb-4">
+            <p class="text-stone-600 mb-4">
                 {{ message }}
             </p>
             <a href="{% url 'timeline' %}"
-               class="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
-                Ir a Votar Noticias
+               class="inline-block px-4 py-2 bg-amber-600 text-white rounded-lg
+                      hover:bg-amber-700">
+                Ir a votar noticias
             </a>
         </div>
         {% endif %}
@@ -152,207 +267,364 @@
 {% if has_clustering %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Fetch cluster data
+    // State
+    let showNews = false;
+    let showLabels = false;
+    let data = null;
+
+    // Color palette - earthy, map-like colors
+    const clusterColors = [
+        '#7cb374', // sage green
+        '#c9a66b', // tan
+        '#8fa3bf', // slate blue
+        '#d4a574', // terracotta
+        '#9db4a0', // muted green
+        '#b8a090', // taupe
+        '#a8c0a8', // soft green
+        '#c4b090', // sand
+        '#90a8b8', // steel blue
+        '#b8a8a0', // warm gray
+    ];
+
+    // Fetch data
     fetch('/api/clustering/data/json/')
         .then(response => response.json())
-        .then(data => {
-            console.log('[Clustering Debug] Data loaded:', {
-                n_voters: data.n_voters,
-                n_clusters: data.n_clusters,
-                current_voter: data.current_voter,
-                has_projections: data.projections?.length > 0
-            });
-
-            // Check if current voter is in projections
-            const currentVoterInData = data.projections?.find(p => p.is_current_voter);
-            if (currentVoterInData) {
-                console.log('[Clustering Debug] ✓ Found current voter in data:', currentVoterInData);
-            } else {
-                console.warn('[Clustering Debug] ✗ Current voter not found in projections');
-                console.log('[Clustering Debug] Current voter from API:', data.current_voter);
-            }
-
-            renderClusterPlot(data);
+        .then(d => {
+            data = d;
+            renderMap();
+            setupControls();
         })
         .catch(error => {
-            console.error('Error loading cluster data:', error);
-            document.getElementById('cluster-plot').innerHTML =
-                '<div class="text-center text-red-600 p-8">Error cargando datos de clustering</div>';
+            console.error('Error loading data:', error);
+            document.getElementById('bubble-map').innerHTML =
+                '<div class="flex items-center justify-center h-full text-red-600">' +
+                'Error cargando el mapa</div>';
         });
-});
 
-function renderClusterPlot(data) {
-    // Group projections by cluster
-    const clusterGroups = {};
-    let currentVoterCluster = null;
-    let currentVoterData = null;
+    function renderMap() {
+        const container = document.getElementById('bubble-map');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const margin = { top: 40, right: 40, bottom: 40, left: 40 };
 
-    data.projections.forEach(proj => {
-        const clusterId = proj.cluster_id !== undefined ? proj.cluster_id : -1;
+        // Clear previous
+        container.innerHTML = '';
 
-        if (!clusterGroups[clusterId]) {
-            clusterGroups[clusterId] = {
-                x: [],
-                y: [],
-                text: [],
-                marker: {
-                    size: [],
-                    color: clusterId,
-                    colorscale: 'Viridis',
-                    line: {
-                        color: [],
-                        width: []
+        // Create SVG
+        const svg = d3.select('#bubble-map')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // Add defs for gradients and filters
+        const defs = svg.append('defs');
+
+        // Fog filter for edges
+        const fog = defs.append('filter')
+            .attr('id', 'fog')
+            .attr('x', '-50%')
+            .attr('y', '-50%')
+            .attr('width', '200%')
+            .attr('height', '200%');
+        fog.append('feGaussianBlur')
+            .attr('in', 'SourceGraphic')
+            .attr('stdDeviation', '15');
+
+        // Glow filter for current user
+        const glow = defs.append('filter')
+            .attr('id', 'glow');
+        glow.append('feGaussianBlur')
+            .attr('stdDeviation', '3')
+            .attr('result', 'coloredBlur');
+        const feMerge = glow.append('feMerge');
+        feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+        feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+        // Create gradients for each cluster (more prominent)
+        clusterColors.forEach((color, i) => {
+            const gradient = defs.append('radialGradient')
+                .attr('id', `cluster-gradient-${i}`)
+                .attr('cx', '50%')
+                .attr('cy', '50%')
+                .attr('r', '70%');
+            gradient.append('stop')
+                .attr('offset', '0%')
+                .attr('stop-color', color)
+                .attr('stop-opacity', 0.55);
+            gradient.append('stop')
+                .attr('offset', '70%')
+                .attr('stop-color', color)
+                .attr('stop-opacity', 0.25);
+            gradient.append('stop')
+                .attr('offset', '100%')
+                .attr('stop-color', color)
+                .attr('stop-opacity', 0.08);
+        });
+
+        // Main group with zoom
+        const g = svg.append('g');
+
+        // Zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 5])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform);
+            });
+        svg.call(zoom);
+
+        // Calculate scales based on voter projections only (not news)
+        const voterX = data.projections.map(p => p.x);
+        const voterY = data.projections.map(p => p.y);
+
+        const xExtent = d3.extent(voterX);
+        const yExtent = d3.extent(voterY);
+        const padding = 0.15;  // Extra padding for bubble expansion
+        const xRange = xExtent[1] - xExtent[0];
+        const yRange = yExtent[1] - yExtent[0];
+
+        const xScale = d3.scaleLinear()
+            .domain([xExtent[0] - xRange * padding, xExtent[1] + xRange * padding])
+            .range([margin.left, width - margin.right]);
+
+        const yScale = d3.scaleLinear()
+            .domain([yExtent[0] - yRange * padding, yExtent[1] + yRange * padding])
+            .range([height - margin.bottom, margin.top]);
+
+        // Group projections by cluster
+        const clusters = {};
+        data.projections.forEach(p => {
+            const cid = p.cluster_id ?? -1;
+            if (!clusters[cid]) clusters[cid] = [];
+            clusters[cid].push(p);
+        });
+
+        // Draw cluster hulls (territories)
+        const hullGroup = g.append('g').attr('class', 'hulls');
+
+        Object.entries(clusters).forEach(([clusterId, points]) => {
+            if (points.length < 3) return;
+
+            const coords = points.map(p => [xScale(p.x), yScale(p.y)]);
+            const hull = d3.polygonHull(coords);
+
+            if (hull) {
+                // Expand hull more for prominent bubble effect
+                const centroid = d3.polygonCentroid(hull);
+                const expandedHull = hull.map(point => {
+                    const dx = point[0] - centroid[0];
+                    const dy = point[1] - centroid[1];
+                    const factor = 1.25;
+                    return [centroid[0] + dx * factor, centroid[1] + dy * factor];
+                });
+
+                const colorIdx = Math.abs(parseInt(clusterId)) % clusterColors.length;
+
+                // Draw hull with smooth curve - more prominent
+                const lineGenerator = d3.line().curve(d3.curveCatmullRomClosed);
+
+                hullGroup.append('path')
+                    .attr('d', lineGenerator(expandedHull))
+                    .attr('class', 'cluster-hull')
+                    .attr('fill', `url(#cluster-gradient-${colorIdx})`)
+                    .attr('stroke', clusterColors[colorIdx])
+                    .attr('stroke-width', 2.5)
+                    .attr('stroke-opacity', 0.7);
+            }
+        });
+
+        // Draw news points (hidden by default)
+        const newsGroup = g.append('g')
+            .attr('class', 'news-points')
+            .style('display', 'none');
+
+        if (data.news_projections) {
+            newsGroup.selectAll('.news-point')
+                .data(data.news_projections)
+                .enter()
+                .append('rect')
+                .attr('class', 'news-point')
+                .attr('x', d => xScale(d.x) - 4)
+                .attr('y', d => yScale(d.y) - 4)
+                .attr('width', 8)
+                .attr('height', 8)
+                .attr('transform', d => `rotate(45, ${xScale(d.x)}, ${yScale(d.y)})`)
+                .attr('fill', '#3b82f6')
+                .attr('fill-opacity', 0.7)
+                .attr('stroke', '#1e40af')
+                .attr('stroke-width', 1)
+                .on('mouseover', (event, d) => showTooltip(event,
+                    `<strong>${d.titulo || 'Sin título'}</strong><br>` +
+                    `<em>${d.medio || 'Medio desconocido'}</em><br>` +
+                    `${d.n_votes} votos`))
+                .on('mouseout', hideTooltip)
+                .on('click', (event, d) => {
+                    if (d.slug) {
+                        window.location.href = `/noticias/${d.slug}/`;
                     }
-                }
-            };
+                });
         }
 
-        const isCurrentVoter = proj.is_current_voter;
+        // Draw voter points (small, subtle)
+        const voterGroup = g.append('g').attr('class', 'voter-points');
 
-        clusterGroups[clusterId].x.push(proj.x);
-        clusterGroups[clusterId].y.push(proj.y);
+        // Filter out current voter - we'll draw them separately
+        const otherVoters = data.projections.filter(p => !p.is_current_voter);
+        const currentVoter = data.projections.find(p => p.is_current_voter);
 
-        const voterLabel = isCurrentVoter ? '⭐ VOS' : `Votante ${proj.voter_id.substring(0, 8)}`;
-        clusterGroups[clusterId].text.push(
-            `${voterLabel}<br>` +
-            `Burbuja: ${proj.cluster_id !== undefined ? '#' + proj.cluster_id : 'N/A'}<br>` +
-            `Votos: ${proj.n_votes}<br>` +
-            `Tamaño burbuja: ${proj.cluster_size || 'N/A'}`
-        );
+        voterGroup.selectAll('.voter-point')
+            .data(otherVoters)
+            .enter()
+            .append('circle')
+            .attr('class', 'voter-point')
+            .attr('cx', d => xScale(d.x))
+            .attr('cy', d => yScale(d.y))
+            .attr('r', d => Math.sqrt(d.n_votes) * 1.2 + 2.5)
+            .attr('fill', d => {
+                const colorIdx = Math.abs(d.cluster_id ?? 0) % clusterColors.length;
+                return d3.color(clusterColors[colorIdx]).darker(0.3);
+            })
+            .attr('fill-opacity', 0.5)
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 0.5)
+            .attr('stroke-opacity', 0.6)
+            .on('mouseover', (event, d) => {
+                showTooltip(event,
+                    `<span class="text-stone-500">Participante</span><br>` +
+                    `Burbuja ${d.cluster_id ?? '?'}<br>` +
+                    `${d.n_votes} votos`);
+            })
+            .on('mouseout', hideTooltip);
 
-        // Make current voter marker larger and more prominent
-        const baseSize = Math.sqrt(proj.n_votes) * 3 + 5;
-        clusterGroups[clusterId].marker.size.push(isCurrentVoter ? baseSize * 1.8 : baseSize);
+        // Draw current voter as a prominent location marker
+        if (currentVoter) {
+            const cx = xScale(currentVoter.x);
+            const cy = yScale(currentVoter.y);
 
-        // Highlight current voter with thick gold border
-        if (isCurrentVoter) {
-            clusterGroups[clusterId].marker.line.color.push('#FFD700');
-            clusterGroups[clusterId].marker.line.width.push(4);
-            currentVoterCluster = clusterId;
-            currentVoterData = {
-                cluster_id: proj.cluster_id,
-                cluster_size: proj.cluster_size,
-                n_votes: proj.n_votes,
-                x: proj.x,
-                y: proj.y
-            };
+            const markerGroup = g.append('g')
+                .attr('class', 'current-voter-marker')
+                .attr('transform', `translate(${cx}, ${cy})`);
+
+            // Outer glow circle
+            markerGroup.append('circle')
+                .attr('r', 12)
+                .attr('fill', 'rgba(251, 191, 36, 0.3)')
+                .attr('stroke', 'none');
+
+            // Pin body (teardrop shape) - smaller
+            markerGroup.append('path')
+                .attr('d', 'M0,-14 C5,-14 9,-10 9,-5 C9,0 0,9 0,9 C0,9 -9,0 -9,-5 C-9,-10 -5,-14 0,-14 Z')
+                .attr('fill', '#dc2626')
+                .attr('stroke', '#991b1b')
+                .attr('stroke-width', 1.5);
+
+            // Inner circle (white dot)
+            markerGroup.append('circle')
+                .attr('cy', -5)
+                .attr('r', 3)
+                .attr('fill', '#fff');
+
+            // Make it interactive
+            markerGroup
+                .style('cursor', 'pointer')
+                .on('mouseover', (event) => {
+                    showTooltip(event,
+                        `<strong>¡Estás acá!</strong><br>` +
+                        `Burbuja: ${currentVoter.cluster_id ?? 'N/A'}<br>` +
+                        `Tus votos: ${currentVoter.n_votes}`);
+                })
+                .on('mouseout', hideTooltip);
+        }
+
+        // Draw cluster labels (hidden by default)
+        const labelGroup = g.append('g')
+            .attr('class', 'cluster-labels')
+            .style('display', 'none');
+
+        Object.entries(clusters).forEach(([clusterId, points]) => {
+            if (points.length < 2) return;
+
+            const avgX = d3.mean(points, p => xScale(p.x));
+            const avgY = d3.mean(points, p => yScale(p.y));
+            const colorIdx = Math.abs(parseInt(clusterId)) % clusterColors.length;
+
+            labelGroup.append('text')
+                .attr('class', 'map-label')
+                .attr('x', avgX)
+                .attr('y', avgY)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px')
+                .text(`Burbuja ${clusterId}`)
+                .attr('fill', d3.color(clusterColors[colorIdx]).darker(1));
+        });
+
+        // Handle current voter info
+        if (currentVoter) {
+            document.getElementById('user-position-info').classList.remove('hidden');
+            document.getElementById('user-cluster-details').innerHTML = `
+                <p>Estás en la <strong>Burbuja ${currentVoter.cluster_id}</strong>
+                   con ${currentVoter.cluster_size} participantes.</p>
+                <p class="text-sm mt-1">Has votado ${currentVoter.n_votes} noticias.</p>
+            `;
         } else {
-            clusterGroups[clusterId].marker.line.color.push('rgba(255,255,255,0.8)');
-            clusterGroups[clusterId].marker.line.width.push(0.5);
+            document.getElementById('user-not-found-info').classList.remove('hidden');
         }
-    });
 
-    // Show user position info if found, otherwise show "not found" message
-    if (currentVoterData) {
-        const userInfo = document.getElementById('user-position-info');
-        const userDetails = document.getElementById('user-cluster-details');
-        userInfo.classList.remove('hidden');
-
-        userDetails.innerHTML = `
-            <div class="font-bold text-base text-blue-900 mb-2">
-                🔵 Burbuja #${currentVoterData.cluster_id}
-            </div>
-            <div>• Votantes en tu burbuja: <strong>${currentVoterData.cluster_size}</strong></div>
-            <div>• Tus votos: <strong>${currentVoterData.n_votes}</strong></div>
-            <div class="mt-2 pt-2 border-t border-blue-300 text-xs text-blue-700">
-                Tu punto está marcado con ⭐ y borde dorado
-            </div>
-        `;
-
-        console.log('[Clustering Debug] ✓ Showing user position panel');
-    } else {
-        // User is not in the clustering data
-        const userNotFound = document.getElementById('user-not-found-info');
-        if (userNotFound) {
-            userNotFound.classList.remove('hidden');
-            console.log('[Clustering Debug] ℹ️ Showing "not in map" message');
-        }
+        // Initial zoom: fit all content with some padding
+        // No transform needed - the scales already fit the data to the viewport
     }
 
-    // Create traces for each bubble
-    const traces = Object.entries(clusterGroups).map(([clusterId, group]) => {
-        const isUserCluster = currentVoterCluster !== null && clusterId == currentVoterCluster;
-        let name = clusterId === '-1' ? 'Sin burbuja' : `Burbuja ${clusterId}`;
-        if (isUserCluster) {
-            name = `⭐ TU BURBUJA #${clusterId}`;
-        }
+    function setupControls() {
+        document.getElementById('toggle-news').addEventListener('click', function() {
+            showNews = !showNews;
+            d3.select('.news-points').style('display', showNews ? 'block' : 'none');
+            this.textContent = showNews ? 'Ocultar noticias' : 'Mostrar noticias';
+            this.classList.toggle('bg-blue-600', showNews);
+            this.classList.toggle('text-white', showNews);
+            this.classList.toggle('bg-blue-100', !showNews);
+            this.classList.toggle('text-blue-800', !showNews);
+        });
 
-        return {
-            x: group.x,
-            y: group.y,
-            text: group.text,
-            mode: 'markers',
-            type: 'scatter',
-            name: name,
-            marker: group.marker,
-            hovertemplate: '%{text}<extra></extra>',
-            // Make user's cluster trace appear on top
-            zorder: isUserCluster ? 100 : 1
-        };
-    });
-
-    // Add centroids
-    if (data.centroids && data.centroids.length > 0) {
-        traces.push({
-            x: data.centroids.map(c => c.x),
-            y: data.centroids.map(c => c.y),
-            text: data.centroids.map(c =>
-                `Centro Burbuja ${c.cluster_id}<br>` +
-                `Tamaño: ${c.size}<br>` +
-                `Consenso: ${c.consensus ? c.consensus.toFixed(3) : 'N/A'}`
-            ),
-            mode: 'markers',
-            type: 'scatter',
-            name: 'Centros',
-            marker: {
-                symbol: 'diamond',
-                size: 15,
-                color: 'red',
-                line: {
-                    color: 'darkred',
-                    width: 2
-                }
-            },
-            hovertemplate: '%{text}<extra></extra>'
+        document.getElementById('toggle-labels').addEventListener('click', function() {
+            showLabels = !showLabels;
+            d3.select('.cluster-labels').style('display', showLabels ? 'block' : 'none');
+            this.textContent = showLabels ? 'Ocultar etiquetas' : 'Mostrar etiquetas';
+            this.classList.toggle('bg-amber-600', showLabels);
+            this.classList.toggle('text-white', showLabels);
+            this.classList.toggle('bg-amber-100', !showLabels);
+            this.classList.toggle('text-amber-800', !showLabels);
         });
     }
 
-    const layout = {
-        title: {
-            text: `Burbujas de Votantes (${data.n_voters} votantes, ${data.n_clusters} burbujas)`,
-            font: { size: 16 }
-        },
-        xaxis: {
-            title: `PC1 (${data.variance_explained && data.variance_explained[0] ? (data.variance_explained[0] * 100).toFixed(1) : '?'}% var.)`,
-            zeroline: true,
-            showgrid: true
-        },
-        yaxis: {
-            title: `PC2 (${data.variance_explained && data.variance_explained[1] ? (data.variance_explained[1] * 100).toFixed(1) : '?'}% var.)`,
-            zeroline: true,
-            showgrid: true
-        },
-        hovermode: 'closest',
-        showlegend: true,
-        legend: {
-            orientation: 'h',
-            yanchor: 'bottom',
-            y: -0.2,
-            xanchor: 'center',
-            x: 0.5
-        },
-        height: 600
-    };
+    function showTooltip(event, html) {
+        const tooltip = document.getElementById('tooltip');
+        if (!tooltip) return;
 
-    const config = {
-        responsive: true,
-        displayModeBar: true,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
-        displaylogo: false
-    };
+        tooltip.innerHTML = html;
+        tooltip.classList.add('visible');
 
-    Plotly.newPlot('cluster-plot', traces, layout, config);
-}
+        // Position relative to the map container
+        const mapContainer = document.getElementById('bubble-map');
+        const rect = mapContainer.getBoundingClientRect();
+
+        // Calculate position within container
+        let x = event.clientX - rect.left + 15;
+        let y = event.clientY - rect.top + 15;
+
+        // Keep tooltip in bounds
+        if (x + 220 > rect.width) x = event.clientX - rect.left - 230;
+        if (y + 100 > rect.height) y = event.clientY - rect.top - 110;
+        if (x < 0) x = 10;
+        if (y < 0) y = 10;
+
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    }
+
+    function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip) tooltip.classList.remove('visible');
+    }
+});
 </script>
 {% endif %}
 {% endblock %}
