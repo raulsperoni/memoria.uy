@@ -193,10 +193,8 @@
     <!-- Collapsed State -->
     <a href="{% url 'cluster-stats' %}#{{ my_cluster.id }}"
        x-show="!expanded"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0 scale-90"
-       x-transition:enter-end="opacity-100 scale-100"
-       class="block bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+       x-transition
+       class="block bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-shadow">
       <div class="text-center">
         <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
         <div class="text-xl font-bold leading-none">🔵</div>
@@ -206,9 +204,7 @@
 
     <!-- Expanded State -->
     <div x-show="expanded"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-90"
-         x-transition:enter-end="opacity-100 scale-100"
+         x-transition
          class="bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px]">
 
       <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-400">

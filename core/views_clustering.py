@@ -40,10 +40,10 @@ class ClusterVisualizationView(TemplateView):
             context['has_clustering'] = True
 
             # Get current voter's info
-            voter_info = get_voter_identifier(self.request)
+            voter_info, _ = get_voter_identifier(self.request)
             if 'usuario' in voter_info and voter_info['usuario']:
                 context['voter_type'] = 'user'
-                context['voter_id'] = str(voter_info['usuario'])
+                context['voter_id'] = str(voter_info['usuario'].id)
             elif 'session_key' in voter_info:
                 context['voter_type'] = 'session'
                 context['voter_id'] = voter_info['session_key']
@@ -196,16 +196,20 @@ def cluster_data_json(request):
         )
 
     # Get voter identifier
-    voter_info = get_voter_identifier(request)
+    voter_info, _ = get_voter_identifier(request)
     current_voter_type = None
     current_voter_id = None
 
     if 'usuario' in voter_info and voter_info['usuario']:
         current_voter_type = 'user'
-        current_voter_id = str(voter_info['usuario'])
+        current_voter_id = str(voter_info['usuario'].id)
+        logger.info(f"[Clustering API] Current voter: user {current_voter_id}")
     elif 'session_key' in voter_info:
         current_voter_type = 'session'
         current_voter_id = voter_info['session_key']
+        logger.info(f"[Clustering API] Current voter: session {current_voter_id[:20]}...")
+    else:
+        logger.warning("[Clustering API] No voter identifier found")
 
     # Build projections with cluster assignments
     projections = []

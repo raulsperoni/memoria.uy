@@ -61,16 +61,48 @@
             <!-- Plotly chart container -->
             <div id="cluster-plot" class="w-full" style="height: 600px;"></div>
 
-            <!-- Legend -->
-            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h3 class="text-sm font-semibold text-gray-700 mb-2">Leyenda:</h3>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• <strong>Puntos</strong>: Cada punto representa un votante</li>
-                    <li>• <strong>Colores</strong>: Diferentes colores indican diferentes burbujas</li>
-                    <li>• <strong>Tamaño</strong>: El tamaño del punto representa la cantidad de votos</li>
-                    <li>• <strong>Hover</strong>: Pasá el mouse sobre un punto para ver detalles</li>
-                    <li>• <strong>Tu posición</strong>: Marcada con un borde destacado si estás en el mapa</li>
-                </ul>
+            <!-- Legend and User Info -->
+            <div class="mt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Legend (always visible) -->
+                    <div class="p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2 mono">Leyenda:</h3>
+                        <ul class="text-sm text-gray-600 space-y-1 mono">
+                            <li>• <strong>Puntos</strong>: Cada punto representa un votante</li>
+                            <li>• <strong>Colores</strong>: Diferentes colores = diferentes burbujas</li>
+                            <li>• <strong>Tamaño</strong>: Más grande = más votos</li>
+                            <li>• <strong>⬥ Diamantes rojos</strong>: Centro de cada burbuja</li>
+                        </ul>
+                    </div>
+
+                    <!-- User position (shown if found) -->
+                    <div id="user-position-info" class="p-4 bg-blue-50 rounded-lg border-2 border-blue-600 hidden">
+                        <h3 class="text-sm font-semibold text-blue-900 mb-2 mono flex items-center gap-2">
+                            <span class="text-xl">📍</span> TU POSICIÓN
+                        </h3>
+                        <div id="user-cluster-details" class="text-sm text-blue-800 space-y-1 mono">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- User not found message (shown if not in clustering) -->
+                    <div id="user-not-found-info" class="p-4 bg-yellow-50 rounded-lg border-2 border-yellow-500 hidden">
+                        <h3 class="text-sm font-semibold text-yellow-900 mb-2 mono flex items-center gap-2">
+                            <span class="text-xl">ℹ️</span> AÚN NO ESTÁS EN EL MAPA
+                        </h3>
+                        <div class="text-sm text-yellow-800 space-y-2 mono">
+                            <p>Este mapa muestra votantes activos cuando se calculó el clustering.</p>
+                            <p class="text-xs">Para aparecer en el próximo clustering:</p>
+                            <ul class="text-xs space-y-1 ml-3">
+                                <li>• Votá al menos <strong>3 noticias</strong></li>
+                                <li>• Esperá el próximo recálculo automático</li>
+                            </ul>
+                            <a href="{% url 'timeline' %}?filter=nuevas" class="inline-block mt-2 px-3 py-1.5 bg-yellow-600 text-white text-xs font-bold border border-yellow-700 hover:bg-yellow-700 transition-colors">
+                                → Ir a votar noticias
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -124,6 +156,22 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/clustering/data/json/')
         .then(response => response.json())
         .then(data => {
+            console.log('[Clustering Debug] Data loaded:', {
+                n_voters: data.n_voters,
+                n_clusters: data.n_clusters,
+                current_voter: data.current_voter,
+                has_projections: data.projections?.length > 0
+            });
+
+            // Check if current voter is in projections
+            const currentVoterInData = data.projections?.find(p => p.is_current_voter);
+            if (currentVoterInData) {
+                console.log('[Clustering Debug] ✓ Found current voter in data:', currentVoterInData);
+            } else {
+                console.warn('[Clustering Debug] ✗ Current voter not found in projections');
+                console.log('[Clustering Debug] Current voter from API:', data.current_voter);
+            }
+
             renderClusterPlot(data);
         })
         .catch(error => {
@@ -136,7 +184,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function renderClusterPlot(data) {
     // Group projections by cluster
     const clusterGroups = {};
-    const currentVoterPoint = [];
+    let currentVoterCluster = null;
+    let currentVoterData = null;
 
     data.projections.forEach(proj => {
         const clusterId = proj.cluster_id !== undefined ? proj.cluster_id : -1;
@@ -158,37 +207,89 @@ function renderClusterPlot(data) {
             };
         }
 
+        const isCurrentVoter = proj.is_current_voter;
+
         clusterGroups[clusterId].x.push(proj.x);
         clusterGroups[clusterId].y.push(proj.y);
+
+        const voterLabel = isCurrentVoter ? '⭐ VOS' : `Votante ${proj.voter_id.substring(0, 8)}`;
         clusterGroups[clusterId].text.push(
-            `Votante: ${proj.voter_type}:${proj.voter_id.substring(0, 8)}...<br>` +
-            `Burbuja: ${proj.cluster_id !== undefined ? proj.cluster_id : 'N/A'}<br>` +
+            `${voterLabel}<br>` +
+            `Burbuja: ${proj.cluster_id !== undefined ? '#' + proj.cluster_id : 'N/A'}<br>` +
             `Votos: ${proj.n_votes}<br>` +
             `Tamaño burbuja: ${proj.cluster_size || 'N/A'}`
         );
-        clusterGroups[clusterId].marker.size.push(Math.sqrt(proj.n_votes) * 3 + 5);
 
-        // Highlight current voter
-        if (proj.is_current_voter) {
-            clusterGroups[clusterId].marker.line.color.push('red');
-            clusterGroups[clusterId].marker.line.width.push(3);
+        // Make current voter marker larger and more prominent
+        const baseSize = Math.sqrt(proj.n_votes) * 3 + 5;
+        clusterGroups[clusterId].marker.size.push(isCurrentVoter ? baseSize * 1.8 : baseSize);
+
+        // Highlight current voter with thick gold border
+        if (isCurrentVoter) {
+            clusterGroups[clusterId].marker.line.color.push('#FFD700');
+            clusterGroups[clusterId].marker.line.width.push(4);
+            currentVoterCluster = clusterId;
+            currentVoterData = {
+                cluster_id: proj.cluster_id,
+                cluster_size: proj.cluster_size,
+                n_votes: proj.n_votes,
+                x: proj.x,
+                y: proj.y
+            };
         } else {
-            clusterGroups[clusterId].marker.line.color.push('white');
+            clusterGroups[clusterId].marker.line.color.push('rgba(255,255,255,0.8)');
             clusterGroups[clusterId].marker.line.width.push(0.5);
         }
     });
 
+    // Show user position info if found, otherwise show "not found" message
+    if (currentVoterData) {
+        const userInfo = document.getElementById('user-position-info');
+        const userDetails = document.getElementById('user-cluster-details');
+        userInfo.classList.remove('hidden');
+
+        userDetails.innerHTML = `
+            <div class="font-bold text-base text-blue-900 mb-2">
+                🔵 Burbuja #${currentVoterData.cluster_id}
+            </div>
+            <div>• Votantes en tu burbuja: <strong>${currentVoterData.cluster_size}</strong></div>
+            <div>• Tus votos: <strong>${currentVoterData.n_votes}</strong></div>
+            <div class="mt-2 pt-2 border-t border-blue-300 text-xs text-blue-700">
+                Tu punto está marcado con ⭐ y borde dorado
+            </div>
+        `;
+
+        console.log('[Clustering Debug] ✓ Showing user position panel');
+    } else {
+        // User is not in the clustering data
+        const userNotFound = document.getElementById('user-not-found-info');
+        if (userNotFound) {
+            userNotFound.classList.remove('hidden');
+            console.log('[Clustering Debug] ℹ️ Showing "not in map" message');
+        }
+    }
+
     // Create traces for each bubble
-    const traces = Object.entries(clusterGroups).map(([clusterId, group]) => ({
-        x: group.x,
-        y: group.y,
-        text: group.text,
-        mode: 'markers',
-        type: 'scatter',
-        name: clusterId === '-1' ? 'Sin burbuja' : `Burbuja ${clusterId}`,
-        marker: group.marker,
-        hovertemplate: '%{text}<extra></extra>'
-    }));
+    const traces = Object.entries(clusterGroups).map(([clusterId, group]) => {
+        const isUserCluster = currentVoterCluster !== null && clusterId == currentVoterCluster;
+        let name = clusterId === '-1' ? 'Sin burbuja' : `Burbuja ${clusterId}`;
+        if (isUserCluster) {
+            name = `⭐ TU BURBUJA #${clusterId}`;
+        }
+
+        return {
+            x: group.x,
+            y: group.y,
+            text: group.text,
+            mode: 'markers',
+            type: 'scatter',
+            name: name,
+            marker: group.marker,
+            hovertemplate: '%{text}<extra></extra>',
+            // Make user's cluster trace appear on top
+            zorder: isUserCluster ? 100 : 1
+        };
+    });
 
     // Add centroids
     if (data.centroids && data.centroids.length > 0) {
