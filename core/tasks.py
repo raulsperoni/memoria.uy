@@ -7,6 +7,7 @@ from core.models import (
     VoterClusterRun,
     VoterCluster,
     VoterProjection,
+    NoticiaProjection,
     VoterClusterMembership,
     ClusterVotingPattern,
     Voto,
@@ -334,15 +335,18 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
             run.save()
             return {"error": error_msg}
 
-        # Step 2: PCA
-        logger.info("Step 2: Computing PCA")
-        pca_model, projections, variance_explained, vote_counts = (
-            compute_sparsity_aware_pca(vote_matrix, n_components=2)
-        )
+        # Step 2: PCA (biplot - voters and noticias)
+        logger.info("Step 2: Computing SVD biplot")
+        pca_result = compute_sparsity_aware_pca(vote_matrix, n_components=2)
+        projections = pca_result['voter_projections']
+        noticia_projections = pca_result['noticia_projections']
+        variance_explained = pca_result['variance_explained']
+        vote_counts = pca_result['voter_vote_counts']
+        noticia_vote_counts = pca_result['noticia_vote_counts']
 
         # Step 3: Base clustering
         logger.info("Step 3: Running base k-means clustering")
-        k_base = min(100, max(10, n_voters // 10))
+        k_base = min(10, max(10, n_voters // 10))
         base_labels, base_centroids, base_inertia = cluster_voters(
             projections, vote_counts, k=k_base
         )
@@ -373,7 +377,21 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
             for i in range(n_voters)
         ]
         VoterProjection.objects.bulk_create(projection_objs)
-        logger.info(f"Saved {len(projection_objs)} projections")
+        logger.info(f"Saved {len(projection_objs)} voter projections")
+
+        # 6.1b: Save noticia projections (biplot)
+        noticia_projection_objs = [
+            NoticiaProjection(
+                run=run,
+                noticia_id=noticia_ids_list[j],
+                projection_x=float(noticia_projections[j, 0]),
+                projection_y=float(noticia_projections[j, 1]),
+                n_votes=int(noticia_vote_counts[j]),
+            )
+            for j in range(n_noticias)
+        ]
+        NoticiaProjection.objects.bulk_create(noticia_projection_objs)
+        logger.info(f"Saved {len(noticia_projection_objs)} noticia projections")
 
         # 6.2: Save base clusters
         base_cluster_objs = []

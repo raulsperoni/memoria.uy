@@ -107,15 +107,15 @@ def test_compute_sparsity_aware_pca():
             if np.random.rand() > 0.3:  # 70% density
                 vote_matrix[i, j] = np.random.choice([-1, 0, 1])
 
-    pca_model, projections, variance, vote_counts = (
-        compute_sparsity_aware_pca(vote_matrix, n_components=2)
-    )
+    pca_result = compute_sparsity_aware_pca(vote_matrix, n_components=2)
 
     # Check output shapes
-    assert projections.shape == (n_voters, 2)
-    assert len(variance) == 2
-    assert len(vote_counts) == n_voters
-    assert all(vote_counts > 0)
+    assert pca_result['voter_projections'].shape == (n_voters, 2)
+    assert pca_result['noticia_projections'].shape == (n_noticias, 2)
+    assert len(pca_result['variance_explained']) == 2
+    assert len(pca_result['voter_vote_counts']) == n_voters
+    assert len(pca_result['noticia_vote_counts']) == n_noticias
+    assert all(pca_result['voter_vote_counts'] > 0)
 
 
 def test_cluster_voters():
@@ -268,7 +268,9 @@ def test_similar_profiles_cluster_together():
     assert vote_matrix.shape == (6, 4)
     assert len(voter_ids) == 6
 
-    _, projections, _, vote_counts = compute_sparsity_aware_pca(vote_matrix)
+    pca_result = compute_sparsity_aware_pca(vote_matrix)
+    projections = pca_result['voter_projections']
+    vote_counts = pca_result['voter_vote_counts']
     labels, _, _ = cluster_voters(projections, vote_counts, k=2)
 
     # Map user IDs to matrix row indices

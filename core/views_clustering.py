@@ -10,6 +10,7 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
+from urllib.parse import urlparse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -259,12 +260,35 @@ def cluster_data_json(request):
             'consensus': cluster.consensus_score,
         })
 
+    # Get noticia projections (biplot)
+    news_projections = []
+    for np_obj in run.noticia_projections.select_related('noticia').all():
+        noticia = np_obj.noticia
+        # Extract domain from URL as "medio"
+        try:
+            domain = urlparse(noticia.enlace).netloc.replace('www.', '')
+        except Exception:
+            domain = ''
+        news_projections.append({
+            'id': noticia.id,
+            'slug': noticia.slug,
+            'x': np_obj.projection_x,
+            'y': np_obj.projection_y,
+            'n_votes': np_obj.n_votes,
+            'titulo': (
+                noticia.mostrar_titulo[:60] if noticia.mostrar_titulo else ''
+            ),
+            'medio': domain,
+        })
+
     return JsonResponse({
         'run_id': run.id,
         'n_voters': run.n_voters,
         'n_clusters': run.n_clusters,
+        'n_noticias': run.n_noticias,
         'projections': projections,
         'centroids': centroids,
+        'news_projections': news_projections,
         'current_voter': {
             'type': current_voter_type,
             'id': current_voter_id,
