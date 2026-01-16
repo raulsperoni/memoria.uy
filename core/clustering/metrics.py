@@ -190,3 +190,68 @@ def compute_distance_to_centroid(projection, centroid):
         float: distance
     """
     return np.linalg.norm(projection - centroid)
+
+
+def compute_cluster_entities(cluster, top_n=5):
+    """
+    Extract top entities viewed positively/negatively by a cluster.
+
+    Analyzes the noticias where the cluster has strong consensus and
+    aggregates their associated entities by sentiment.
+
+    Args:
+        cluster: VoterCluster instance with voting_patterns
+        top_n: number of entities to return per sentiment
+
+    Returns:
+        tuple: (entities_positive, entities_negative)
+            Each is a list of dicts: [{"nombre": str, "tipo": str, "count": int}]
+    """
+    from collections import Counter
+    from core.models import NoticiaEntidad
+
+    # Get noticias where cluster voted with consensus
+    patterns = cluster.voting_patterns.filter(
+        consensus_score__gte=0.6
+    ).select_related('noticia')
+
+    # Separate by majority opinion
+    noticias_buena = [p.noticia_id for p in patterns if p.majority_opinion == 'buena']
+    noticias_mala = [p.noticia_id for p in patterns if p.majority_opinion == 'mala']
+
+    # For noticias voted "buena": entities with positive sentiment are "liked"
+    # For noticias voted "mala": entities with negative sentiment are "disliked"
+    entities_positive = Counter()
+    entities_negative = Counter()
+
+    # Entities from positively-voted noticias
+    if noticias_buena:
+        positive_nes = NoticiaEntidad.objects.filter(
+            noticia_id__in=noticias_buena,
+            sentimiento='positivo'
+        ).select_related('entidad')
+        for ne in positive_nes:
+            key = (ne.entidad.nombre, ne.entidad.tipo)
+            entities_positive[key] += 1
+
+    # Entities from negatively-voted noticias
+    if noticias_mala:
+        negative_nes = NoticiaEntidad.objects.filter(
+            noticia_id__in=noticias_mala,
+            sentimiento='negativo'
+        ).select_related('entidad')
+        for ne in negative_nes:
+            key = (ne.entidad.nombre, ne.entidad.tipo)
+            entities_negative[key] += 1
+
+    # Format results
+    top_positive = [
+        {"nombre": nombre, "tipo": tipo, "count": count}
+        for (nombre, tipo), count in entities_positive.most_common(top_n)
+    ]
+    top_negative = [
+        {"nombre": nombre, "tipo": tipo, "count": count}
+        for (nombre, tipo), count in entities_negative.most_common(top_n)
+    ]
+
+    return top_positive, top_negative

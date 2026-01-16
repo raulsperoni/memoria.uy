@@ -14,6 +14,7 @@ from core.clustering import (
     group_clusters,
     compute_cluster_consensus,
     compute_voter_similarity,
+    compute_cluster_entities,
 )
 
 
@@ -287,3 +288,86 @@ def test_similar_profiles_cluster_together():
         assert labels[user_index[str(user.id)]] == label_a
     for user in group_b:
         assert labels[user_index[str(user.id)]] == label_b
+
+
+@pytest.mark.django_db
+def test_compute_cluster_entities():
+    """Test entity extraction from cluster voting patterns."""
+    from core.models import (
+        VoterClusterRun,
+        VoterCluster,
+        ClusterVotingPattern,
+        Entidad,
+        NoticiaEntidad,
+    )
+
+    # Create test noticias
+    noticia1 = Noticia.objects.create(
+        enlace='http://entity-test1.com',
+        meta_titulo='Noticia sobre política'
+    )
+    noticia2 = Noticia.objects.create(
+        enlace='http://entity-test2.com',
+        meta_titulo='Noticia sobre economía'
+    )
+
+    # Create entities
+    entidad_pos = Entidad.objects.create(nombre='Juan Pérez', tipo='persona')
+    entidad_neg = Entidad.objects.create(nombre='Gobierno', tipo='organizacion')
+
+    # Link entities to noticias with sentiment
+    NoticiaEntidad.objects.create(
+        noticia=noticia1,
+        entidad=entidad_pos,
+        sentimiento='positivo'
+    )
+    NoticiaEntidad.objects.create(
+        noticia=noticia2,
+        entidad=entidad_neg,
+        sentimiento='negativo'
+    )
+
+    # Create a cluster run and cluster
+    run = VoterClusterRun.objects.create(status='completed')
+    cluster = VoterCluster.objects.create(
+        run=run,
+        cluster_id=0,
+        cluster_type='group',
+        size=10,
+        centroid_x=0.0,
+        centroid_y=0.0,
+        consensus_score=0.8
+    )
+
+    # Create voting patterns with high consensus
+    ClusterVotingPattern.objects.create(
+        cluster=cluster,
+        noticia=noticia1,
+        count_buena=8,
+        count_mala=1,
+        count_neutral=1,
+        consensus_score=0.8,
+        majority_opinion='buena'
+    )
+    ClusterVotingPattern.objects.create(
+        cluster=cluster,
+        noticia=noticia2,
+        count_buena=1,
+        count_mala=8,
+        count_neutral=1,
+        consensus_score=0.8,
+        majority_opinion='mala'
+    )
+
+    # Test entity extraction
+    entities_pos, entities_neg = compute_cluster_entities(cluster, top_n=5)
+
+    # Should find Juan Pérez as positive (from noticia1 voted buena)
+    assert len(entities_pos) == 1
+    assert entities_pos[0]['nombre'] == 'Juan Pérez'
+    assert entities_pos[0]['tipo'] == 'persona'
+
+    # Should find Gobierno as negative (from noticia2 voted mala)
+    assert len(entities_neg) == 1
+    assert entities_neg[0]['nombre'] == 'Gobierno'
+    assert entities_neg[0]['tipo'] == 'organizacion'

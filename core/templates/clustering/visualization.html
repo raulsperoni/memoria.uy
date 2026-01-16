@@ -467,6 +467,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Draw voter points (small, subtle)
         const voterGroup = g.append('g').attr('class', 'voter-points');
 
+        // Build cluster name lookup from centroids (must be before voter rendering)
+        const clusterInfo = {};
+        if (data.centroids) {
+            data.centroids.forEach(c => {
+                clusterInfo[c.cluster_id] = {
+                    name: c.name || `Burbuja ${c.cluster_id}`,
+                    description: c.description || '',
+                    entities_positive: c.entities_positive || [],
+                    entities_negative: c.entities_negative || [],
+                };
+            });
+        }
+
+        // Helper to get cluster name
+        function getClusterName(clusterId) {
+            return clusterInfo[clusterId]?.name || `Burbuja ${clusterId}`;
+        }
+
         // Filter out current voter - we'll draw them separately
         const otherVoters = data.projections.filter(p => !p.is_current_voter);
         const currentVoter = data.projections.find(p => p.is_current_voter);
@@ -488,9 +506,10 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr('stroke-width', 0.5)
             .attr('stroke-opacity', 0.6)
             .on('mouseover', (event, d) => {
+                const cName = getClusterName(d.cluster_id);
                 showTooltip(event,
                     `<span class="text-stone-500">Participante</span><br>` +
-                    `Burbuja ${d.cluster_id ?? '?'}<br>` +
+                    `<strong>${cName}</strong><br>` +
                     `${d.n_votes} votos`);
             })
             .on('mouseout', hideTooltip);
@@ -524,12 +543,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr('fill', '#fff');
 
             // Make it interactive
+            const voterClusterName = getClusterName(currentVoter.cluster_id);
             markerGroup
                 .style('cursor', 'pointer')
                 .on('mouseover', (event) => {
                     showTooltip(event,
                         `<strong>¡Estás acá!</strong><br>` +
-                        `Burbuja: ${currentVoter.cluster_id ?? 'N/A'}<br>` +
+                        `<strong>${voterClusterName}</strong><br>` +
                         `Tus votos: ${currentVoter.n_votes}`);
                 })
                 .on('mouseout', hideTooltip);
@@ -546,6 +566,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const avgX = d3.mean(points, p => xScale(p.x));
             const avgY = d3.mean(points, p => yScale(p.y));
             const colorIdx = Math.abs(parseInt(clusterId)) % clusterColors.length;
+            const name = getClusterName(parseInt(clusterId));
 
             labelGroup.append('text')
                 .attr('class', 'map-label')
@@ -553,18 +574,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr('y', avgY)
                 .attr('text-anchor', 'middle')
                 .attr('font-size', '14px')
-                .text(`Burbuja ${clusterId}`)
+                .text(name)
                 .attr('fill', d3.color(clusterColors[colorIdx]).darker(1));
         });
 
         // Handle current voter info
         if (currentVoter) {
+            const userClusterName = getClusterName(currentVoter.cluster_id);
+            const userClusterInfo = clusterInfo[currentVoter.cluster_id] || {};
             document.getElementById('user-position-info').classList.remove('hidden');
-            document.getElementById('user-cluster-details').innerHTML = `
-                <p>Estás en la <strong>Burbuja ${currentVoter.cluster_id}</strong>
+
+            let detailsHtml = `
+                <p>Estás en <strong>"${userClusterName}"</strong>
                    con ${currentVoter.cluster_size} participantes.</p>
-                <p class="text-sm mt-1">Has votado ${currentVoter.n_votes} noticias.</p>
             `;
+
+            if (userClusterInfo.description) {
+                detailsHtml += `<p class="text-sm mt-1 italic">${userClusterInfo.description}</p>`;
+            }
+
+            detailsHtml += `<p class="text-sm mt-1">Has votado ${currentVoter.n_votes} noticias.</p>`;
+
+            document.getElementById('user-cluster-details').innerHTML = detailsHtml;
         } else {
             document.getElementById('user-not-found-info').classList.remove('hidden');
         }

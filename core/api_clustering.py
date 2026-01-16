@@ -131,7 +131,11 @@ def cluster_data(request):
             'id': c.cluster_id,
             'size': c.size,
             'centroid': [c.centroid_x, c.centroid_y],
-            'consensus_score': c.consensus_score
+            'consensus_score': c.consensus_score,
+            'name': c.llm_name,
+            'description': c.llm_description,
+            'entities_positive': c.top_entities_positive or [],
+            'entities_negative': c.top_entities_negative or [],
         }
         for c in group_clusters
     ]

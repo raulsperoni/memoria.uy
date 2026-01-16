@@ -258,6 +258,10 @@ def cluster_data_json(request):
             'y': cluster.centroid_y,
             'size': cluster.size,
             'consensus': cluster.consensus_score,
+            'name': cluster.llm_name,
+            'description': cluster.llm_description,
+            'entities_positive': cluster.top_entities_positive or [],
+            'entities_negative': cluster.top_entities_negative or [],
         })
 
     # Get noticia projections (biplot)
