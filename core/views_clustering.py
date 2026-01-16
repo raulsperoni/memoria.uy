@@ -92,9 +92,9 @@ class ClusterStatsView(TemplateView):
         ).order_by('-created_at').first()
 
         if run:
-            # Get all clusters with voting patterns
+            # Get group clusters (not base) with voting patterns
             clusters = run.clusters.filter(
-                cluster_type='base'
+                cluster_type='group'
             ).prefetch_related('voting_patterns').order_by('cluster_id')
 
             cluster_stats = []
@@ -216,9 +216,9 @@ def cluster_data_json(request):
     projections = []
     memberships = {}
 
-    # Get all memberships
+    # Get all memberships (use group clusters for visualization)
     for membership in run.clusters.filter(
-        cluster_type='base'
+        cluster_type='group'
     ).prefetch_related('members'):
         for member in membership.members.all():
             key = f"{member.voter_type}:{member.voter_id}"
@@ -249,9 +249,9 @@ def cluster_data_json(request):
             'is_current_voter': is_current,
         })
 
-    # Get cluster centroids
+    # Get cluster centroids (use group clusters)
     centroids = []
-    for cluster in run.clusters.filter(cluster_type='base'):
+    for cluster in run.clusters.filter(cluster_type='group'):
         centroids.append({
             'cluster_id': cluster.cluster_id,
             'x': cluster.centroid_x,

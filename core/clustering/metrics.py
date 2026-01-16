@@ -2,6 +2,13 @@
 Clustering quality and similarity metrics.
 
 Implements consensus scores, voter similarity, and clustering evaluation.
+
+References:
+- Rousseeuw, P.J. (1987). "Silhouettes: A graphical aid to the interpretation
+  and validation of cluster analysis." J. Computational and Applied
+  Mathematics, 20, 53-65. doi:10.1016/0377-0427(87)90125-7
+
+See REFERENCES.md for detailed documentation.
 """
 
 import numpy as np
