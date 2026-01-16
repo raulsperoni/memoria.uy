@@ -167,9 +167,20 @@
                 <!-- Bubble Header -->
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-bold text-white">
-                            Burbuja {{ stat.cluster.cluster_id }}
-                        </h3>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">
+                                {% if stat.cluster.llm_name %}
+                                    {{ stat.cluster.llm_name }}
+                                {% else %}
+                                    Burbuja {{ stat.cluster.cluster_id }}
+                                {% endif %}
+                            </h3>
+                            {% if stat.cluster.llm_description %}
+                            <p class="text-blue-100 text-sm mt-1">
+                                {{ stat.cluster.llm_description }}
+                            </p>
+                            {% endif %}
+                        </div>
                         <div class="text-white text-sm">
                             {{ stat.cluster.size }} votantes
                         </div>
@@ -209,6 +220,42 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Entities Section -->
+                    {% if stat.cluster.top_entities_positive or stat.cluster.top_entities_negative %}
+                    <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if stat.cluster.top_entities_positive %}
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <h4 class="text-sm font-semibold text-green-800 mb-2">
+                                👍 Ven positivamente
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                {% for entity in stat.cluster.top_entities_positive %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {{ entity.nombre }}
+                                    <span class="ml-1 text-green-600">({{ entity.count }})</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if stat.cluster.top_entities_negative %}
+                        <div class="bg-red-50 rounded-lg p-4">
+                            <h4 class="text-sm font-semibold text-red-800 mb-2">
+                                👎 Ven negativamente
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                {% for entity in stat.cluster.top_entities_negative %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    {{ entity.nombre }}
+                                    <span class="ml-1 text-red-600">({{ entity.count }})</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
 
                     <!-- Top Noticias -->
                     {% if stat.top_patterns %}

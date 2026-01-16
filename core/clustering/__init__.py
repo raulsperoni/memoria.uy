@@ -19,6 +19,7 @@ from .metrics import (
     compute_silhouette_score,
     compute_cluster_voting_aggregation,
     compute_distance_to_centroid,
+    compute_cluster_entities,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     'compute_silhouette_score',
     'compute_cluster_voting_aggregation',
     'compute_distance_to_centroid',
+    'compute_cluster_entities',
 ]

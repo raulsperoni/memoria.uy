@@ -343,6 +343,32 @@ class VoterCluster(models.Model):
         help_text="Additional cluster metadata (radius, variance, etc.)"
     )
 
+    # LLM-generated description fields (only for group clusters)
+    llm_name = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="LLM-generated cluster name"
+    )
+    llm_description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="LLM-generated cluster description"
+    )
+    top_entities_positive = models.JSONField(
+        default=list,
+        help_text="Top entities viewed positively by this cluster"
+    )
+    top_entities_negative = models.JSONField(
+        default=list,
+        help_text="Top entities viewed negatively by this cluster"
+    )
+    description_generated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the LLM description was generated"
+    )
+
     class Meta:
         unique_together = [['run', 'cluster_type', 'cluster_id']]
         indexes = [

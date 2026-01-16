@@ -1,7 +1,17 @@
 """
 K-means clustering for voter grouping.
 
-Implements weighted k-means where voters are weighted by number of votes cast.
+Implements k-means clustering on PCA-projected voter coordinates.
+
+References:
+- Lloyd, S.P. (1982). "Least squares quantization in PCM."
+  IEEE Transactions on Information Theory, 28(2), 129-137.
+  doi:10.1109/TIT.1982.1056489
+  (Originally developed at Bell Labs in 1957, published 1982)
+- Polis implementation: github.com/compdemocracy/polis
+  (math/src/polismath/math/clusters.clj)
+
+See REFERENCES.md for detailed documentation.
 """
 
 import numpy as np

@@ -6,6 +6,17 @@ following Polis's approach of scaling projections based on vote density.
 
 Uses SVD to project both voters (rows) and noticias (columns) into the
 same 2D space for biplot visualization.
+
+References:
+- Pearson, K. (1901). "On lines and planes of closest fit to systems of
+  points in space." Philosophical Magazine, Series 6, 2(11), 559-572.
+- Hotelling, H. (1933). "Analysis of a complex of statistical variables
+  into principal components." J. Educational Psychology, 24, 417-441.
+- Jolliffe, I.T. (2002). Principal Component Analysis, 2nd ed. Springer.
+- Polis implementation: github.com/compdemocracy/polis
+  (math/src/polismath/math/pca.clj)
+
+See REFERENCES.md for detailed documentation.
 """
 
 import numpy as np

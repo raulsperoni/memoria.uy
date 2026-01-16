@@ -131,7 +131,11 @@ def cluster_data(request):
             'id': c.cluster_id,
             'size': c.size,
             'centroid': [c.centroid_x, c.centroid_y],
-            'consensus_score': c.consensus_score
+            'consensus_score': c.consensus_score,
+            'name': c.llm_name,
+            'description': c.llm_description,
+            'entities_positive': c.top_entities_positive or [],
+            'entities_negative': c.top_entities_negative or [],
         }
         for c in group_clusters
     ]
@@ -293,13 +297,19 @@ def cluster_voting_patterns(request, cluster_id):
             status=404
         )
 
-    # Find cluster
-    try:
-        cluster = run.clusters.get(
+    # Find cluster (prefer group, fallback to base)
+    cluster = run.clusters.filter(
+        cluster_id=cluster_id,
+        cluster_type='group'
+    ).first()
+
+    if not cluster:
+        cluster = run.clusters.filter(
             cluster_id=cluster_id,
             cluster_type='base'
-        )
-    except VoterCluster.DoesNotExist:
+        ).first()
+
+    if not cluster:
         return Response(
             {'error': f'Cluster {cluster_id} not found'},
             status=404

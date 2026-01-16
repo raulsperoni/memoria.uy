@@ -522,7 +522,142 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
         VoterCluster.objects.bulk_create(group_cluster_objs)
         logger.info(f"Saved {len(group_cluster_objs)} group clusters")
 
-        # 6.6: Compute overall silhouette score
+        # 6.6: Save group memberships and voting patterns
+        group_cluster_obj_map = {
+            c.cluster_id: c for c in group_cluster_objs
+        }
+
+        group_membership_objs = []
+        for i in range(n_voters):
+            group_id = int(group_labels[i])
+            if group_id not in group_cluster_obj_map:
+                continue
+
+            cluster_obj = group_cluster_obj_map[group_id]
+            group_centroid = projections[group_labels == group_id].mean(axis=0)
+            distance = compute_distance_to_centroid(
+                projections[i], group_centroid
+            )
+
+            group_membership_objs.append(
+                VoterClusterMembership(
+                    cluster=cluster_obj,
+                    voter_type=voter_ids_list[i][0],
+                    voter_id=voter_ids_list[i][1],
+                    distance_to_centroid=float(distance),
+                )
+            )
+
+        VoterClusterMembership.objects.bulk_create(group_membership_objs)
+        logger.info(f"Saved {len(group_membership_objs)} group memberships")
+
+        # 6.7: Compute voting patterns for group clusters
+        group_voting_pattern_objs = []
+        for group_id in np.unique(group_labels):
+            if group_id not in group_cluster_obj_map:
+                continue
+
+            cluster_obj = group_cluster_obj_map[group_id]
+            cluster_mask = group_labels == group_id
+            cluster_members = np.where(cluster_mask)[0]
+
+            if len(cluster_members) == 0:
+                continue
+
+            vote_agg = compute_cluster_voting_aggregation(
+                cluster_members, voter_ids_list, vote_matrix, noticia_ids_list
+            )
+
+            for noticia_id, agg in vote_agg.items():
+                total = agg["buena"] + agg["mala"] + agg["neutral"]
+                if total == 0:
+                    continue
+
+                max_opinion = max(
+                    ["buena", "mala", "neutral"],
+                    key=lambda x: agg[x]
+                )
+                noticia_consensus = agg[max_opinion] / total
+
+                group_voting_pattern_objs.append(
+                    ClusterVotingPattern(
+                        cluster=cluster_obj,
+                        noticia_id=noticia_id,
+                        count_buena=agg["buena"],
+                        count_mala=agg["mala"],
+                        count_neutral=agg.get("neutral", 0),
+                        consensus_score=float(noticia_consensus),
+                        majority_opinion=max_opinion,
+                    )
+                )
+
+        ClusterVotingPattern.objects.bulk_create(group_voting_pattern_objs)
+        logger.info(f"Saved {len(group_voting_pattern_objs)} group voting patterns")
+
+        # Step 7: Generate LLM descriptions for group clusters
+        logger.info("Step 7: Generating LLM descriptions for group clusters")
+        from core.clustering.metrics import compute_cluster_entities
+
+        for group_id, cluster_obj in group_cluster_obj_map.items():
+            try:
+                # 7.1: Get top noticias with highest consensus
+                top_patterns = ClusterVotingPattern.objects.filter(
+                    cluster=cluster_obj
+                ).order_by('-consensus_score')[:10]
+
+                top_noticias = []
+                for pattern in top_patterns:
+                    noticia = pattern.noticia
+                    top_noticias.append({
+                        'titulo': noticia.mostrar_titulo or noticia.enlace,
+                        'resumen': noticia.meta_descripcion or '',
+                        'majority_opinion': pattern.majority_opinion,
+                        'consensus': pattern.consensus_score or 0.5,
+                    })
+
+                # 7.2: Get distinctive entities
+                entities_pos, entities_neg = compute_cluster_entities(
+                    cluster_obj, top_n=5
+                )
+
+                # 7.3: Generate description with LLM
+                description = parse.generate_cluster_description(
+                    top_noticias=top_noticias,
+                    entities_positive=entities_pos,
+                    entities_negative=entities_neg,
+                    cluster_size=cluster_obj.size,
+                    consensus_score=cluster_obj.consensus_score or 0.5,
+                )
+
+                # 7.4: Save to cluster
+                if description:
+                    cluster_obj.llm_name = description.nombre[:100]
+                    cluster_obj.llm_description = description.descripcion
+                    cluster_obj.top_entities_positive = entities_pos
+                    cluster_obj.top_entities_negative = entities_neg
+                    cluster_obj.description_generated_at = timezone.now()
+                    cluster_obj.save()
+                    logger.info(
+                        f"Generated description for group {group_id}: "
+                        f"{description.nombre}"
+                    )
+                else:
+                    # Still save entities even if LLM fails
+                    cluster_obj.top_entities_positive = entities_pos
+                    cluster_obj.top_entities_negative = entities_neg
+                    cluster_obj.save()
+                    logger.warning(
+                        f"LLM description failed for group {group_id}, "
+                        f"saved entities only"
+                    )
+
+            except Exception as e:
+                logger.error(
+                    f"Error generating description for group {group_id}: {e}"
+                )
+                continue
+
+        # 6.8: Compute overall silhouette score
         silhouette = compute_silhouette_score(projections, base_labels)
 
         # Update run metadata
