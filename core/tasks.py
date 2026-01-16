@@ -342,11 +342,11 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
         # Step 2: PCA (biplot - voters and noticias)
         logger.info("Step 2: Computing SVD biplot")
         pca_result = compute_sparsity_aware_pca(vote_matrix, n_components=2)
-        projections = pca_result['voter_projections']
-        noticia_projections = pca_result['noticia_projections']
-        variance_explained = pca_result['variance_explained']
-        vote_counts = pca_result['voter_vote_counts']
-        noticia_vote_counts = pca_result['noticia_vote_counts']
+        projections = pca_result["voter_projections"]
+        noticia_projections = pca_result["noticia_projections"]
+        variance_explained = pca_result["variance_explained"]
+        vote_counts = pca_result["voter_vote_counts"]
+        noticia_vote_counts = pca_result["noticia_vote_counts"]
 
         # Step 3: Base clustering
         logger.info("Step 3: Running base k-means clustering")
@@ -527,9 +527,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
         logger.info(f"Saved {len(group_cluster_objs)} group clusters")
 
         # 6.6: Save group memberships and voting patterns
-        group_cluster_obj_map = {
-            c.cluster_id: c for c in group_cluster_objs
-        }
+        group_cluster_obj_map = {c.cluster_id: c for c in group_cluster_objs}
 
         group_membership_objs = []
         for i in range(n_voters):
@@ -539,9 +537,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
 
             cluster_obj = group_cluster_obj_map[group_id]
             group_centroid = projections[group_labels == group_id].mean(axis=0)
-            distance = compute_distance_to_centroid(
-                projections[i], group_centroid
-            )
+            distance = compute_distance_to_centroid(projections[i], group_centroid)
 
             group_membership_objs.append(
                 VoterClusterMembership(
@@ -577,10 +573,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                 if total == 0:
                     continue
 
-                max_opinion = max(
-                    ["buena", "mala", "neutral"],
-                    key=lambda x: agg[x]
-                )
+                max_opinion = max(["buena", "mala", "neutral"], key=lambda x: agg[x])
                 noticia_consensus = agg[max_opinion] / total
 
                 group_voting_pattern_objs.append(
@@ -607,17 +600,19 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                 # 7.1: Get top noticias with highest consensus
                 top_patterns = ClusterVotingPattern.objects.filter(
                     cluster=cluster_obj
-                ).order_by('-consensus_score')[:10]
+                ).order_by("-consensus_score")[:10]
 
                 top_noticias = []
                 for pattern in top_patterns:
                     noticia = pattern.noticia
-                    top_noticias.append({
-                        'titulo': noticia.mostrar_titulo or noticia.enlace,
-                        'resumen': noticia.meta_descripcion or '',
-                        'majority_opinion': pattern.majority_opinion,
-                        'consensus': pattern.consensus_score or 0.5,
-                    })
+                    top_noticias.append(
+                        {
+                            "titulo": noticia.mostrar_titulo or noticia.enlace,
+                            "resumen": noticia.meta_descripcion or "",
+                            "majority_opinion": pattern.majority_opinion,
+                            "consensus": pattern.consensus_score or 0.5,
+                        }
+                    )
 
                 # 7.2: Get distinctive entities
                 entities_pos, entities_neg = compute_cluster_entities(
@@ -656,9 +651,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                     )
 
             except Exception as e:
-                logger.error(
-                    f"Error generating description for group {group_id}: {e}"
-                )
+                logger.error(f"Error generating description for group {group_id}: {e}")
                 continue
 
         # 6.8: Compute overall silhouette score
@@ -751,10 +744,9 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
     )
     bubble_names = []
     if latest_run:
-        group_clusters = (
-            VoterCluster.objects.filter(run=latest_run, cluster_type="group")
-            .order_by("-size")
-        )
+        group_clusters = VoterCluster.objects.filter(
+            run=latest_run, cluster_type="group"
+        ).order_by("-size")
         for cluster in group_clusters:
             bubble_names.append(cluster.llm_name or f"Grupo {cluster.cluster_id}")
 
@@ -771,9 +763,7 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
     sent_recipients = []
 
     for user in inactive_users:
-        pending_count = (
-            Noticia.objects.exclude(votos__usuario=user).count()
-        )
+        pending_count = Noticia.objects.exclude(votos__usuario=user).count()
         if pending_count == 0:
             skipped_count += 1
             continue
@@ -830,9 +820,7 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
             sent_count += 1
             sent_recipients.append(user.email)
         except Exception as exc:
-            logger.error(
-                f"Failed to send reengagement email to {user.email}: {exc}"
-            )
+            logger.error(f"Failed to send reengagement email to {user.email}: {exc}")
             skipped_count += 1
 
     staff_notified = False
@@ -865,13 +853,10 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
                 )
                 staff_notified = True
             except Exception as exc:
-                logger.error(
-                    f"Failed to send staff summary email: {exc}"
-                )
+                logger.error(f"Failed to send staff summary email: {exc}")
 
     logger.info(
-        "Reengagement email task finished. "
-        f"Sent={sent_count}, skipped={skipped_count}"
+        f"Reengagement email task finished. Sent={sent_count}, skipped={skipped_count}"
     )
     return {
         "sent": sent_count,
