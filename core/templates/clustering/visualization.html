@@ -136,14 +136,9 @@
                                    hover:bg-blue-200 text-xs md:text-sm font-medium">
                         Mostrar noticias
                     </button>
-                    <button id="toggle-labels"
-                            class="px-2 md:px-3 py-1 md:py-1.5 bg-amber-100 text-amber-800 rounded
-                                   hover:bg-amber-200 text-xs md:text-sm font-medium">
-                        Mostrar etiquetas
-                    </button>
                 </div>
                 <div class="text-xs md:text-sm text-gray-500 italic hidden md:block">
-                    Hacé zoom con la rueda del mouse
+                    Hacé click en una burbuja para ver su detalle
                 </div>
             </div>
 
@@ -176,7 +171,57 @@
                 <div class="legend-item text-xs md:text-sm">
                     <div class="w-8 h-5 rounded-full bg-emerald-300/50 border-2
                                 border-emerald-600/70"></div>
-                    <span>Burbuja</span>
+                    <span>Burbuja (click para ver detalle)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cluster Detail Panel (appears on click) -->
+        <div id="cluster-detail-panel" class="hidden mb-4 md:mb-8 transition-all duration-300">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden border-2 border-stone-300">
+                <!-- Header with close button -->
+                <div id="cluster-detail-header" class="px-4 py-3 flex justify-between items-start">
+                    <div>
+                        <h3 id="cluster-detail-name" class="text-lg md:text-xl font-bold text-white">
+                        </h3>
+                        <p id="cluster-detail-description" class="text-sm text-white/80 mt-1">
+                        </p>
+                    </div>
+                    <button id="close-cluster-detail"
+                            class="text-white/80 hover:text-white p-1 -mt-1 -mr-1">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-4">
+                    <!-- Stats row -->
+                    <div class="flex flex-wrap gap-4 mb-4 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">Participantes:</span>
+                            <span id="cluster-detail-size" class="font-semibold"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">Consenso:</span>
+                            <span id="cluster-detail-consensus" class="font-semibold"></span>
+                        </div>
+                    </div>
+
+                    <!-- Entities -->
+                    <div id="cluster-detail-entities" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    </div>
+
+                    <!-- Top News -->
+                    <div id="cluster-detail-news" class="space-y-2">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                            📰 Noticias que definen esta burbuja:
+                        </h4>
+                        <div id="cluster-detail-news-list" class="space-y-2">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -269,8 +314,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     // State
     let showNews = false;
-    let showLabels = false;
     let data = null;
+    let selectedClusterId = null;
 
     // Color palette - earthy, map-like colors
     const clusterColors = [
@@ -425,10 +470,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 hullGroup.append('path')
                     .attr('d', lineGenerator(expandedHull))
                     .attr('class', 'cluster-hull')
+                    .attr('data-cluster-id', clusterId)
                     .attr('fill', `url(#cluster-gradient-${colorIdx})`)
                     .attr('stroke', clusterColors[colorIdx])
                     .attr('stroke-width', 2.5)
-                    .attr('stroke-opacity', 0.7);
+                    .attr('stroke-opacity', 0.7)
+                    .style('cursor', 'pointer')
+                    .on('click', (event) => {
+                        event.stopPropagation();
+                        showClusterDetail(parseInt(clusterId));
+                    })
+                    .on('mouseover', function() {
+                        d3.select(this)
+                            .attr('stroke-width', 4)
+                            .attr('stroke-opacity', 1);
+                    })
+                    .on('mouseout', function() {
+                        d3.select(this)
+                            .attr('stroke-width', 2.5)
+                            .attr('stroke-opacity', 0.7);
+                    });
             }
         });
 
@@ -555,10 +616,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 .on('mouseout', hideTooltip);
         }
 
-        // Draw cluster labels (hidden by default)
+        // Draw cluster labels (visible by default)
         const labelGroup = g.append('g')
-            .attr('class', 'cluster-labels')
-            .style('display', 'none');
+            .attr('class', 'cluster-labels');
 
         Object.entries(clusters).forEach(([clusterId, points]) => {
             if (points.length < 2) return;
@@ -615,15 +675,182 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.toggle('text-blue-800', !showNews);
         });
 
-        document.getElementById('toggle-labels').addEventListener('click', function() {
-            showLabels = !showLabels;
-            d3.select('.cluster-labels').style('display', showLabels ? 'block' : 'none');
-            this.textContent = showLabels ? 'Ocultar etiquetas' : 'Mostrar etiquetas';
-            this.classList.toggle('bg-amber-600', showLabels);
-            this.classList.toggle('text-white', showLabels);
-            this.classList.toggle('bg-amber-100', !showLabels);
-            this.classList.toggle('text-amber-800', !showLabels);
+        // Close panel button
+        document.getElementById('close-cluster-detail').addEventListener('click', function() {
+            hideClusterDetail();
         });
+    }
+
+    function showClusterDetail(clusterId) {
+        selectedClusterId = clusterId;
+        const centroid = data.centroids.find(c => c.cluster_id === clusterId);
+        if (!centroid) return;
+
+        const panel = document.getElementById('cluster-detail-panel');
+        const colorIdx = Math.abs(clusterId) % clusterColors.length;
+
+        // Header styling
+        const header = document.getElementById('cluster-detail-header');
+        header.style.background = `linear-gradient(135deg, ${clusterColors[colorIdx]}, ${d3.color(clusterColors[colorIdx]).darker(0.5)})`;
+
+        // Name and description
+        document.getElementById('cluster-detail-name').textContent =
+            centroid.name || `Burbuja ${clusterId}`;
+        document.getElementById('cluster-detail-description').textContent =
+            centroid.description || '';
+
+        // Stats
+        document.getElementById('cluster-detail-size').textContent =
+            `${centroid.size} personas`;
+        const consensusPercent = Math.round((centroid.consensus || 0) * 100);
+        document.getElementById('cluster-detail-consensus').textContent =
+            `${consensusPercent}%`;
+
+        // Entities
+        const entitiesContainer = document.getElementById('cluster-detail-entities');
+        let entitiesHtml = '';
+
+        if (centroid.entities_positive && centroid.entities_positive.length > 0) {
+            entitiesHtml += `
+                <div class="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                    <h5 class="text-xs font-semibold text-emerald-800 mb-2 flex items-center gap-1">
+                        <span>👍</span> Ven positivamente
+                    </h5>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${centroid.entities_positive.map(e => `
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
+                                         bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                ${e.nombre}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (centroid.entities_negative && centroid.entities_negative.length > 0) {
+            entitiesHtml += `
+                <div class="bg-rose-50 rounded-lg p-3 border border-rose-200">
+                    <h5 class="text-xs font-semibold text-rose-800 mb-2 flex items-center gap-1">
+                        <span>👎</span> Ven negativamente
+                    </h5>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${centroid.entities_negative.map(e => `
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
+                                         bg-rose-100 text-rose-800 border border-rose-300">
+                                ${e.nombre}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (!entitiesHtml) {
+            entitiesHtml = `
+                <div class="col-span-2 text-sm text-gray-500 italic">
+                    No hay entidades distintivas identificadas para esta burbuja.
+                </div>
+            `;
+        }
+
+        entitiesContainer.innerHTML = entitiesHtml;
+
+        // Fetch top news for this cluster
+        fetchClusterNews(clusterId);
+
+        // Show panel with animation
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideClusterDetail() {
+        selectedClusterId = null;
+        document.getElementById('cluster-detail-panel').classList.add('hidden');
+    }
+
+    async function fetchClusterNews(clusterId) {
+        const newsList = document.getElementById('cluster-detail-news-list');
+        newsList.innerHTML = `
+            <div class="text-sm text-gray-500 italic">Cargando noticias...</div>
+        `;
+
+        try {
+            const response = await fetch(`/api/clustering/clusters/${clusterId}/votes/`);
+            if (!response.ok) throw new Error('Error fetching news');
+
+            const clusterData = await response.json();
+            const patterns = clusterData.voting_patterns || [];
+
+            // Sort by consensus and take top 5
+            const topPatterns = patterns
+                .sort((a, b) => (b.consensus || 0) - (a.consensus || 0))
+                .slice(0, 5);
+
+            if (topPatterns.length === 0) {
+                newsList.innerHTML = `
+                    <div class="text-sm text-gray-500 italic">
+                        No hay noticias con votos en esta burbuja.
+                    </div>
+                `;
+                return;
+            }
+
+            // Get news details from news_projections
+            const newsMap = {};
+            if (data.news_projections) {
+                data.news_projections.forEach(n => {
+                    newsMap[n.id] = n;
+                });
+            }
+
+            newsList.innerHTML = topPatterns.map(p => {
+                const news = newsMap[p.noticia_id] || {};
+                const total = p.buena + p.mala + p.neutral;
+                const consensusPercent = Math.round((p.consensus || 0) * 100);
+
+                const opinionColor = p.majority_opinion === 'buena'
+                    ? 'text-emerald-600'
+                    : p.majority_opinion === 'mala'
+                        ? 'text-rose-600'
+                        : 'text-gray-600';
+
+                const opinionIcon = p.majority_opinion === 'buena'
+                    ? '👍'
+                    : p.majority_opinion === 'mala'
+                        ? '👎'
+                        : '😐';
+
+                return `
+                    <div class="flex items-start gap-3 p-2 bg-gray-50 rounded-lg
+                                hover:bg-gray-100 transition-colors">
+                        <span class="text-lg">${opinionIcon}</span>
+                        <div class="flex-1 min-w-0">
+                            <a href="/noticias/${news.slug || ''}/"
+                               class="text-sm font-medium text-blue-700 hover:text-blue-900
+                                      line-clamp-2">
+                                ${news.titulo || `Noticia #${p.noticia_id}`}
+                            </a>
+                            <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                <span class="${opinionColor} font-medium">
+                                    ${p.majority_opinion}
+                                </span>
+                                <span>${total} votos</span>
+                                <span>${consensusPercent}% consenso</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error('Error fetching cluster news:', error);
+            newsList.innerHTML = `
+                <div class="text-sm text-red-500">
+                    Error cargando noticias. Intentá de nuevo.
+                </div>
+            `;
+        }
     }
 
     function showTooltip(event, html) {

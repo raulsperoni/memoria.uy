@@ -297,13 +297,19 @@ def cluster_voting_patterns(request, cluster_id):
             status=404
         )
 
-    # Find cluster
-    try:
-        cluster = run.clusters.get(
+    # Find cluster (prefer group, fallback to base)
+    cluster = run.clusters.filter(
+        cluster_id=cluster_id,
+        cluster_type='group'
+    ).first()
+
+    if not cluster:
+        cluster = run.clusters.filter(
             cluster_id=cluster_id,
             cluster_type='base'
-        )
-    except VoterCluster.DoesNotExist:
+        ).first()
+
+    if not cluster:
         return Response(
             {'error': f'Cluster {cluster_id} not found'},
             status=404
