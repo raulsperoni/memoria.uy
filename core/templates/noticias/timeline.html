@@ -3,10 +3,9 @@
 {% extends "base.html" %}
 
 {% block sticky_content %}
-<!-- Mobile Ticker (sticky below header) -->
-{% if has_cluster %}
+<!-- Mobile Ticker (sticky below header, always rendered, hidden when no cluster) -->
 <div id="bubble-ticker-mobile"
-     class="md:hidden sticky top-0 z-40 bg-blue-600 border-b-2 border-black text-white mono"
+     class="md:hidden sticky top-0 z-40 bg-blue-600 border-b-2 border-black text-white mono {% if not has_cluster %}hidden{% endif %}"
      x-data="{ collapsed: false }"
      x-show="!collapsed"
      x-transition>
@@ -14,9 +13,9 @@
     <a href="{% url 'cluster-visualization' %}"
        class="flex items-center gap-2 flex-1 min-w-0 px-4 py-2 hover:bg-blue-700 transition-colors">
       <span class="text-xs font-bold whitespace-nowrap">TU BURBUJA</span>
-      <span class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
+      <span id="mobile-ticker-info" class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
         {% load vote_extras %}
-        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{{ my_cluster.id }} | {{ my_cluster.size }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>
+        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %} | {{ my_cluster.size|default:"0" }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>
       </span>
     </a>
     <button @click="collapsed = !collapsed"
@@ -25,7 +24,6 @@
     </button>
   </div>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block content %}

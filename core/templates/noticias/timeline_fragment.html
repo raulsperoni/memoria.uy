@@ -169,11 +169,9 @@
             <div class="text-[9px] text-gray-600">según todos los votos</div>
           </button>
         </div>
-        {% if not has_cluster %}
-        <p class="text-[9px] text-gray-500 mt-2">
+        <p id="no-cluster-message" class="text-[9px] text-gray-500 mt-2" {% if has_cluster %}style="display: none;"{% endif %}>
           * La opción "mi burbuja" estará disponible cuando se genere el próximo análisis de clusters
         </p>
-        {% endif %}
       </div>
 
       <!-- Entity filters (dynamically updated) -->
@@ -183,10 +181,9 @@
     </div>
   </div>
 
-  <!-- Desktop Floating Badge -->
-  {% if has_cluster %}
+  <!-- Desktop Floating Badge (always rendered, hidden when no cluster) -->
   <div id="bubble-badge-desktop"
-       class="hidden md:block fixed top-24 right-6 z-40 mono"
+       class="hidden {% if has_cluster %}md:block{% endif %} fixed top-24 right-6 z-40 mono"
        x-data="{ expanded: false }"
        @mouseenter="expanded = true"
        @mouseleave="expanded = false">
@@ -199,8 +196,8 @@
       <div class="text-center">
         <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
         <div class="text-xl font-bold leading-none">🔵</div>
-        <div class="text-xs font-bold mt-1">#{{ my_cluster.id }}</div>
-        <div class="text-[9px] mt-1 text-blue-200" {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
+        <div id="badge-cluster-id" class="text-xs font-bold mt-1">#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %}</div>
+        <div id="badge-cluster-name" class="text-[9px] mt-1 text-blue-200" {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
           {% if my_cluster.llm_name %}{{ my_cluster.llm_name }}{% endif %}
         </div>
       </div>
@@ -214,28 +211,25 @@
 
       <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-400">
         <h3 class="text-xs font-bold">TU BURBUJA</h3>
-        <span class="text-xl font-bold">#{{ my_cluster.id }}</span>
+        <span id="badge-expanded-id" class="text-xl font-bold">#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %}</span>
       </div>
-      {% if my_cluster.llm_name %}
-      <div class="mb-3 pb-2 border-b border-blue-400">
+      <div id="badge-expanded-name-section" class="mb-3 pb-2 border-b border-blue-400" {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
         <div class="text-[10px] text-blue-200 mb-1">NOMBRE:</div>
-        <div class="text-xs font-bold">{{ my_cluster.llm_name }}</div>
+        <div id="badge-expanded-name" class="text-xs font-bold">{{ my_cluster.llm_name|default:"" }}</div>
       </div>
-      {% endif %}
 
       <div class="space-y-2 text-[10px]">
         <div class="flex justify-between">
           <span class="text-blue-200">VOTANTES:</span>
-          <span class="font-bold">{{ my_cluster.size }}</span>
+          <span id="badge-expanded-size" class="font-bold">{{ my_cluster.size|default:"0" }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-blue-200">CONSENSO:</span>
-          <span class="font-bold" data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}</span>
+          <span id="badge-expanded-consensus" class="font-bold" data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}</span>
         </div>
       </div>
     </a>
   </div>
-  {% endif %}
 
   <!-- Timeline Items -->
   <div id="timeline-items">
@@ -394,6 +388,33 @@
     showNotification('timeout: intentá de nuevo', 'error');
   });
 
+  // Handle swap errors gracefully (e.g., when paginating to non-existent page)
+  document.body.addEventListener('htmx:swapError', function(event) {
+    // Check if this is the load-more trigger
+    if (event.detail.target && event.detail.target.id === 'load-more-trigger') {
+      console.log('[Memoria Web] Swap error on load-more, showing empty state');
+      // Remove the trigger and show empty state
+      event.detail.target.remove();
+      checkTimelineState();
+    }
+  });
+
+  // Handle empty responses from pagination (before swap happens)
+  document.body.addEventListener('htmx:beforeSwap', function(event) {
+    // If this is the load-more trigger and response is empty, prevent swap error
+    if (event.detail.target && event.detail.target.id === 'load-more-trigger') {
+      var xhr = event.detail.xhr;
+      var responseText = xhr.responseText.trim();
+      // If response is completely empty, just remove the trigger
+      if (!responseText) {
+        console.log('[Memoria Web] Empty pagination response, removing trigger');
+        event.detail.shouldSwap = false;
+        event.detail.target.remove();
+        checkTimelineState();
+      }
+    }
+  });
+
   // Update active filter description when filter changes
   document.body.addEventListener('updateActiveFilters', function(event) {
     const filterText = document.getElementById('active-filter-text');
@@ -402,72 +423,130 @@
     }
   });
 
+  // Check timeline state after voting removes items
+  function checkTimelineState() {
+    const container = document.getElementById('timeline-items');
+    if (!container) return;
+
+    const newsItems = container.querySelectorAll('[id^="noticia-"]');
+    const spinner = document.getElementById('load-more-trigger');
+
+    // If no items and no spinner loading, show empty state or reload
+    if (newsItems.length === 0 && !spinner) {
+      console.log('[Memoria Web] No more items, showing empty state');
+      container.innerHTML = '<div class="border-2 border-black bg-white p-8 text-center mono">' +
+        '<p class="text-gray-600 mb-2">[ votaste todas las noticias ]</p>' +
+        '<p class="text-xs text-gray-500 mb-4">¡Bien hecho! Volvé más tarde para ver nuevas noticias.</p>' +
+        '<a href="?filter=todas" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white inline-block">ver todas las noticias</a>' +
+        '</div>';
+    }
+  }
+
+  // When a vote removes an item (empty response), check state after animation
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    var target = event.detail.target;
+    // Check if a noticia was removed (target was inside timeline-items)
+    if (target && target.id && target.id.startsWith('noticia-')) {
+      // After swap animation (1s in template + buffer)
+      setTimeout(checkTimelineState, 1500);
+    }
+  });
+
   // Periodic bubble info update (every 30 seconds)
-  {% if has_cluster %}
+  // Always run, even if user doesn't have cluster yet - they may get assigned
+  var hasClusterInitially = {% if has_cluster %}true{% else %}false{% endif %};
+
   function updateBubbleInfo() {
     fetch('{% url "api-voter-cluster" %}')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          // 404 means no cluster yet, that's expected for new users
+          if (response.status === 404) {
+            console.log('[Memoria Web] No cluster assigned yet');
+            return null;
+          }
+          throw new Error('API error: ' + response.status);
+        }
+        return response.json();
+      })
       .then(data => {
+        if (!data) return; // No cluster data
+
         if (data.cluster_id !== null && data.cluster_id !== undefined) {
-          // Update mobile ticker
-          const mobileTickerLink = document.querySelector('#bubble-ticker-mobile a');
-          if (mobileTickerLink) {
-            // Link always goes to visualization, no need to update href
-            const mobileTicker = mobileTickerLink.querySelector('span:last-child');
-            if (mobileTicker) {
-              const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
-              const consensusValue = data.cluster_consensus !== null && data.cluster_consensus !== undefined ? data.cluster_consensus : 0;
-              const consensus = consensusValue.toFixed(1).replace(',', '.');
-              mobileTicker.textContent = namePart + '#' + data.cluster_id + ' | ' + data.cluster_size + 'v | ' + consensus;
-            }
+          // Show the desktop badge if it was hidden (add md:block class)
+          const badge = document.getElementById('bubble-badge-desktop');
+          if (badge && !badge.classList.contains('md:block')) {
+            badge.classList.add('md:block');
+            console.log('[Memoria Web] Cluster assigned! Showing bubble badge');
           }
 
-          // Update desktop badge collapsed state
-          const desktopBadgeId = document.querySelector('#bubble-badge-desktop a .text-xs.font-bold.mt-1');
-          if (desktopBadgeId) {
-            desktopBadgeId.textContent = '#' + data.cluster_id;
+          // Show mobile ticker if it was hidden
+          const mobileTicker = document.getElementById('bubble-ticker-mobile');
+          if (mobileTicker && mobileTicker.classList.contains('hidden')) {
+            mobileTicker.classList.remove('hidden');
           }
 
-          // Update desktop badge collapsed state name
-          const collapsedNameDiv = document.querySelector('#bubble-badge-desktop a .text-\\[9px\\].mt-1.text-blue-200');
-          if (collapsedNameDiv) {
+          // Update mobile ticker info
+          const mobileTickerInfo = document.getElementById('mobile-ticker-info');
+          if (mobileTickerInfo) {
+            const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
+            const consensusValue = data.cluster_consensus !== null
+              ? data.cluster_consensus : 0;
+            const consensus = consensusValue.toFixed(1).replace(',', '.');
+            mobileTickerInfo.textContent = namePart + '#' + data.cluster_id +
+              ' | ' + data.cluster_size + 'v | ' + consensus;
+          }
+
+          // Update desktop badge using IDs
+          const badgeId = document.getElementById('badge-cluster-id');
+          if (badgeId) badgeId.textContent = '#' + data.cluster_id;
+
+          const badgeName = document.getElementById('badge-cluster-name');
+          if (badgeName) {
             if (data.cluster_name) {
-              collapsedNameDiv.textContent = data.cluster_name;
-              collapsedNameDiv.style.display = 'block';
+              badgeName.textContent = data.cluster_name;
+              badgeName.style.display = 'block';
             } else {
-              collapsedNameDiv.style.display = 'none';
+              badgeName.style.display = 'none';
             }
           }
 
-          // Update desktop badge expanded state
-          const expandedId = document.querySelector('#bubble-badge-desktop .text-xl.font-bold');
-          if (expandedId) {
-            expandedId.textContent = '#' + data.cluster_id;
-          }
+          const expandedId = document.getElementById('badge-expanded-id');
+          if (expandedId) expandedId.textContent = '#' + data.cluster_id;
 
-          const nameSection = document.querySelector('#bubble-badge-desktop .mb-3.pb-2.border-b.border-blue-400');
-          if (nameSection) {
-            const expandedName = nameSection.querySelector('.text-xs.font-bold');
-            if (expandedName) {
-              if (data.cluster_name) {
-                expandedName.textContent = data.cluster_name;
-                nameSection.style.display = 'block';
-              } else {
-                nameSection.style.display = 'none';
-              }
+          const nameSection = document.getElementById('badge-expanded-name-section');
+          const expandedName = document.getElementById('badge-expanded-name');
+          if (nameSection && expandedName) {
+            if (data.cluster_name) {
+              expandedName.textContent = data.cluster_name;
+              nameSection.style.display = 'block';
+            } else {
+              nameSection.style.display = 'none';
             }
           }
 
-          const expandedSize = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:first-child .font-bold');
-          if (expandedSize) {
-            expandedSize.textContent = data.cluster_size;
-          }
+          const expandedSize = document.getElementById('badge-expanded-size');
+          if (expandedSize) expandedSize.textContent = data.cluster_size;
 
-          const expandedConsensus = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:last-child .font-bold');
+          const expandedConsensus = document.getElementById('badge-expanded-consensus');
           if (expandedConsensus) {
-            const consensusValue = data.cluster_consensus !== null && data.cluster_consensus !== undefined ? data.cluster_consensus : 0;
+            const consensusValue = data.cluster_consensus !== null
+              ? data.cluster_consensus : 0;
             expandedConsensus.textContent = consensusValue.toFixed(2).replace(',', '.');
           }
+
+          // Enable the "mi burbuja" filter button if it was disabled
+          const burbujaBtn = document.querySelector(
+            'button[hx-get*="cluster_consenso_buena"]'
+          );
+          if (burbujaBtn && burbujaBtn.disabled) {
+            burbujaBtn.disabled = false;
+            burbujaBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          }
+
+          // Hide the "no cluster" help message
+          const noClusterMsg = document.getElementById('no-cluster-message');
+          if (noClusterMsg) noClusterMsg.style.display = 'none';
         }
       })
       .catch(error => {
@@ -477,5 +556,10 @@
 
   // Update every 30 seconds
   setInterval(updateBubbleInfo, 30000);
-  {% endif %}
+
+  // Also check once on page load if user didn't have cluster initially
+  if (!hasClusterInitially) {
+    // Check after a short delay to not conflict with initial page load
+    setTimeout(updateBubbleInfo, 2000);
+  }
 </script>

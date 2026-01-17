@@ -133,6 +133,9 @@ def compute_cluster_voting_aggregation(
     """
     Aggregate voting patterns for a cluster.
 
+    Distinguishes between explicit neutral votes and missing votes (Polis-style).
+    Only counts votes that are actually present in the matrix.
+
     Args:
         cluster_members: array of voter indices in this cluster
         voter_ids_list: list of (voter_type, voter_id) tuples
@@ -152,18 +155,75 @@ def compute_cluster_voting_aggregation(
     aggregation = {}
 
     if issparse(vote_matrix):
-        vote_matrix_dense = vote_matrix.toarray()
+        # Convert to CSR for efficient row/column access
+        vote_matrix_csr = vote_matrix.tocsr()
     else:
-        vote_matrix_dense = vote_matrix
+        vote_matrix_csr = vote_matrix
 
+    NEUTRAL_EPSILON = 0.0001  # See matrix_builder.py
+    
+    # Debug: log if cluster_members are out of bounds
+    if len(cluster_members) > 0:
+        max_member_idx = np.max(cluster_members)
+        if max_member_idx >= vote_matrix.shape[0]:
+            logger.warning(
+                f"Cluster member index {max_member_idx} out of bounds "
+                f"(matrix has {vote_matrix.shape[0]} rows)"
+            )
+    
+    # Debug: log aggregation stats
+    total_votes_found = 0
+    noticias_with_votes = 0
+    
+    # Debug: Check a sample noticia to see what's happening
+    sample_checked = False
+    
     for noticia_idx, noticia_id in enumerate(noticia_ids_list):
-        # Get votes from cluster members for this noticia
-        votes_on_noticia = vote_matrix_dense[cluster_members, noticia_idx]
+        if issparse(vote_matrix):
+            column = vote_matrix_csr[:, noticia_idx]
+            # For CSR column vector, use nonzero() to get row indices
+            # column.indices gives column indices (always [0] for column vector), not row indices
+            if hasattr(column, 'nonzero'):
+                row_indices_with_votes, _ = column.nonzero()
+                row_indices_with_votes = row_indices_with_votes.tolist()
+            else:
+                row_indices_with_votes = []
+            data_values = column.data if hasattr(column, 'data') else []
+            vote_map = dict(zip(row_indices_with_votes, data_values))
+            
+            # Debug: Log first noticia with votes to understand the issue
+            if not sample_checked and len(row_indices_with_votes) > 0:
+                cluster_members_in_column = [v for v in cluster_members if v in vote_map]
+                if len(cluster_members_in_column) > 0:
+                    logger.warning(
+                        f"DEBUG: Noticia {noticia_id} (idx {noticia_idx}) has {len(row_indices_with_votes)} total votes, "
+                        f"{len(cluster_members_in_column)} from cluster members"
+                    )
+                    sample_checked = True
+            
+            cluster_votes = []
+            for voter_idx in cluster_members:
+                # Validate index bounds
+                if voter_idx >= vote_matrix.shape[0]:
+                    logger.warning(
+                        f"Voter index {voter_idx} out of bounds for noticia {noticia_id}"
+                    )
+                    continue
+                if voter_idx in vote_map:
+                    vote_value = float(vote_map[voter_idx])
+                    if abs(vote_value - NEUTRAL_EPSILON) < 1e-6:
+                        vote_value = 0.0  # Convert epsilon back to 0 for neutral
+                    cluster_votes.append(vote_value)
+            
+            votes_array = np.array(cluster_votes) if cluster_votes else np.array([])
+        else:
+            votes_array = vote_matrix_csr[cluster_members, noticia_idx]
+            votes_array = np.where(np.abs(votes_array - NEUTRAL_EPSILON) < 1e-6, 0.0, votes_array)
 
         # Count by opinion
-        buena_count = np.sum(votes_on_noticia == 1)
-        mala_count = np.sum(votes_on_noticia == -1)
-        neutral_count = np.sum(votes_on_noticia == 0)
+        buena_count = np.sum(votes_array == 1)
+        mala_count = np.sum(votes_array == -1)
+        neutral_count = np.sum(votes_array == 0)
 
         total = buena_count + mala_count + neutral_count
 
@@ -174,7 +234,17 @@ def compute_cluster_voting_aggregation(
                 'neutral': int(neutral_count),
                 'total': int(total)
             }
+            total_votes_found += total
+            noticias_with_votes += 1
 
+    # Debug logging
+    if len(cluster_members) > 0 and noticias_with_votes == 0:
+        logger.warning(
+            f"No votes found for cluster with {len(cluster_members)} members "
+            f"across {len(noticia_ids_list)} noticias. "
+            f"This suggests members voted on noticias not in noticia_ids_list."
+        )
+    
     return aggregation
 
 

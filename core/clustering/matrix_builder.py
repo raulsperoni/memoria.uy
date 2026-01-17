@@ -112,10 +112,12 @@ def build_vote_matrix(time_window_days=30, min_votes_per_voter=3):
     n_noticias = len(noticia_ids_list)
     vote_matrix = lil_matrix((n_voters, n_noticias), dtype=np.float32)
 
-    # Opinion encoding
+    # Opinion encoding: Use epsilon for neutral so it's stored in sparse matrix
+    # (scipy sparse doesn't store 0s, so we use 0.0001 and convert back to 0.0 later)
+    NEUTRAL_EPSILON = 0.0001
     opinion_encoding = {
         'buena': 1.0,
-        'neutral': 0.0,
+        'neutral': NEUTRAL_EPSILON,
         'mala': -1.0,
     }
 
@@ -139,7 +141,7 @@ def build_vote_matrix(time_window_days=30, min_votes_per_voter=3):
 
         voter_idx = voter_id_map[voter_key]
         noticia_idx = noticia_id_map[vote['noticia_id']]
-        opinion_value = opinion_encoding.get(vote['opinion'], 0.0)
+        opinion_value = opinion_encoding.get(vote['opinion'], NEUTRAL_EPSILON)
 
         vote_matrix[voter_idx, noticia_idx] = opinion_value
 
@@ -147,7 +149,7 @@ def build_vote_matrix(time_window_days=30, min_votes_per_voter=3):
     density = vote_matrix.nnz / (n_voters * n_noticias) * 100
     logger.info(
         f"Built vote matrix: {n_voters} voters × {n_noticias} noticias "
-        f"({vote_matrix.nnz} votes, {density:.1f}% density)"
+        f"({vote_matrix.nnz} non-zero votes, {density:.1f}% density)"
     )
 
     return vote_matrix, voter_ids_list, noticia_ids_list
