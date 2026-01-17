@@ -15,7 +15,7 @@
        class="flex items-center gap-2 flex-1 min-w-0 px-4 py-2 hover:bg-blue-700 transition-colors">
       <span class="text-xs font-bold whitespace-nowrap">TU BURBUJA</span>
       <span class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
-        #{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
+        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
       </span>
     </a>
     <button @click="collapsed = !collapsed"

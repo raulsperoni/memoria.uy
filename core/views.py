@@ -406,14 +406,24 @@ class NewsTimelineView(ListView):
         ).order_by('-created_at').first()
 
         if cluster_run and voter_id:
-            # Try to find voter's cluster membership
+            # Try to find voter's cluster membership - prefer group clusters
             try:
+                # First try to get group cluster membership
                 membership = VoterClusterMembership.objects.filter(
                     cluster__run=cluster_run,
-                    cluster__cluster_type='base',
+                    cluster__cluster_type='group',
                     voter_type=voter_type,
                     voter_id=voter_id
                 ).select_related('cluster').first()
+
+                # Fallback to base cluster if no group cluster
+                if not membership:
+                    membership = VoterClusterMembership.objects.filter(
+                        cluster__run=cluster_run,
+                        cluster__cluster_type='base',
+                        voter_type=voter_type,
+                        voter_id=voter_id
+                    ).select_related('cluster').first()
 
                 if membership:
                     my_cluster_obj = membership.cluster
@@ -423,6 +433,7 @@ class NewsTimelineView(ListView):
                         'consensus': my_cluster_obj.consensus_score,
                         'centroid_x': my_cluster_obj.centroid_x,
                         'centroid_y': my_cluster_obj.centroid_y,
+                        'llm_name': my_cluster_obj.llm_name,
                     }
                     context["has_cluster"] = True
 
@@ -811,12 +822,22 @@ class NoticiaDetailView(DetailView):
                         ClusterVotingPattern,
                     )
 
+                    # First try to get group cluster membership
                     membership = VoterClusterMembership.objects.filter(
                         cluster__run=cluster_run,
-                        cluster__cluster_type='base',
+                        cluster__cluster_type='group',
                         voter_type=voter_type,
                         voter_id=voter_id
                     ).select_related('cluster').first()
+
+                    # Fallback to base cluster if no group cluster
+                    if not membership:
+                        membership = VoterClusterMembership.objects.filter(
+                            cluster__run=cluster_run,
+                            cluster__cluster_type='base',
+                            voter_type=voter_type,
+                            voter_id=voter_id
+                        ).select_related('cluster').first()
 
                     if membership:
                         my_cluster_obj = membership.cluster
@@ -824,6 +845,7 @@ class NoticiaDetailView(DetailView):
                             'id': my_cluster_obj.cluster_id,
                             'size': my_cluster_obj.size,
                             'consensus': my_cluster_obj.consensus_score,
+                            'llm_name': my_cluster_obj.llm_name,
                         }
                         context["has_cluster"] = True
 

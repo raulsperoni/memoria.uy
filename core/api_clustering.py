@@ -183,7 +183,7 @@ def voter_cluster_membership(request):
             "distance_to_centroid": float
         }
     """
-    voter_info = get_voter_identifier(request)
+    voter_info, lookup_data = get_voter_identifier(request)
 
     # Get latest run
     run = VoterClusterRun.objects.filter(
@@ -199,7 +199,7 @@ def voter_cluster_membership(request):
     # Determine voter type and ID
     if 'usuario' in voter_info and voter_info['usuario']:
         voter_type = 'user'
-        voter_id = str(voter_info['usuario'])
+        voter_id = str(voter_info['usuario'].id)
     elif 'session_key' in voter_info:
         voter_type = 'session'
         voter_id = voter_info['session_key']
@@ -221,13 +221,22 @@ def voter_cluster_membership(request):
             status=404
         )
 
-    # Find voter's cluster membership (base cluster)
+    # Find voter's cluster membership - prefer group cluster
     membership = VoterClusterMembership.objects.filter(
         cluster__run=run,
-        cluster__cluster_type='base',
+        cluster__cluster_type='group',
         voter_type=voter_type,
         voter_id=voter_id
     ).select_related('cluster').first()
+
+    # Fallback to base cluster if no group cluster
+    if not membership:
+        membership = VoterClusterMembership.objects.filter(
+            cluster__run=run,
+            cluster__cluster_type='base',
+            voter_type=voter_type,
+            voter_id=voter_id
+        ).select_related('cluster').first()
 
     if not membership:
         return Response(
@@ -250,6 +259,7 @@ def voter_cluster_membership(request):
         'cluster_id': membership.cluster.cluster_id,
         'cluster_size': membership.cluster.size,
         'cluster_consensus': membership.cluster.consensus_score,
+        'cluster_name': membership.cluster.llm_name,
         'projection': {
             'x': projection.projection_x,
             'y': projection.projection_y

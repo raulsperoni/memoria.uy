@@ -568,6 +568,14 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                 cluster_members, voter_ids_list, vote_matrix, noticia_ids_list
             )
 
+            # Compute consensus for the group cluster
+            cluster_votes = {nid: agg for nid, agg in vote_agg.items()}
+            consensus = compute_cluster_consensus(cluster_votes)
+            
+            # Update cluster consensus score
+            cluster_obj.consensus_score = float(consensus)
+            cluster_obj.save()
+
             for noticia_id, agg in vote_agg.items():
                 total = agg["buena"] + agg["mala"] + agg["neutral"]
                 if total == 0:

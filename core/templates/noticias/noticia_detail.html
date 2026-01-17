@@ -30,7 +30,7 @@
        class="flex items-center gap-2 flex-1 min-w-0 px-4 py-2 hover:bg-blue-700 transition-colors">
       <span class="text-xs font-bold whitespace-nowrap">TU BURBUJA</span>
       <span class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
-        #{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
+        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
       </span>
     </a>
     <button @click="collapsed = !collapsed"
@@ -171,7 +171,7 @@
         <div class="bg-blue-50 border-2 border-blue-600 p-4 mb-6">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-bold mono text-blue-900">
-              Tu burbuja (#{{ my_cluster.id }}) votó:
+              Tu burbuja{% if my_cluster.llm_name %} "{{ my_cluster.llm_name }}"{% endif %} (#{{ my_cluster.id }}) votó:
             </h2>
           </div>
 
@@ -251,6 +251,23 @@
   </article>
 
   <script>
+  // Debug: Bubble information
+  {% if has_cluster %}
+  try {
+    var bubbleInfo = {
+      id: parseInt('{{ my_cluster.id }}', 10),
+      size: parseInt('{{ my_cluster.size }}', 10),
+      consensus: {% if my_cluster.consensus is not None %}parseFloat('{{ my_cluster.consensus }}'){% else %}null{% endif %},
+      llm_name: {% if my_cluster.llm_name %}'{{ my_cluster.llm_name|escapejs }}'{% else %}null{% endif %}
+    };
+    console.log('[Memoria Web] Bubble Info:', bubbleInfo);
+  } catch (e) {
+    console.error('[Memoria Web] Error logging bubble info:', e);
+  }
+  {% else %}
+  console.log('[Memoria Web] No cluster assigned');
+  {% endif %}
+
   function shareToWhatsApp() {
     const title = "{{ noticia.mostrar_titulo|escapejs }}";
     const url = window.location.href;
@@ -266,6 +283,78 @@
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   }
+
+  // Periodic bubble info update (every 30 seconds)
+  {% if has_cluster %}
+  function updateBubbleInfo() {
+    fetch('{% url "api-voter-cluster" %}')
+      .then(response => response.json())
+      .then(data => {
+        if (data.cluster_id !== null && data.cluster_id !== undefined) {
+          // Update mobile ticker
+          const mobileTickerLink = document.querySelector('#bubble-ticker-mobile a');
+          if (mobileTickerLink) {
+            mobileTickerLink.href = mobileTickerLink.href.split('#')[0] + '#' + data.cluster_id;
+            const mobileTicker = mobileTickerLink.querySelector('span:last-child');
+            if (mobileTicker) {
+              const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
+              const consensus = data.cluster_consensus !== null ? data.cluster_consensus.toFixed(1) : '0.0';
+              mobileTicker.textContent = namePart + '#' + data.cluster_id + ' | ' + data.cluster_size + 'v | ' + consensus;
+            }
+          }
+
+          // Update desktop badge collapsed state
+          const desktopBadgeId = document.querySelector('#bubble-badge-desktop .text-xs.font-bold.mt-1');
+          if (desktopBadgeId) {
+            desktopBadgeId.textContent = '#' + data.cluster_id;
+          }
+
+          const desktopBadgeName = document.querySelector('#bubble-badge-desktop .text-\\[9px\\].mt-1.text-blue-200');
+          if (desktopBadgeName && data.cluster_name) {
+            desktopBadgeName.textContent = data.cluster_name;
+            desktopBadgeName.style.display = 'block';
+          } else if (desktopBadgeName && !data.cluster_name) {
+            desktopBadgeName.style.display = 'none';
+          }
+
+          // Update desktop badge expanded state
+          const expandedId = document.querySelector('#bubble-badge-desktop .text-xl.font-bold');
+          if (expandedId) {
+            expandedId.textContent = '#' + data.cluster_id;
+          }
+
+          const nameSection = document.querySelector('#bubble-badge-desktop .mb-3.pb-2.border-b.border-blue-400');
+          if (nameSection) {
+            const expandedName = nameSection.querySelector('.text-xs.font-bold');
+            if (expandedName) {
+              if (data.cluster_name) {
+                expandedName.textContent = data.cluster_name;
+                nameSection.style.display = 'block';
+              } else {
+                nameSection.style.display = 'none';
+              }
+            }
+          }
+
+          const expandedSize = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:first-child .font-bold');
+          if (expandedSize) {
+            expandedSize.textContent = data.cluster_size;
+          }
+
+          const expandedConsensus = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:last-child .font-bold');
+          if (expandedConsensus) {
+            expandedConsensus.textContent = data.cluster_consensus !== null ? data.cluster_consensus.toFixed(2) : '0.00';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('[Memoria Web] Error updating bubble info:', error);
+      });
+  }
+
+  // Update every 30 seconds
+  setInterval(updateBubbleInfo, 30000);
+  {% endif %}
   </script>
 
   <!-- JSON-LD Structured Data -->
@@ -312,6 +401,9 @@
         <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
         <div class="text-xl font-bold leading-none">🔵</div>
         <div class="text-xs font-bold mt-1">#{{ my_cluster.id }}</div>
+        {% if my_cluster.llm_name %}
+        <div class="text-[9px] mt-1 text-blue-200">{{ my_cluster.llm_name }}</div>
+        {% endif %}
       </div>
     </div>
 
@@ -324,6 +416,12 @@
         <h3 class="text-xs font-bold">TU BURBUJA</h3>
         <span class="text-xl font-bold">#{{ my_cluster.id }}</span>
       </div>
+      {% if my_cluster.llm_name %}
+      <div class="mb-3 pb-2 border-b border-blue-400">
+        <div class="text-[10px] text-blue-200 mb-1">NOMBRE:</div>
+        <div class="text-xs font-bold">{{ my_cluster.llm_name }}</div>
+      </div>
+      {% endif %}
 
       <div class="space-y-2 mb-3 text-[10px]">
         <div class="flex justify-between">
