@@ -1,4 +1,5 @@
 from typing import Optional, Literal, Union
+import os
 from pydantic import BaseModel, Field
 from litellm import completion
 from bs4 import BeautifulSoup
@@ -18,6 +19,19 @@ MODELS_PRIORITY_MD = {
     "openrouter/google/gemini-2.0-flash-lite-001": 1,
     "openai/gpt-oss-20b:free": 2,
 }
+
+
+def _get_extra_headers(model: str) -> Optional[dict]:
+    if not model.startswith("openrouter/"):
+        return None
+    headers = {}
+    app_name = os.getenv("OPENROUTER_APP_NAME") or os.getenv("OR_APP_NAME")
+    app_url = os.getenv("OPENROUTER_APP_URL") or os.getenv("OR_SITE_URL")
+    if app_name:
+        headers["X-Title"] = app_name
+    if app_url:
+        headers["HTTP-Referer"] = app_url
+    return headers or None
 
 
 def remove_unnecessary_tags(html):
@@ -105,6 +119,7 @@ def parse_noticia(
             model=current_model,
             caching=False,
             response_format=Articulo,
+            extra_headers=_get_extra_headers(current_model),
             messages=[
                 {
                     "role": "system",
@@ -155,6 +170,7 @@ def parse_noticia_from_html(
             model=current_model,
             caching=False,
             response_format=Articulo,
+            extra_headers=_get_extra_headers(current_model),
             messages=[
                 {
                     "role": "system",
@@ -208,6 +224,7 @@ def parse_noticia_markdown(
         clean_html = remove_unnecessary_tags(html)
         response = completion(
             model=current_model,
+            extra_headers=_get_extra_headers(current_model),
             messages=[
                 {
                     "role": "system",
@@ -543,6 +560,7 @@ Ejemplos de buenos nombres: "Los Escépticos", "Optimistas del Interior",
             model=current_model,
             caching=False,
             response_format=ClusterDescription,
+            extra_headers=_get_extra_headers(current_model),
             messages=[
                 {
                     "role": "system",

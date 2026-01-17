@@ -1,4 +1,5 @@
 {# templates/noticias/timeline_fragment.html #}
+{% load vote_extras %}
 
 <div id="timeline-container" class="max-w-3xl mx-auto mono">
   <!-- Notification area -->
@@ -191,7 +192,7 @@
        @mouseleave="expanded = false">
 
     <!-- Collapsed State -->
-    <a href="{% url 'cluster-stats' %}#{{ my_cluster.id }}"
+    <a href="{% url 'cluster-visualization' %}"
        x-show="!expanded"
        x-transition
        class="block bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-shadow">
@@ -199,48 +200,40 @@
         <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
         <div class="text-xl font-bold leading-none">🔵</div>
         <div class="text-xs font-bold mt-1">#{{ my_cluster.id }}</div>
+        <div class="text-[9px] mt-1 text-blue-200" {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
+          {% if my_cluster.llm_name %}{{ my_cluster.llm_name }}{% endif %}
+        </div>
       </div>
     </a>
 
     <!-- Expanded State -->
-    <div x-show="expanded"
-         x-transition
-         class="bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px]">
+    <a href="{% url 'cluster-visualization' %}"
+       x-show="expanded"
+       x-transition
+       class="block bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-shadow">
 
       <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-400">
         <h3 class="text-xs font-bold">TU BURBUJA</h3>
         <span class="text-xl font-bold">#{{ my_cluster.id }}</span>
       </div>
+      {% if my_cluster.llm_name %}
+      <div class="mb-3 pb-2 border-b border-blue-400">
+        <div class="text-[10px] text-blue-200 mb-1">NOMBRE:</div>
+        <div class="text-xs font-bold">{{ my_cluster.llm_name }}</div>
+      </div>
+      {% endif %}
 
-      <div class="space-y-2 mb-3 text-[10px]">
+      <div class="space-y-2 text-[10px]">
         <div class="flex justify-between">
           <span class="text-blue-200">VOTANTES:</span>
           <span class="font-bold">{{ my_cluster.size }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-blue-200">CONSENSO:</span>
-          <span class="font-bold">{{ my_cluster.consensus|floatformat:2 }}</span>
+          <span class="font-bold" data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}</span>
         </div>
       </div>
-
-      <div class="space-y-2">
-        <a href="{% url 'cluster-visualization' %}"
-           class="block text-center border border-white px-3 py-1.5 text-[10px] font-bold hover:bg-white hover:text-blue-600 transition-colors">
-          [VER MAPA]
-        </a>
-        <a href="{% url 'cluster-stats' %}"
-           class="block text-center border border-white px-3 py-1.5 text-[10px] font-bold hover:bg-white hover:text-blue-600 transition-colors">
-          [ESTADÍSTICAS]
-        </a>
-        <button hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
-                hx-target="#timeline-items"
-                hx-swap="innerHTML"
-                hx-push-url="true"
-                class="w-full text-center bg-white text-blue-600 px-3 py-1.5 text-[10px] font-bold hover:bg-blue-100 transition-colors">
-          [RECOMENDADAS]
-        </button>
-      </div>
-    </div>
+    </a>
   </div>
   {% endif %}
 
@@ -288,6 +281,29 @@
 
 <!-- JavaScript -->
 <script>
+  // Debug: Bubble information
+  {% load vote_extras %}
+  {% if has_cluster %}
+  try {
+    var consensusRaw = '{{ my_cluster.consensus|js_float }}';
+    var consensusValue = {% if my_cluster.consensus is not None %}parseFloat(consensusRaw){% else %}null{% endif %};
+    var bubbleInfo = {
+      id: parseInt('{{ my_cluster.id }}', 10),
+      size: parseInt('{{ my_cluster.size }}', 10),
+      consensus: consensusValue,
+      consensusRaw: consensusRaw,
+      llm_name: {% if my_cluster.llm_name %}'{{ my_cluster.llm_name|escapejs }}'{% else %}null{% endif %}
+    };
+    console.log('[Memoria Web] Bubble Info:', bubbleInfo);
+    console.log('[Memoria Web] Consensus raw from template:', consensusRaw);
+    console.log('[Memoria Web] Consensus parsed:', consensusValue);
+  } catch (e) {
+    console.error('[Memoria Web] Error logging bubble info:', e);
+  }
+  {% else %}
+  console.log('[Memoria Web] No cluster assigned');
+  {% endif %}
+
   // Extension session synchronization
   console.log('[Memoria Web] Checking for extension session in localStorage...');
 
@@ -385,4 +401,81 @@
       filterText.textContent = '> ' + event.detail.description;
     }
   });
+
+  // Periodic bubble info update (every 30 seconds)
+  {% if has_cluster %}
+  function updateBubbleInfo() {
+    fetch('{% url "api-voter-cluster" %}')
+      .then(response => response.json())
+      .then(data => {
+        if (data.cluster_id !== null && data.cluster_id !== undefined) {
+          // Update mobile ticker
+          const mobileTickerLink = document.querySelector('#bubble-ticker-mobile a');
+          if (mobileTickerLink) {
+            // Link always goes to visualization, no need to update href
+            const mobileTicker = mobileTickerLink.querySelector('span:last-child');
+            if (mobileTicker) {
+              const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
+              const consensusValue = data.cluster_consensus !== null && data.cluster_consensus !== undefined ? data.cluster_consensus : 0;
+              const consensus = consensusValue.toFixed(1).replace(',', '.');
+              mobileTicker.textContent = namePart + '#' + data.cluster_id + ' | ' + data.cluster_size + 'v | ' + consensus;
+            }
+          }
+
+          // Update desktop badge collapsed state
+          const desktopBadgeId = document.querySelector('#bubble-badge-desktop a .text-xs.font-bold.mt-1');
+          if (desktopBadgeId) {
+            desktopBadgeId.textContent = '#' + data.cluster_id;
+          }
+
+          // Update desktop badge collapsed state name
+          const collapsedNameDiv = document.querySelector('#bubble-badge-desktop a .text-\\[9px\\].mt-1.text-blue-200');
+          if (collapsedNameDiv) {
+            if (data.cluster_name) {
+              collapsedNameDiv.textContent = data.cluster_name;
+              collapsedNameDiv.style.display = 'block';
+            } else {
+              collapsedNameDiv.style.display = 'none';
+            }
+          }
+
+          // Update desktop badge expanded state
+          const expandedId = document.querySelector('#bubble-badge-desktop .text-xl.font-bold');
+          if (expandedId) {
+            expandedId.textContent = '#' + data.cluster_id;
+          }
+
+          const nameSection = document.querySelector('#bubble-badge-desktop .mb-3.pb-2.border-b.border-blue-400');
+          if (nameSection) {
+            const expandedName = nameSection.querySelector('.text-xs.font-bold');
+            if (expandedName) {
+              if (data.cluster_name) {
+                expandedName.textContent = data.cluster_name;
+                nameSection.style.display = 'block';
+              } else {
+                nameSection.style.display = 'none';
+              }
+            }
+          }
+
+          const expandedSize = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:first-child .font-bold');
+          if (expandedSize) {
+            expandedSize.textContent = data.cluster_size;
+          }
+
+          const expandedConsensus = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:last-child .font-bold');
+          if (expandedConsensus) {
+            const consensusValue = data.cluster_consensus !== null && data.cluster_consensus !== undefined ? data.cluster_consensus : 0;
+            expandedConsensus.textContent = consensusValue.toFixed(2).replace(',', '.');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('[Memoria Web] Error updating bubble info:', error);
+      });
+  }
+
+  // Update every 30 seconds
+  setInterval(updateBubbleInfo, 30000);
+  {% endif %}
 </script>

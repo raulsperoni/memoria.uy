@@ -32,3 +32,16 @@ app.conf.beat_schedule = {
         },
     },
 }
+
+if os.getenv("ENABLE_REENGAGEMENT_EMAILS", "False") == "True":
+    app.conf.beat_schedule["send-reengagement-emails"] = {
+        "task": "core.tasks.send_reengagement_emails",
+        "schedule": crontab(
+            hour=int(os.getenv("REENGAGEMENT_EMAIL_HOUR", "10")),
+            minute=int(os.getenv("REENGAGEMENT_EMAIL_MINUTE", "0")),
+        ),
+        "kwargs": {
+            "days_inactive": int(os.getenv("REENGAGEMENT_DAYS_INACTIVE", "7")),
+            "max_emails": int(os.getenv("REENGAGEMENT_MAX_EMAILS", "500")),
+        },
+    }

@@ -111,7 +111,7 @@
       <div class="border-b-2 border-black px-3 py-2 bg-blue-50">
         <div class="flex items-center justify-between text-xs">
           <span class="font-semibold text-gray-700 mono">
-            tu burbuja (#{{ my_cluster.id }}) votó:
+            tu burbuja{% if my_cluster.llm_name %} "{{ my_cluster.llm_name }}"{% endif %} (#{{ my_cluster.id }}) votó:
           </span>
           <div class="flex items-center gap-2">
             <div class="flex gap-1.5">
