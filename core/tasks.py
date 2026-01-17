@@ -618,7 +618,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                             "titulo": noticia.mostrar_titulo or noticia.enlace,
                             "resumen": noticia.meta_descripcion or "",
                             "majority_opinion": pattern.majority_opinion,
-                            "consensus": pattern.consensus_score or 0.5,
+                            "consensus": pattern.consensus_score if pattern.consensus_score is not None else 0.0,
                         }
                     )
 
@@ -633,7 +633,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                     entities_positive=entities_pos,
                     entities_negative=entities_neg,
                     cluster_size=cluster_obj.size,
-                    consensus_score=cluster_obj.consensus_score or 0.5,
+                    consensus_score=cluster_obj.consensus_score if cluster_obj.consensus_score is not None else 0.0,
                 )
 
                 # 7.4: Save to cluster

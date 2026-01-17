@@ -48,3 +48,24 @@ def div(value, arg):
         return int(float(value) / arg_float)
     except (ValueError, TypeError, ZeroDivisionError):
         return 0
+
+
+@register.filter
+def js_float(value, decimals=None):
+    """
+    Format float value for JavaScript (always use dot as decimal separator).
+    Usage: {{ value|js_float }} or {{ value|js_float:2 }}
+    """
+    if value is None:
+        return 'null'
+    try:
+        float_value = float(value)
+        if decimals is not None:
+            # Format with specific number of decimals
+            return f"{float_value:.{int(decimals)}f}"
+        else:
+            # Auto-format: remove trailing zeros
+            formatted = f"{float_value:.10f}".rstrip('0').rstrip('.')
+            return formatted if formatted else '0'
+    except (ValueError, TypeError):
+        return '0'

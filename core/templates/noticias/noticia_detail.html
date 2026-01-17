@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load vote_extras %}
 
 {% block title %}{{ noticia.mostrar_titulo }} - memoria.uy{% endblock %}
 
@@ -26,11 +27,12 @@
      x-show="!collapsed"
      x-transition>
   <div class="flex items-center">
-    <a href="{% url 'cluster-stats' %}#{{ my_cluster.id }}"
+    <a href="{% url 'cluster-visualization' %}"
        class="flex items-center gap-2 flex-1 min-w-0 px-4 py-2 hover:bg-blue-700 transition-colors">
       <span class="text-xs font-bold whitespace-nowrap">TU BURBUJA</span>
       <span class="text-xs whitespace-nowrap overflow-hidden text-ellipsis">
-        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{{ my_cluster.id }} | {{ my_cluster.size }}v | {{ my_cluster.consensus|floatformat:1 }}
+        {% load vote_extras %}
+        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{{ my_cluster.id }} | {{ my_cluster.size }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>
       </span>
     </a>
     <button @click="collapsed = !collapsed"
@@ -252,12 +254,13 @@
 
   <script>
   // Debug: Bubble information
+  {% load vote_extras %}
   {% if has_cluster %}
   try {
     var bubbleInfo = {
       id: parseInt('{{ my_cluster.id }}', 10),
       size: parseInt('{{ my_cluster.size }}', 10),
-      consensus: {% if my_cluster.consensus is not None %}parseFloat('{{ my_cluster.consensus }}'){% else %}null{% endif %},
+      consensus: {% if my_cluster.consensus is not None %}parseFloat('{{ my_cluster.consensus|js_float }}'){% else %}null{% endif %},
       llm_name: {% if my_cluster.llm_name %}'{{ my_cluster.llm_name|escapejs }}'{% else %}null{% endif %}
     };
     console.log('[Memoria Web] Bubble Info:', bubbleInfo);
@@ -294,11 +297,12 @@
           // Update mobile ticker
           const mobileTickerLink = document.querySelector('#bubble-ticker-mobile a');
           if (mobileTickerLink) {
-            mobileTickerLink.href = mobileTickerLink.href.split('#')[0] + '#' + data.cluster_id;
+            // Link always goes to visualization, no need to update href
             const mobileTicker = mobileTickerLink.querySelector('span:last-child');
             if (mobileTicker) {
               const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
-              const consensus = data.cluster_consensus !== null ? data.cluster_consensus.toFixed(1) : '0.0';
+              const consensusValue = data.cluster_consensus !== null && data.cluster_consensus !== undefined ? data.cluster_consensus : 0;
+              const consensus = consensusValue.toFixed(1).replace(',', '.');
               mobileTicker.textContent = namePart + '#' + data.cluster_id + ' | ' + data.cluster_size + 'v | ' + consensus;
             }
           }
@@ -309,12 +313,15 @@
             desktopBadgeId.textContent = '#' + data.cluster_id;
           }
 
-          const desktopBadgeName = document.querySelector('#bubble-badge-desktop .text-\\[9px\\].mt-1.text-blue-200');
-          if (desktopBadgeName && data.cluster_name) {
-            desktopBadgeName.textContent = data.cluster_name;
-            desktopBadgeName.style.display = 'block';
-          } else if (desktopBadgeName && !data.cluster_name) {
-            desktopBadgeName.style.display = 'none';
+          // Update desktop badge collapsed state name
+          const collapsedNameDiv = document.querySelector('#bubble-badge-desktop .text-\\[9px\\].mt-1.text-blue-200');
+          if (collapsedNameDiv) {
+            if (data.cluster_name) {
+              collapsedNameDiv.textContent = data.cluster_name;
+              collapsedNameDiv.style.display = 'block';
+            } else {
+              collapsedNameDiv.style.display = 'none';
+            }
           }
 
           // Update desktop badge expanded state
@@ -343,7 +350,8 @@
 
           const expandedConsensus = document.querySelector('#bubble-badge-desktop .space-y-2.mb-3 .flex.justify-between:last-child .font-bold');
           if (expandedConsensus) {
-            expandedConsensus.textContent = data.cluster_consensus !== null ? data.cluster_consensus.toFixed(2) : '0.00';
+            const consensusValue = data.cluster_consensus !== null && data.cluster_consensus !== undefined ? data.cluster_consensus : 0;
+            expandedConsensus.textContent = consensusValue.toFixed(2).replace(',', '.');
           }
         }
       })
@@ -394,23 +402,25 @@
        @mouseleave="expanded = false">
 
     <!-- Collapsed State -->
-    <div x-show="!expanded"
-         x-transition
-         class="bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-shadow">
+    <a href="{% url 'cluster-visualization' %}"
+       x-show="!expanded"
+       x-transition
+       class="block bg-blue-600 border-2 border-black text-white px-3 py-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-shadow">
       <div class="text-center">
         <div class="text-[9px] font-bold tracking-tight leading-none mb-1">TU BURBUJA</div>
         <div class="text-xl font-bold leading-none">🔵</div>
         <div class="text-xs font-bold mt-1">#{{ my_cluster.id }}</div>
-        {% if my_cluster.llm_name %}
-        <div class="text-[9px] mt-1 text-blue-200">{{ my_cluster.llm_name }}</div>
-        {% endif %}
+        <div class="text-[9px] mt-1 text-blue-200" {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
+          {% if my_cluster.llm_name %}{{ my_cluster.llm_name }}{% endif %}
+        </div>
       </div>
-    </div>
+    </a>
 
     <!-- Expanded State -->
-    <div x-show="expanded"
-         x-transition
-         class="bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px]">
+    <a href="{% url 'cluster-visualization' %}"
+       x-show="expanded"
+       x-transition
+       class="block bg-blue-600 border-2 border-black text-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] min-w-[240px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-shadow">
 
       <div class="flex items-center justify-between mb-3 pb-2 border-b border-blue-400">
         <h3 class="text-xs font-bold">TU BURBUJA</h3>
@@ -423,33 +433,21 @@
       </div>
       {% endif %}
 
-      <div class="space-y-2 mb-3 text-[10px]">
+      <div class="space-y-2 text-[10px]">
         <div class="flex justify-between">
           <span class="text-blue-200">VOTANTES:</span>
           <span class="font-bold">{{ my_cluster.size }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-blue-200">CONSENSO:</span>
-          <span class="font-bold">{{ my_cluster.consensus|floatformat:2 }}</span>
+          <span class="font-bold" data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}</span>
         </div>
       </div>
-
-      <div class="space-y-2">
-        <a href="{% url 'cluster-visualization' %}"
-           class="block text-center border border-white px-3 py-1.5 text-[10px] font-bold hover:bg-white hover:text-blue-600 transition-colors">
-          [VER MAPA]
-        </a>
-        <a href="{% url 'cluster-stats' %}"
-           class="block text-center border border-white px-3 py-1.5 text-[10px] font-bold hover:bg-white hover:text-blue-600 transition-colors">
-          [ESTADÍSTICAS]
-        </a>
-        <a href="{% url 'timeline' %}?filter=cluster_consenso_buena"
-           class="block text-center bg-white text-blue-600 px-3 py-1.5 text-[10px] font-bold hover:bg-blue-100 transition-colors">
-          [RECOMENDADAS]
-        </a>
-      </div>
-    </div>
+    </a>
   </div>
   {% endif %}
 </div>
 {% endblock %}
+
+
+
