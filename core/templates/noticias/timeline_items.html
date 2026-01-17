@@ -4,19 +4,28 @@
 {% include "noticias/timeline_item.html" with noticia=noticia current_filter=current_filter %}
 {% endfor %}
 
-{# Empty state #}
-{% if not noticias %}
-<div class="border-2 border-black bg-white p-8 text-center mono">
-  <p class="text-gray-600 mb-2">[ sin noticias ]</p>
-  <p class="text-xs text-gray-500">agregá la primera noticia arriba</p>
-</div>
+{# Empty state - show if no news AND no more pages #}
+{% if not noticias and not page_obj.has_next %}
+  {# Different message for "nuevas" filter vs other filters #}
+  {% if current_filter == 'nuevas' or not current_filter %}
+  <div class="border-2 border-black bg-white p-8 text-center mono">
+    <p class="text-gray-600 mb-2">[ votaste todas las noticias ]</p>
+    <p class="text-xs text-gray-500 mb-4">¡Bien hecho! Volvé más tarde para ver nuevas noticias.</p>
+    <a href="?filter=todas" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white inline-block">ver todas las noticias</a>
+  </div>
+  {% else %}
+  <div class="border-2 border-black bg-white p-8 text-center mono">
+    <p class="text-gray-600 mb-2">[ sin noticias ]</p>
+    <p class="text-xs text-gray-500">agregá la primera noticia arriba</p>
+  </div>
+  {% endif %}
 {% endif %}
 
-{# Infinite scroll trigger #}
+{# Infinite scroll trigger - also trigger if current page empty but more pages exist #}
 {% if page_obj.has_next %}
-  <div class="text-center py-8 mono text-xs text-gray-600"
+  <div id="load-more-trigger" class="text-center py-8 mono text-xs text-gray-600"
     hx-get="{% url 'timeline' %}?page={{ page_obj.next_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if request.GET.entidad %}&entidad={{ request.GET.entidad }}{% endif %}"
-    hx-trigger="revealed"
+    hx-trigger="{% if not noticias %}load{% else %}intersect once threshold:0.1{% endif %}"
     hx-swap="outerHTML">
     <div class="border-2 border-black bg-white p-4">
       <div class="border-4 border-black border-t-transparent h-8 w-8 rounded-full animate-spin mx-auto"></div>

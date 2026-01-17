@@ -90,6 +90,74 @@ class NewsTimelineView(ListView):
     ordering = ["-fecha_agregado"]
     paginate_by = 10
 
+    def paginate_queryset(self, queryset, page_size):
+        """
+        Override to handle out-of-range pages gracefully.
+        When filtering 'nuevas' (unvoted news), items disappear as users vote,
+        which can make previously valid pages no longer exist.
+        Instead of 404, return empty list with has_next=False.
+        """
+        from django.core.paginator import Paginator, EmptyPage
+
+        paginator = Paginator(queryset, page_size)
+        page_kwarg = self.page_kwarg
+        page = self.kwargs.get(page_kwarg) or self.request.GET.get(page_kwarg) or 1
+
+        try:
+            page_number = int(page)
+        except ValueError:
+            page_number = 1
+
+        try:
+            page_obj = paginator.page(page_number)
+            return (paginator, page_obj, page_obj.object_list, page_obj.has_other_pages())
+        except EmptyPage:
+            # Page out of range - return empty page with has_next=False
+            # This happens when user votes on all items and next page
+            # no longer exists
+            page_obj = paginator.page(paginator.num_pages) if paginator.num_pages > 0 else None
+            if page_obj:
+                # Return last valid page's info but with empty object list
+                # to signal no more content
+                class EmptyPageObj:
+                    def __init__(self):
+                        self.object_list = []
+                        self.has_next_val = False
+                        self.has_previous_val = paginator.num_pages > 0
+                        self.number = page_number
+
+                    def has_next(self):
+                        return self.has_next_val
+
+                    def has_previous(self):
+                        return self.has_previous_val
+
+                    def next_page_number(self):
+                        return self.number + 1
+
+                    def previous_page_number(self):
+                        return self.number - 1
+
+                empty_page = EmptyPageObj()
+                return (paginator, empty_page, [], False)
+            else:
+                # No pages at all
+                class EmptyPageObj:
+                    def __init__(self):
+                        self.object_list = []
+                        self.has_next_val = False
+                        self.has_previous_val = False
+                        self.number = 1
+
+                    def has_next(self):
+                        return False
+
+                    def has_previous(self):
+                        return False
+
+                empty_page = EmptyPageObj()
+                return (paginator, empty_page, [], False)
+
     def get(self, request, *args, **kwargs):
         # Get voter identifier (user or session)
         voter_data, lookup_data = get_voter_identifier(request)
@@ -557,10 +625,7 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
         logger.info(f"[Vote Debug] On nuevas filter: {on_nuevas_filter}")
 
         if on_nuevas_filter:
-            logger.info(
-                "[Vote Debug] Returning empty response "
-                "(item will be removed)"
-            )
+            logger.info("[Vote Debug] Returning empty response (item will be removed)")
             return HttpResponse("")
 
         # Check if voting from detail page
