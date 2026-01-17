@@ -568,6 +568,14 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                 cluster_members, voter_ids_list, vote_matrix, noticia_ids_list
             )
 
+            # Debug: log if aggregation is empty
+            if len(vote_agg) == 0 and len(cluster_members) > 0:
+                logger.warning(
+                    f"Group cluster {group_id} has {len(cluster_members)} members "
+                    f"but aggregation returned empty. "
+                    f"Members: {cluster_members[:5]}..."
+                )
+
             # Compute consensus for the group cluster
             cluster_votes = {nid: agg for nid, agg in vote_agg.items()}
             consensus = compute_cluster_consensus(cluster_votes)

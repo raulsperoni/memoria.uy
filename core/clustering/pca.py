@@ -68,27 +68,51 @@ def compute_sparsity_aware_pca(vote_matrix, n_components=2):
         f"{n_components} components"
     )
 
+    # Epsilon value used for neutral votes in sparse matrix (see matrix_builder.py)
+    NEUTRAL_EPSILON = 0.0001
+    
     # Convert to dense for SVD
     if issparse(vote_matrix):
         vote_matrix_dense = vote_matrix.toarray()
     else:
         vote_matrix_dense = np.array(vote_matrix)
+    
+    # Convert epsilon back to 0 for neutral votes (for proper mean-centering)
+    vote_matrix_dense = np.where(
+        np.abs(vote_matrix_dense - NEUTRAL_EPSILON) < 1e-6, 
+        0.0, 
+        vote_matrix_dense
+    )
 
-    # Count votes per voter (non-zero entries per row)
-    voter_vote_counts = np.array([
-        np.count_nonzero(vote_matrix_dense[i, :])
-        for i in range(n_voters)
-    ])
+    # Count votes per voter/noticia (count entries present in sparse matrix)
+    if issparse(vote_matrix):
+        vote_matrix_for_counting = vote_matrix.toarray()
+        # Count non-zero entries OR epsilon (before conversion)
+        voter_vote_counts = np.array([
+            np.sum((np.abs(vote_matrix_for_counting[i, :]) > 1e-10) | 
+                   (np.abs(vote_matrix_for_counting[i, :] - NEUTRAL_EPSILON) < 1e-6))
+            for i in range(n_voters)
+        ])
+        noticia_vote_counts = np.array([
+            np.sum((np.abs(vote_matrix_for_counting[:, j]) > 1e-10) | 
+                   (np.abs(vote_matrix_for_counting[:, j] - NEUTRAL_EPSILON) < 1e-6))
+            for j in range(n_noticias)
+        ])
+    else:
+        voter_vote_counts = np.array([
+            np.count_nonzero(vote_matrix_dense[i, :])
+            for i in range(n_voters)
+        ])
+        noticia_vote_counts = np.array([
+            np.count_nonzero(vote_matrix_dense[:, j])
+            for j in range(n_noticias)
+        ])
+    
     voter_vote_counts = np.maximum(voter_vote_counts, 1)
-
-    # Count votes per noticia (non-zero entries per column)
-    noticia_vote_counts = np.array([
-        np.count_nonzero(vote_matrix_dense[:, j])
-        for j in range(n_noticias)
-    ])
     noticia_vote_counts = np.maximum(noticia_vote_counts, 1)
 
     # Mean-center the matrix (standard PCA preprocessing)
+    # Use the converted matrix where epsilon -> 0
     matrix_centered = vote_matrix_dense - vote_matrix_dense.mean(axis=0)
 
     # SVD decomposition: V = U @ S @ Vt
