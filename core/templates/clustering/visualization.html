@@ -7,13 +7,13 @@
 
 {% block og_description %}{% if user_cluster_name %}Descubrí en qué burbuja estás. Votá noticias uruguayas y encontrá tu lugar en el mapa de opiniones.{% else %}Descubrí las burbujas de opinión sobre noticias uruguayas. Votá anónimamente y encontrá tu lugar en el mapa.{% endif %}{% endblock %}
 
-{% block og_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
+{% block og_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id is not None %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
 
 {% block twitter_title %}{% if user_cluster_name %}Estoy en "{{ user_cluster_name }}" 🫧{% else %}Mapa de Burbujas - Memoria.uy{% endif %}{% endblock %}
 
 {% block twitter_description %}{% if user_cluster_name %}¿En qué burbuja estás vos? Descubrilo en memoria.uy{% else %}Descubrí las burbujas de opinión sobre noticias uruguayas{% endif %}{% endblock %}
 
-{% block twitter_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
+{% block twitter_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id is not None %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
 
 {% block extra_head %}
 <!-- D3.js for visualization -->
@@ -751,6 +751,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
+     * Upload captured image to server for use as OG image
+     */
+    async function uploadOGImage(imageBlob, clusterId) {
+        console.group('📤 Upload OG Image');
+        console.log('Cluster ID:', clusterId);
+        console.log('Blob size:', (imageBlob.size / 1024).toFixed(1), 'KB');
+        console.log('Blob type:', imageBlob.type);
+        console.log('Upload URL:', `/api/mapa/upload-og-image/?cluster=${clusterId}`);
+        
+        try {
+            console.log('Starting fetch...');
+            const response = await fetch(`/api/mapa/upload-og-image/?cluster=${clusterId}`, {
+                method: 'POST',
+                body: imageBlob,
+                headers: {
+                    'Content-Type': 'image/jpeg'
+                }
+            });
+            
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✓ SUCCESS - Upload response:', data);
+                console.log('Image saved to:', data.path);
+            } else {
+                const errorText = await response.text();
+                console.error('❌ FAILED - Status:', response.status);
+                console.error('Error response:', errorText);
+            }
+        } catch (err) {
+            console.error('❌ EXCEPTION during upload:', err);
+            console.error('Error stack:', err.stack);
+        }
+        
+        console.groupEnd();
+    }
+    
+    /**
      * Convert SVG to PNG blob for sharing
      * Optimized: solid background, lower scale, JPEG format
      */
@@ -809,7 +849,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 event.preventDefault();
                 
                 const clusterName = "{{ user_cluster_name|escapejs }}";
-                const shareUrl = window.location.origin + "/mapa/?ref=share{% if user_cluster_id %}&cluster={{ user_cluster_id }}{% endif %}";
+                const shareUrl = window.location.origin + "/mapa/?ref=share{% if user_cluster_id is not None %}&cluster={{ user_cluster_id }}{% endif %}";
                 
                 // Compose viral message
                 const shareText = `Estoy en la burbuja "${clusterName}" 🫧\n\n¿En cuál estás vos? Descubrilo votando noticias uruguayas:\n\n${shareUrl}`;
@@ -820,31 +860,135 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.disabled = true;
                 
                 try {
+                    console.log('🎬 Starting share process...');
+                    
                     // Capture the SVG as image first
                     const svgElement = document.querySelector('#bubble-map svg');
-                    const imageBlob = await svgToBlob(svgElement);
+                    console.log('SVG element found:', !!svgElement);
                     
-                    // Try to use Web Share API with image (mobile-friendly)
-                    if (navigator.share && navigator.canShare) {
-                        const file = new File([imageBlob], 'mi-burbuja.jpg', { type: 'image/jpeg' });
-                        const shareData = {
-                            title: `Estoy en "${clusterName}" 🫧`,
-                            text: shareText,
-                            files: [file]
-                        };
+                    const imageBlob = await svgToBlob(svgElement);
+                    console.log('Image captured:', imageBlob.size, 'bytes');
+                    
+                    // Upload image to server for OG image (fire and forget)
+                    {% if user_cluster_id is not None %}
+                    console.log('User has cluster_id: {{ user_cluster_id }}');
+                    uploadOGImage(imageBlob, {{ user_cluster_id }});
+                    {% else %}
+                    console.warn('⚠️ No user_cluster_id - cannot upload OG image');
+                    {% endif %}
+                    
+                    // Try to use Web Share API (mobile-friendly)
+                    // On mobile: show options for Instagram (image) vs WhatsApp (text+link)
+                    console.log('navigator.share available:', !!navigator.share);
+                    console.log('User agent:', navigator.userAgent);
+                    
+                    if (navigator.share) {
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        console.log('Is mobile:', isMobile);
                         
-                        if (navigator.canShare(shareData)) {
-                            try {
-                                await navigator.share(shareData);
+                        if (isMobile) {
+                            // Mobile: show choice between Instagram and WhatsApp
+                            const file = new File([imageBlob], 'mi-burbuja.jpg', { type: 'image/jpeg' });
+                            
+                            this.innerHTML = '<span class="text-xl">✓</span> <span>¡Listo!</span>';
+                            this.classList.add('from-green-500', 'to-green-600');
+                            this.classList.remove('from-emerald-500', 'to-teal-500');
+                            
+                            const toast = document.getElementById('share-toast');
+                            const overlay = document.getElementById('share-toast-overlay');
+                            
+                            toast.innerHTML = `
+                                <div class="text-center">
+                                    <div class="mb-3 text-lg">Compartir en:</div>
+                                    <div class="flex flex-col gap-3 mb-3">
+                                        <button id="share-whatsapp-btn"
+                                                class="px-4 py-3 bg-green-500 text-white rounded text-base hover:bg-green-600 font-semibold flex items-center justify-center gap-2">
+                                            💬 WhatsApp (con link)
+                                        </button>
+                                        <button id="share-instagram-btn"
+                                                class="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded text-base hover:from-purple-600 hover:to-pink-600 font-semibold flex items-center justify-center gap-2">
+                                            📸 Instagram / Otras apps
+                                        </button>
+                                    </div>
+                                    <button id="close-share-mobile"
+                                            class="text-gray-400 text-sm">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            `;
+                            toast.classList.add('visible');
+                            overlay.classList.add('visible');
+                            
+                            setTimeout(() => {
+                                // WhatsApp - texto + imagen
+                                document.getElementById('share-whatsapp-btn')?.addEventListener('click', async () => {
+                                    try {
+                                        const shareData = {
+                                            text: shareText,
+                                            files: [file]
+                                        };
+                                        
+                                        if (navigator.canShare && navigator.canShare(shareData)) {
+                                            await navigator.share(shareData);
+                                        } else {
+                                            // Fallback: solo texto si no soporta archivos
+                                            await navigator.share({
+                                                text: shareText
+                                            });
+                                        }
+                                        toast.classList.remove('visible');
+                                        overlay.classList.remove('visible');
+                                    } catch (err) {
+                                        if (err.name !== 'AbortError') {
+                                            alert('No se pudo compartir: ' + err.message);
+                                        }
+                                    }
+                                });
+                                
+                                // Instagram/otras - texto + imagen
+                                document.getElementById('share-instagram-btn')?.addEventListener('click', async () => {
+                                    try {
+                                        const shareData = {
+                                            text: shareText,
+                                            files: [file]
+                                        };
+                                        
+                                        if (navigator.canShare && navigator.canShare(shareData)) {
+                                            await navigator.share(shareData);
+                                        } else {
+                                            // Fallback: solo texto si no soporta archivos
+                                            await navigator.share({
+                                                text: shareText
+                                            });
+                                        }
+                                        toast.classList.remove('visible');
+                                        overlay.classList.remove('visible');
+                                    } catch (err) {
+                                        if (err.name !== 'AbortError') {
+                                            alert('No se pudo compartir: ' + err.message);
+                                        }
+                                    }
+                                });
+                                
+                                document.getElementById('close-share-mobile')?.addEventListener('click', () => {
+                                    toast.classList.remove('visible');
+                                    overlay.classList.remove('visible');
+                                });
+                                
+                                overlay.addEventListener('click', () => {
+                                    toast.classList.remove('visible');
+                                    overlay.classList.remove('visible');
+                                });
+                            }, 100);
+                            
+                            setTimeout(() => {
                                 this.innerHTML = originalHTML;
+                                this.classList.remove('from-green-500', 'to-green-600');
+                                this.classList.add('from-emerald-500', 'to-teal-500');
                                 this.disabled = false;
-                                return;
-                            } catch (err) {
-                                if (err.name !== 'AbortError') {
-                                    console.error('Share failed:', err);
-                                }
-                                // Continue to fallback
-                            }
+                            }, 30000);
+                            
+                            return;
                         }
                     }
                     

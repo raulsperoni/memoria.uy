@@ -5,16 +5,20 @@ Views for cluster visualization and analysis.
 from django.views.generic import TemplateView
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.conf import settings
 from core.models import VoterClusterRun, Voto
 from core.views import get_voter_identifier
-from core.og_image import generate_bubble_map_og_image, generate_default_og_image
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
 from urllib.parse import urlparse
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -61,17 +65,24 @@ class ClusterVisualizationView(TemplateView):
 
             # Get current voter's cluster info for sharing/meta tags
             if voter_type and voter_id:
+                logger.info(f"[Cluster Context] Looking for cluster - voter_type={voter_type}, voter_id={voter_id[:20] if len(str(voter_id)) > 20 else voter_id}")
+                
                 membership = run.clusters.filter(
                     cluster_type='group',
                     members__voter_type=voter_type,
                     members__voter_id=voter_id
                 ).first()
                 
+                logger.info(f"[Cluster Context] Membership found: {bool(membership)}")
+                
                 if membership:
                     context['user_cluster_name'] = membership.llm_name or f"Burbuja {membership.cluster_id}"
                     context['user_cluster_description'] = membership.llm_description or ''
                     context['user_cluster_id'] = membership.cluster_id
                     context['user_cluster_size'] = membership.size
+                    logger.info(f"[Cluster Context] ✓ User cluster: {membership.cluster_id} ({context['user_cluster_name']})")
+                else:
+                    logger.warning(f"[Cluster Context] ⚠️ No cluster found for this voter")
 
             # Add statistics
             context['n_voters'] = run.n_voters
@@ -323,89 +334,132 @@ def cluster_data_json(request):
     })
 
 
-@require_GET
-@cache_page(60 * 60 * 24)  # Cache for 24 hours
-def cluster_og_image(request):
+@require_POST
+@csrf_exempt  # Allow from extension/browser without CSRF
+def upload_cluster_og_image(request):
     """
-    Generate Open Graph image for cluster sharing.
+    Upload user-captured cluster image to use as OG image.
     
-    Returns a 1200x630px PNG image showing the user's bubble position.
-    If user is not in a cluster, returns default image.
+    This is much better than server-side rendering:
+    - Real user captures = authentic
+    - No need for Playwright/headless browser
+    - Free computation (user does it)
+    - Always up-to-date
     
-    Query params:
-        - cluster_id: Optional cluster ID to highlight
+    POST body: image blob (JPEG)
+    Query params: cluster_id (required)
     """
+    logger.info(f"[OG Upload] Received upload request")
+    
     try:
-        # Get latest run
-        run = VoterClusterRun.objects.filter(
-            status='completed'
-        ).order_by('-created_at').first()
+        cluster_id = request.GET.get('cluster')
+        logger.info(f"[OG Upload] Cluster ID: {cluster_id}")
         
-        if not run:
-            # No clustering data, return default
-            img_buffer = generate_default_og_image()
-            return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        if not cluster_id:
+            logger.warning("[OG Upload] No cluster_id provided")
+            return JsonResponse({'error': 'cluster_id required'}, status=400)
         
-        # Get voter identifier
-        voter_info, _ = get_voter_identifier(request)
-        voter_type = None
-        voter_id = None
+        # Read image from request body
+        image_data = request.body
+        image_size = len(image_data)
+        logger.info(f"[OG Upload] Image size: {image_size / 1024:.1f} KB")
         
-        if 'usuario' in voter_info and voter_info['usuario']:
-            voter_type = 'user'
-            voter_id = str(voter_info['usuario'].id)
-        elif 'session_key' in voter_info:
-            voter_type = 'session'
-            voter_id = voter_info['session_key']
+        if not image_data or image_size < 1000:  # Sanity check
+            logger.warning(f"[OG Upload] Invalid image data (size: {image_size})")
+            return JsonResponse({'error': 'Invalid image data'}, status=400)
         
-        # Try to get cluster info from query params first (for shared links)
-        cluster_id_param = request.GET.get('cluster')
+        # Save image with cluster_id in filename
+        filename = f'og-cluster-{cluster_id}.jpg'
+        filepath = os.path.join('og-images', filename)
         
-        if cluster_id_param:
-            # Generate image for specific cluster (useful for shared links)
-            try:
-                cluster_id = int(cluster_id_param)
-                cluster = run.clusters.filter(
-                    cluster_type='group',
-                    cluster_id=cluster_id
-                ).first()
-                
-                if cluster:
-                    img_buffer = generate_bubble_map_og_image(
-                        cluster_name=cluster.llm_name or f"Burbuja {cluster.cluster_id}",
-                        cluster_id=cluster.cluster_id,
-                        user_cluster_size=cluster.size,
-                        total_clusters=run.n_clusters,
-                        total_voters=run.n_voters
-                    )
-                    return HttpResponse(img_buffer.getvalue(), content_type='image/png')
-            except (ValueError, TypeError):
-                pass
+        # Delete old version if exists
+        if default_storage.exists(filepath):
+            default_storage.delete(filepath)
+            logger.info(f"[OG Upload] Deleted old image: {filepath}")
         
-        # Fall back to current voter's cluster
-        if voter_type and voter_id:
-            membership = run.clusters.filter(
-                cluster_type='group',
-                members__voter_type=voter_type,
-                members__voter_id=voter_id
-            ).first()
-            
-            if membership:
-                img_buffer = generate_bubble_map_og_image(
-                    cluster_name=membership.llm_name or f"Burbuja {membership.cluster_id}",
-                    cluster_id=membership.cluster_id,
-                    user_cluster_size=membership.size,
-                    total_clusters=run.n_clusters,
-                    total_voters=run.n_voters
-                )
-                return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        # Save to storage (works with local and S3)
+        saved_path = default_storage.save(filepath, ContentFile(image_data))
         
-        # Default image if user not in cluster
-        img_buffer = generate_default_og_image()
-        return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        logger.info(f"[OG Upload] ✓ Saved OG image for cluster {cluster_id}: {saved_path}")
+        
+        return JsonResponse({
+            'success': True,
+            'cluster_id': cluster_id,
+            'path': saved_path,
+            'size_kb': round(image_size / 1024, 1)
+        })
         
     except Exception as e:
-        logger.error(f"Error generating OG image: {e}", exc_info=True)
-        # Return default image on error
-        img_buffer = generate_default_og_image()
-        return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        logger.error(f"[OG Upload] Error uploading OG image: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def cluster_og_image(request):
+    """
+    Serve Open Graph image for cluster sharing.
+    
+    ONLY serves user-uploaded images from real captures.
+    No fallback, no generation - if there's no uploaded image, returns static logo.
+    
+    Query params:
+        - cluster: Optional cluster ID
+    """
+    try:
+        cluster_id_param = request.GET.get('cluster')
+        
+        # Log crawler info for debugging
+        user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+        referer = request.META.get('HTTP_REFERER', 'No referer')
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', 'Unknown IP'))
+        
+        # Identify common crawlers
+        crawler = 'Unknown'
+        if 'whatsapp' in user_agent.lower():
+            crawler = 'WhatsApp'
+        elif 'facebookexternalhit' in user_agent.lower():
+            crawler = 'Facebook'
+        elif 'twitterbot' in user_agent.lower():
+            crawler = 'Twitter'
+        elif 'telegrambot' in user_agent.lower():
+            crawler = 'Telegram'
+        elif 'slackbot' in user_agent.lower():
+            crawler = 'Slack'
+        elif 'linkedinbot' in user_agent.lower():
+            crawler = 'LinkedIn'
+        
+        logger.info(f"[OG Image] 🔍 Request from {crawler}")
+        logger.info(f"[OG Image]    Cluster: {cluster_id_param}")
+        logger.info(f"[OG Image]    IP: {ip}")
+        logger.info(f"[OG Image]    Referer: {referer}")
+        logger.info(f"[OG Image]    User-Agent: {user_agent[:100]}...")
+        
+        # Serve user-uploaded image if exists
+        if cluster_id_param:
+            filename = f'og-cluster-{cluster_id_param}.jpg'
+            filepath = os.path.join('og-images', filename)
+            logger.info(f"[OG Image]    Looking for: {filepath}")
+            
+            if default_storage.exists(filepath):
+                try:
+                    with default_storage.open(filepath, 'rb') as f:
+                        image_data = f.read()
+                        logger.info(f"[OG Image]    ✅ Serving user-captured image ({len(image_data)/1024:.1f} KB)")
+                        return HttpResponse(image_data, content_type='image/jpeg')
+                except Exception as e:
+                    logger.error(f"[OG Image]    ❌ Error reading image: {e}")
+        
+        # No uploaded image - return static logo
+        logger.info(f"[OG Image]    ℹ️  No uploaded image, redirecting to static logo")
+        from django.templatetags.static import static
+        from django.shortcuts import redirect
+        
+        # Redirect to static logo
+        logo_url = static('core/logo.svg')
+        return redirect(logo_url)
+        
+    except Exception as e:
+        logger.error(f"[OG Image] Error: {e}", exc_info=True)
+        from django.templatetags.static import static
+        from django.shortcuts import redirect
+        return redirect(static('core/logo.svg'))
