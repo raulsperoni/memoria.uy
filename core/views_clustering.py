@@ -279,9 +279,7 @@ def cluster_data_json(request):
             'x': np_obj.projection_x,
             'y': np_obj.projection_y,
             'n_votes': np_obj.n_votes,
-            'titulo': (
-                noticia.mostrar_titulo[:60] if noticia.mostrar_titulo else ''
-            ),
+            'titulo': noticia.mostrar_titulo or '',
             'medio': domain,
         })
 
