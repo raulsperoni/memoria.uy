@@ -181,73 +181,6 @@
     </div>
   </div>
 
-  <!-- Desktop Floating Badge (always rendered, hidden when no cluster) -->
-  <div id="bubble-badge-desktop"
-       class="hidden {% if has_cluster %}md:block{% endif %} fixed top-24 right-6 z-40 mono"
-       x-data="{ expanded: false }"
-       @mouseenter="expanded = true"
-       @mouseleave="expanded = false"
-       data-cluster-id="{{ my_cluster.id|default:'0' }}">
-
-    <!-- Collapsed State - Bubble style -->
-    <a href="{% url 'cluster-visualization' %}"
-       x-show="!expanded"
-       x-transition
-       class="bubble-badge-collapsed block cursor-pointer transition-all duration-300 hover:scale-110">
-      <div class="bubble-shape relative flex flex-col items-center justify-center w-20 h-20">
-        <div class="text-[8px] font-bold tracking-tight leading-none text-white/90 drop-shadow">
-          TU BURBUJA
-        </div>
-        <div id="badge-cluster-id" class="text-lg font-bold text-white drop-shadow mt-0.5">
-          #{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %}
-        </div>
-        <div id="badge-cluster-name"
-             class="text-[8px] text-white/80 text-center px-1 leading-tight max-w-full truncate"
-             {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
-          {% if my_cluster.llm_name %}{{ my_cluster.llm_name }}{% endif %}
-        </div>
-      </div>
-    </a>
-
-    <!-- Expanded State -->
-    <a href="{% url 'cluster-visualization' %}"
-       x-show="expanded"
-       x-transition
-       class="bubble-badge-expanded block p-4 min-w-[220px] cursor-pointer transition-all">
-      <div class="flex items-center justify-between mb-3 pb-2 border-b border-white/30">
-        <h3 class="text-xs font-bold text-white drop-shadow">TU BURBUJA</h3>
-        <span id="badge-expanded-id" class="text-xl font-bold text-white drop-shadow">
-          #{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %}
-        </span>
-      </div>
-      <div id="badge-expanded-name-section"
-           class="mb-3 pb-2 border-b border-white/30"
-           {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
-        <div class="text-[10px] text-white/70 mb-1">NOMBRE:</div>
-        <div id="badge-expanded-name" class="text-xs font-bold text-white">
-          {{ my_cluster.llm_name|default:"" }}
-        </div>
-      </div>
-
-      <div class="space-y-2 text-[10px]">
-        <div class="flex justify-between">
-          <span class="text-white/70">VOTANTES:</span>
-          <span id="badge-expanded-size" class="font-bold text-white">
-            {{ my_cluster.size|default:"0" }}
-          </span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-white/70">CONSENSO:</span>
-          <span id="badge-expanded-consensus"
-                class="font-bold text-white"
-                data-consensus="{{ my_cluster.consensus|default:'0' }}">
-            {% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}
-          </span>
-        </div>
-      </div>
-    </a>
-  </div>
-
   <!-- Timeline Items -->
   <div id="timeline-items">
     {% include "noticias/timeline_items.html" %}
@@ -288,146 +221,23 @@
   select {
     font-family: 'IBM Plex Mono', monospace;
   }
-
-  /* Bubble badge styles */
-  .bubble-shape {
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    box-shadow:
-      inset -4px -4px 8px rgba(255,255,255,0.3),
-      inset 4px 4px 8px rgba(0,0,0,0.15),
-      4px 4px 12px rgba(0,0,0,0.25);
-    animation: bubble-float 3s ease-in-out infinite;
-  }
-
-  .bubble-badge-expanded {
-    border-radius: 20px 20px 8px 20px;
-    box-shadow:
-      inset -3px -3px 6px rgba(255,255,255,0.25),
-      inset 3px 3px 6px rgba(0,0,0,0.1),
-      6px 6px 16px rgba(0,0,0,0.3);
-  }
-
-  @keyframes bubble-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
-  }
-
-  .bubble-badge-collapsed:hover .bubble-shape {
-    animation: bubble-float 1.5s ease-in-out infinite;
-  }
 </style>
 
 <!-- JavaScript -->
 <script>
-  // Cluster color palette - same as visualization.html
-  const CLUSTER_COLORS = [
-    '#7cb374', // sage green
-    '#c9a66b', // tan
-    '#8fa3bf', // slate blue
-    '#d4a574', // terracotta
-    '#9db4a0', // muted green
-    '#b8a090', // taupe
-    '#a8c0a8', // soft green
-    '#c4b090', // sand
-    '#90a8b8', // steel blue
-    '#b8a8a0', // warm gray
-  ];
-
-  function getClusterColor(clusterId) {
-    const idx = Math.abs(parseInt(clusterId) || 0) % CLUSTER_COLORS.length;
-    return CLUSTER_COLORS[idx];
-  }
-
-  function darkenColor(hex, amount) {
-    const num = parseInt(hex.slice(1), 16);
-    const r = Math.max(0, (num >> 16) - amount);
-    const g = Math.max(0, ((num >> 8) & 0x00FF) - amount);
-    const b = Math.max(0, (num & 0x0000FF) - amount);
-    return `rgb(${r}, ${g}, ${b})`;
-  }
-
-  function applyBubbleColors(clusterId) {
-    const color = getClusterColor(clusterId);
-    const darkColor = darkenColor(color, 40);
-
-    // Collapsed bubble
-    const bubbleShape = document.querySelector('.bubble-shape');
-    if (bubbleShape) {
-      bubbleShape.style.background = `
-        radial-gradient(circle at 30% 30%,
-          rgba(255,255,255,0.4) 0%,
-          ${color} 40%,
-          ${darkColor} 100%)`;
-      bubbleShape.style.border = `2px solid ${darkColor}`;
-    }
-
-    // Expanded badge
-    const expandedBadge = document.querySelector('.bubble-badge-expanded');
-    if (expandedBadge) {
-      expandedBadge.style.background = `
-        linear-gradient(135deg, ${color} 0%, ${darkColor} 100%)`;
-      expandedBadge.style.border = `2px solid ${darkColor}`;
-    }
-
-    // Mobile ticker
-    const mobileTicker = document.getElementById('bubble-ticker-mobile');
-    if (mobileTicker) {
-      mobileTicker.style.background = `linear-gradient(90deg, ${color}, ${darkColor})`;
-    }
-  }
-
-  // Debug: Bubble information
-  {% load vote_extras %}
-  {% if has_cluster %}
-  try {
-    var consensusRaw = '{{ my_cluster.consensus|js_float }}';
-    var consensusValue = {% if my_cluster.consensus is not None %}parseFloat(consensusRaw){% else %}null{% endif %};
-    var bubbleInfo = {
-      id: parseInt('{{ my_cluster.id }}', 10),
-      size: parseInt('{{ my_cluster.size }}', 10),
-      consensus: consensusValue,
-      consensusRaw: consensusRaw,
-      llm_name: {% if my_cluster.llm_name %}'{{ my_cluster.llm_name|escapejs }}'{% else %}null{% endif %}
-    };
-    console.log('[Memoria Web] Bubble Info:', bubbleInfo);
-
-    // Apply cluster colors to badge
-    applyBubbleColors(bubbleInfo.id);
-  } catch (e) {
-    console.error('[Memoria Web] Error logging bubble info:', e);
-  }
-  {% else %}
-  console.log('[Memoria Web] No cluster assigned');
-  {% endif %}
-
   // Extension session synchronization
   console.log('[Memoria Web] Checking for extension session in localStorage...');
 
-  // Check if extension has set a session ID in localStorage
   const extensionSessionId = localStorage.getItem('memoria_extension_session');
 
   if (extensionSessionId) {
     console.log('[Memoria Web] ✓ Found extension session:', extensionSessionId);
 
-    // Inject extension session into all HTMX requests
     document.body.addEventListener('htmx:configRequest', function(event) {
-      console.log('[Memoria Web] Adding X-Extension-Session header to request:', {
-        url: event.detail.path,
-        sessionId: extensionSessionId
-      });
       event.detail.headers['X-Extension-Session'] = extensionSessionId;
     });
-
-    // Log when requests complete
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-      console.log('[Memoria Web] Request completed:', {
-        url: event.detail.pathInfo.finalRequestPath,
-        status: event.detail.xhr.status
-      });
-    });
   } else {
-    console.log('[Memoria Web] No extension session found in localStorage');
-    console.log('[Memoria Web] Will use Django session instead');
+    console.log('[Memoria Web] No extension session found, using Django session');
   }
 
   // Notification system
@@ -451,11 +261,7 @@
     `;
 
     notificationArea.appendChild(notification);
-
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      notification.remove();
-    }, 5000);
+    setTimeout(() => notification.remove(), 5000);
   }
 
   // Event listeners
@@ -476,9 +282,7 @@
       } else if (xhr.status === 404) {
         errorMessage = 'recurso no encontrado';
       }
-    } catch (e) {
-      console.error('Error processing HTMX error:', e);
-    }
+    } catch (e) {}
     showNotification(errorMessage, 'error');
   });
 
@@ -490,26 +294,19 @@
     showNotification('timeout: intentá de nuevo', 'error');
   });
 
-  // Handle swap errors gracefully (e.g., when paginating to non-existent page)
+  // Handle swap errors gracefully
   document.body.addEventListener('htmx:swapError', function(event) {
-    // Check if this is the load-more trigger
     if (event.detail.target && event.detail.target.id === 'load-more-trigger') {
-      console.log('[Memoria Web] Swap error on load-more, showing empty state');
-      // Remove the trigger and show empty state
       event.detail.target.remove();
       checkTimelineState();
     }
   });
 
-  // Handle empty responses from pagination (before swap happens)
   document.body.addEventListener('htmx:beforeSwap', function(event) {
-    // If this is the load-more trigger and response is empty, prevent swap error
     if (event.detail.target && event.detail.target.id === 'load-more-trigger') {
       var xhr = event.detail.xhr;
       var responseText = xhr.responseText.trim();
-      // If response is completely empty, just remove the trigger
       if (!responseText) {
-        console.log('[Memoria Web] Empty pagination response, removing trigger');
         event.detail.shouldSwap = false;
         event.detail.target.remove();
         checkTimelineState();
@@ -517,7 +314,6 @@
     }
   });
 
-  // Update active filter description when filter changes
   document.body.addEventListener('updateActiveFilters', function(event) {
     const filterText = document.getElementById('active-filter-text');
     if (filterText && event.detail && event.detail.description) {
@@ -525,7 +321,6 @@
     }
   });
 
-  // Check timeline state after voting removes items
   function checkTimelineState() {
     const container = document.getElementById('timeline-items');
     if (!container) return;
@@ -533,9 +328,7 @@
     const newsItems = container.querySelectorAll('[id^="noticia-"]');
     const spinner = document.getElementById('load-more-trigger');
 
-    // If no items and no spinner loading, show empty state or reload
     if (newsItems.length === 0 && !spinner) {
-      console.log('[Memoria Web] No more items, showing empty state');
       container.innerHTML = '<div class="border-2 border-black bg-white p-8 text-center mono">' +
         '<p class="text-gray-600 mb-2">[ votaste todas las noticias ]</p>' +
         '<p class="text-xs text-gray-500 mb-4">¡Bien hecho! Volvé más tarde para ver nuevas noticias.</p>' +
@@ -544,51 +337,39 @@
     }
   }
 
-  // When a vote removes an item (empty response), check state after animation
   document.body.addEventListener('htmx:afterSwap', function(event) {
     var target = event.detail.target;
-    // Check if a noticia was removed (target was inside timeline-items)
     if (target && target.id && target.id.startsWith('noticia-')) {
-      // After swap animation (1s in template + buffer)
       setTimeout(checkTimelineState, 1500);
     }
   });
 
   // Periodic bubble info update (every 30 seconds)
-  // Always run, even if user doesn't have cluster yet - they may get assigned
   var hasClusterInitially = {% if has_cluster %}true{% else %}false{% endif %};
 
   function updateBubbleInfo() {
     fetch('{% url "api-voter-cluster" %}')
       .then(response => {
         if (!response.ok) {
-          // 404 means no cluster yet, that's expected for new users
-          if (response.status === 404) {
-            console.log('[Memoria Web] No cluster assigned yet');
-            return null;
-          }
+          if (response.status === 404) return null;
           throw new Error('API error: ' + response.status);
         }
         return response.json();
       })
       .then(data => {
-        if (!data) return; // No cluster data
+        if (!data) return;
 
         if (data.cluster_id !== null && data.cluster_id !== undefined) {
-          // Show the desktop badge if it was hidden (add md:block class)
           const badge = document.getElementById('bubble-badge-desktop');
           if (badge && !badge.classList.contains('md:block')) {
             badge.classList.add('md:block');
-            console.log('[Memoria Web] Cluster assigned! Showing bubble badge');
           }
 
-          // Show mobile ticker if it was hidden
           const mobileTicker = document.getElementById('bubble-ticker-mobile');
           if (mobileTicker && mobileTicker.classList.contains('hidden')) {
             mobileTicker.classList.remove('hidden');
           }
 
-          // Update mobile ticker info
           const mobileTickerInfo = document.getElementById('mobile-ticker-info');
           if (mobileTickerInfo) {
             const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
@@ -599,7 +380,6 @@
               ' | ' + data.cluster_size + 'v | ' + consensus;
           }
 
-          // Update desktop badge using IDs
           const badgeId = document.getElementById('badge-cluster-id');
           if (badgeId) badgeId.textContent = '#' + data.cluster_id;
 
@@ -607,9 +387,7 @@
           if (badgeName) {
             if (data.cluster_name) {
               badgeName.textContent = data.cluster_name;
-              badgeName.style.display = 'block';
-            } else {
-              badgeName.style.display = 'none';
+              badgeName.classList.remove('hidden');
             }
           }
 
@@ -622,8 +400,6 @@
             if (data.cluster_name) {
               expandedName.textContent = data.cluster_name;
               nameSection.style.display = 'block';
-            } else {
-              nameSection.style.display = 'none';
             }
           }
 
@@ -646,12 +422,13 @@
             burbujaBtn.classList.remove('opacity-50', 'cursor-not-allowed');
           }
 
-          // Hide the "no cluster" help message
           const noClusterMsg = document.getElementById('no-cluster-message');
           if (noClusterMsg) noClusterMsg.style.display = 'none';
 
-          // Apply bubble colors based on cluster ID
-          applyBubbleColors(data.cluster_id);
+          // Apply bubble colors (function from _bubble_badge.html)
+          if (typeof applyBubbleColors === 'function') {
+            applyBubbleColors(data.cluster_id);
+          }
         }
       })
       .catch(error => {
@@ -659,12 +436,9 @@
       });
   }
 
-  // Update every 30 seconds
   setInterval(updateBubbleInfo, 30000);
 
-  // Also check once on page load if user didn't have cluster initially
   if (!hasClusterInitially) {
-    // Check after a short delay to not conflict with initial page load
     setTimeout(updateBubbleInfo, 2000);
   }
 </script>

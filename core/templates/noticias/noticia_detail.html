@@ -19,28 +19,7 @@
 {% block twitter_image %}{% if noticia.mostrar_imagen %}{{ noticia.mostrar_imagen }}{% else %}{% static 'core/logo.svg' %}{% endif %}{% endblock %}
 
 {% block sticky_content %}
-<!-- Mobile Ticker (sticky below header, always rendered, hidden when no cluster) -->
-<div id="bubble-ticker-mobile"
-     class="md:hidden sticky top-0 z-40 border-b-2 border-black text-white mono {% if not has_cluster %}hidden{% endif %}"
-     data-cluster-id="{{ my_cluster.id|default:'0' }}"
-     x-data="{ collapsed: false }"
-     x-show="!collapsed"
-     x-transition>
-  <div class="flex items-center">
-    <a href="{% url 'cluster-visualization' %}"
-       class="mobile-ticker-link flex items-center gap-2 flex-1 min-w-0 px-4 py-2 transition-colors">
-      <span class="text-xs font-bold whitespace-nowrap drop-shadow">TU BURBUJA</span>
-      <span id="mobile-ticker-info" class="text-xs whitespace-nowrap overflow-hidden text-ellipsis drop-shadow">
-        {% load vote_extras %}
-        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %} | {{ my_cluster.size|default:"0" }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>
-      </span>
-    </a>
-    <button @click="collapsed = !collapsed"
-            class="mobile-ticker-close px-4 py-2 border-l border-white/30 text-[10px] transition-colors flex-shrink-0 drop-shadow">
-      [×]
-    </button>
-  </div>
-</div>
+{% include "noticias/_bubble_badge.html" %}
 {% endblock %}
 
 {% block content %}
@@ -168,7 +147,6 @@
 
       <!-- Inline Bubble Info (minimized on detail page) -->
       {% if has_cluster and cluster_pattern %}
-        {% load vote_extras %}
         <div class="bg-blue-50 border-2 border-blue-600 p-4 mb-6">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-bold mono text-blue-900">
@@ -252,84 +230,6 @@
   </article>
 
   <script>
-  // Cluster color palette - same as visualization.html
-  const CLUSTER_COLORS = [
-    '#7cb374', // sage green
-    '#c9a66b', // tan
-    '#8fa3bf', // slate blue
-    '#d4a574', // terracotta
-    '#9db4a0', // muted green
-    '#b8a090', // taupe
-    '#a8c0a8', // soft green
-    '#c4b090', // sand
-    '#90a8b8', // steel blue
-    '#b8a8a0', // warm gray
-  ];
-
-  function getClusterColor(clusterId) {
-    const idx = Math.abs(parseInt(clusterId) || 0) % CLUSTER_COLORS.length;
-    return CLUSTER_COLORS[idx];
-  }
-
-  function darkenColor(hex, amount) {
-    const num = parseInt(hex.slice(1), 16);
-    const r = Math.max(0, (num >> 16) - amount);
-    const g = Math.max(0, ((num >> 8) & 0x00FF) - amount);
-    const b = Math.max(0, (num & 0x0000FF) - amount);
-    return `rgb(${r}, ${g}, ${b})`;
-  }
-
-  function applyBubbleColors(clusterId) {
-    const color = getClusterColor(clusterId);
-    const darkColor = darkenColor(color, 40);
-
-    // Collapsed bubble
-    const bubbleShape = document.querySelector('.bubble-shape');
-    if (bubbleShape) {
-      bubbleShape.style.background = `
-        radial-gradient(circle at 30% 30%,
-          rgba(255,255,255,0.4) 0%,
-          ${color} 40%,
-          ${darkColor} 100%)`;
-      bubbleShape.style.border = `2px solid ${darkColor}`;
-    }
-
-    // Expanded badge
-    const expandedBadge = document.querySelector('.bubble-badge-expanded');
-    if (expandedBadge) {
-      expandedBadge.style.background = `
-        linear-gradient(135deg, ${color} 0%, ${darkColor} 100%)`;
-      expandedBadge.style.border = `2px solid ${darkColor}`;
-    }
-
-    // Mobile ticker
-    const mobileTicker = document.getElementById('bubble-ticker-mobile');
-    if (mobileTicker) {
-      mobileTicker.style.background = `linear-gradient(90deg, ${color}, ${darkColor})`;
-    }
-  }
-
-  // Debug: Bubble information
-  {% load vote_extras %}
-  {% if has_cluster %}
-  try {
-    var bubbleInfo = {
-      id: parseInt('{{ my_cluster.id }}', 10),
-      size: parseInt('{{ my_cluster.size }}', 10),
-      consensus: {% if my_cluster.consensus is not None %}parseFloat('{{ my_cluster.consensus|js_float }}'){% else %}null{% endif %},
-      llm_name: {% if my_cluster.llm_name %}'{{ my_cluster.llm_name|escapejs }}'{% else %}null{% endif %}
-    };
-    console.log('[Memoria Web] Bubble Info:', bubbleInfo);
-
-    // Apply cluster colors to badge
-    applyBubbleColors(bubbleInfo.id);
-  } catch (e) {
-    console.error('[Memoria Web] Error logging bubble info:', e);
-  }
-  {% else %}
-  console.log('[Memoria Web] No cluster assigned');
-  {% endif %}
-
   function shareToWhatsApp() {
     const title = "{{ noticia.mostrar_titulo|escapejs }}";
     const url = window.location.href;
@@ -347,14 +247,12 @@
   }
 
   // Periodic bubble info update (every 30 seconds)
-  // Always run, even if user doesn't have cluster yet - they may get assigned
   var hasClusterInitially = {% if has_cluster %}true{% else %}false{% endif %};
 
   function updateBubbleInfo() {
     fetch('{% url "api-voter-cluster" %}')
       .then(response => {
         if (!response.ok) {
-          // 404 means no cluster yet, that's expected for new users
           if (response.status === 404) {
             console.log('[Memoria Web] No cluster assigned yet');
             return null;
@@ -364,14 +262,12 @@
         return response.json();
       })
       .then(data => {
-        if (!data) return; // No cluster data
+        if (!data) return;
 
         if (data.cluster_id !== null && data.cluster_id !== undefined) {
-          // Show the desktop badge if it was hidden (add md:block class)
           const badge = document.getElementById('bubble-badge-desktop');
           if (badge && !badge.classList.contains('md:block')) {
             badge.classList.add('md:block');
-            console.log('[Memoria Web] Cluster assigned! Showing bubble badge');
           }
 
           const mobileTicker = document.getElementById('bubble-ticker-mobile');
@@ -379,7 +275,6 @@
             mobileTicker.classList.remove('hidden');
           }
 
-          // Update mobile ticker
           const mobileTickerInfo = document.getElementById('mobile-ticker-info');
           if (mobileTickerInfo) {
             const namePart = data.cluster_name ? data.cluster_name + ' | ' : '';
@@ -390,7 +285,6 @@
               ' | ' + data.cluster_size + 'v | ' + consensus;
           }
 
-          // Update desktop badge using IDs
           const badgeId = document.getElementById('badge-cluster-id');
           if (badgeId) badgeId.textContent = '#' + data.cluster_id;
 
@@ -398,9 +292,7 @@
           if (badgeName) {
             if (data.cluster_name) {
               badgeName.textContent = data.cluster_name;
-              badgeName.style.display = 'block';
-            } else {
-              badgeName.style.display = 'none';
+              badgeName.classList.remove('hidden');
             }
           }
 
@@ -413,8 +305,6 @@
             if (data.cluster_name) {
               expandedName.textContent = data.cluster_name;
               nameSection.style.display = 'block';
-            } else {
-              nameSection.style.display = 'none';
             }
           }
 
@@ -428,8 +318,10 @@
             expandedConsensus.textContent = consensusValue.toFixed(2).replace(',', '.');
           }
 
-          // Apply bubble colors based on cluster ID
-          applyBubbleColors(data.cluster_id);
+          // Apply bubble colors (function from _bubble_badge.html)
+          if (typeof applyBubbleColors === 'function') {
+            applyBubbleColors(data.cluster_id);
+          }
         }
       })
       .catch(error => {
@@ -437,10 +329,8 @@
       });
   }
 
-  // Update every 30 seconds
   setInterval(updateBubbleInfo, 30000);
 
-  // Also check once on page load if user didn't have cluster initially
   if (!hasClusterInitially) {
     setTimeout(updateBubbleInfo, 2000);
   }
@@ -473,104 +363,5 @@
     }
   }
   </script>
-
-  <!-- Desktop Floating Badge (always rendered, hidden when no cluster) -->
-  <div id="bubble-badge-desktop"
-       class="hidden {% if has_cluster %}md:block{% endif %} fixed top-24 right-6 z-40 mono"
-       x-data="{ expanded: false }"
-       @mouseenter="expanded = true"
-       @mouseleave="expanded = false"
-       data-cluster-id="{{ my_cluster.id|default:'0' }}">
-
-    <!-- Collapsed State - Bubble style -->
-    <a href="{% url 'cluster-visualization' %}"
-       x-show="!expanded"
-       x-transition
-       class="bubble-badge-collapsed block cursor-pointer transition-all duration-300 hover:scale-110">
-      <div class="bubble-shape relative flex flex-col items-center justify-center w-20 h-20">
-        <div class="text-[8px] font-bold tracking-tight leading-none text-white/90 drop-shadow">
-          TU BURBUJA
-        </div>
-        <div id="badge-cluster-id" class="text-lg font-bold text-white drop-shadow mt-0.5">
-          #{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %}
-        </div>
-        <div id="badge-cluster-name"
-             class="text-[8px] text-white/80 text-center px-1 leading-tight max-w-full truncate"
-             {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
-          {% if my_cluster.llm_name %}{{ my_cluster.llm_name }}{% endif %}
-        </div>
-      </div>
-    </a>
-
-    <!-- Expanded State -->
-    <a href="{% url 'cluster-visualization' %}"
-       x-show="expanded"
-       x-transition
-       class="bubble-badge-expanded block p-4 min-w-[220px] cursor-pointer transition-all">
-      <div class="flex items-center justify-between mb-3 pb-2 border-b border-white/30">
-        <h3 class="text-xs font-bold text-white drop-shadow">TU BURBUJA</h3>
-        <span id="badge-expanded-id" class="text-xl font-bold text-white drop-shadow">
-          #{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %}
-        </span>
-      </div>
-      <div id="badge-expanded-name-section"
-           class="mb-3 pb-2 border-b border-white/30"
-           {% if not my_cluster.llm_name %}style="display: none;"{% endif %}>
-        <div class="text-[10px] text-white/70 mb-1">NOMBRE:</div>
-        <div id="badge-expanded-name" class="text-xs font-bold text-white">
-          {{ my_cluster.llm_name|default:"" }}
-        </div>
-      </div>
-
-      <div class="space-y-2 text-[10px]">
-        <div class="flex justify-between">
-          <span class="text-white/70">VOTANTES:</span>
-          <span id="badge-expanded-size" class="font-bold text-white">
-            {{ my_cluster.size|default:"0" }}
-          </span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-white/70">CONSENSO:</span>
-          <span id="badge-expanded-consensus"
-                class="font-bold text-white"
-                data-consensus="{{ my_cluster.consensus|default:'0' }}">
-            {% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}
-          </span>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <style>
-    /* Bubble badge styles */
-    .bubble-shape {
-      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-      box-shadow:
-        inset -4px -4px 8px rgba(255,255,255,0.3),
-        inset 4px 4px 8px rgba(0,0,0,0.15),
-        4px 4px 12px rgba(0,0,0,0.25);
-      animation: bubble-float 3s ease-in-out infinite;
-    }
-
-    .bubble-badge-expanded {
-      border-radius: 20px 20px 8px 20px;
-      box-shadow:
-        inset -3px -3px 6px rgba(255,255,255,0.25),
-        inset 3px 3px 6px rgba(0,0,0,0.1),
-        6px 6px 16px rgba(0,0,0,0.3);
-    }
-
-    @keyframes bubble-float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-4px); }
-    }
-
-    .bubble-badge-collapsed:hover .bubble-shape {
-      animation: bubble-float 1.5s ease-in-out infinite;
-    }
-  </style>
 </div>
 {% endblock %}
-
-
-
