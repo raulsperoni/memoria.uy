@@ -5,6 +5,10 @@ from litellm import completion
 from bs4 import BeautifulSoup
 from core.url_requests import get
 import logging
+import litellm
+
+litellm.set_verbose = False
+
 
 # import litellm
 # litellm._turn_on_debug()
@@ -20,17 +24,18 @@ logger = logging.getLogger(__name__)
 # Purpose: Extract structured article metadata (title, entities, sentiment) from HTML
 # Requirements: JSON output mode, good at entity extraction and sentiment analysis
 MODELS_PRIORITY_JSON = {
-    "google/gemini-2.5-flash-lite": 1,
-    "openrouter/mistralai/mistral-saba": 2,
-    "openai/gpt-oss-20b:free": 3,
+    "openrouter/google/gemini-2.5-flash-lite": 1,
+    "openrouter/google/gemini-2.0-flash-lite-001": 2,
+    "openrouter/mistralai/mistral-saba": 3,
 }
 
 # Used by: generate_cluster_description()
 # Purpose: Generate creative cluster names and descriptions in Spanish
 # Requirements: JSON output mode, creative writing in Spanish (rioplatense)
 MODELS_PRIORITY_CLUSTER = {
-    "google/gemini-2.5-flash-lite": 1,
-    "openrouter/mistralai/mistral-saba": 2,
+    "openrouter/google/google/gemini-2.5-flash-lite": 1,
+    "openrouter/google/gemini-2.0-flash-lite-001": 2,
+    "openrouter/mistralai/mistral-saba": 3,
 }
 
 
@@ -122,7 +127,7 @@ class Articulo(BaseModel):
 
 def parse_noticia_from_html(
     html: str,
-    current_model: str = "openrouter/google/gemini-2.0-flash-lite-001",
+    current_model: str = "openrouter/google/gemini-2.5-flash-lite",
 ) -> Union[Articulo, None]:
     """
     Extract structured article data directly from HTML in a single LLM call.
@@ -397,7 +402,7 @@ def generate_cluster_description(
     entities_negative: list[dict],
     cluster_size: int,
     consensus_score: float,
-    current_model: str = "openrouter/google/gemini-2.0-flash-lite-001",
+    current_model: str = "openrouter/google/gemini-2.5-flash-lite",
 ) -> Union[ClusterDescription, None]:
     """
     Generate a playful name and description for a voter cluster using LLM.
