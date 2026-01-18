@@ -63,9 +63,29 @@ class ClusterVisualizationView(TemplateView):
                 context['voter_type'] = voter_type
                 context['voter_id'] = voter_id
 
-            # Get current voter's cluster info for sharing/meta tags
-            if voter_type and voter_id:
-                logger.info(f"[Cluster Context] Looking for cluster - voter_type={voter_type}, voter_id={voter_id[:20] if len(str(voter_id)) > 20 else voter_id}")
+            # Check if URL has a specific cluster parameter (for shared links)
+            shared_cluster_id = self.request.GET.get('cluster')
+            
+            if shared_cluster_id is not None:
+                logger.info(f"[Cluster Context] Shared link detected - cluster={shared_cluster_id}")
+                try:
+                    shared_cluster = run.clusters.filter(
+                        cluster_type='group',
+                        cluster_id=int(shared_cluster_id)
+                    ).first()
+                    
+                    if shared_cluster:
+                        context['user_cluster_name'] = shared_cluster.llm_name or f"Burbuja {shared_cluster.cluster_id}"
+                        context['user_cluster_description'] = shared_cluster.llm_description or ''
+                        context['user_cluster_id'] = shared_cluster.cluster_id
+                        context['user_cluster_size'] = shared_cluster.size
+                        logger.info(f"[Cluster Context] ✓ Using shared cluster: {shared_cluster.cluster_id} ({context['user_cluster_name']})")
+                except (ValueError, TypeError) as e:
+                    logger.error(f"[Cluster Context] Invalid cluster parameter: {e}")
+            
+            # Otherwise, get current voter's cluster info for sharing/meta tags
+            elif voter_type and voter_id:
+                logger.info(f"[Cluster Context] Looking for current voter's cluster - voter_type={voter_type}, voter_id={voter_id[:20] if len(str(voter_id)) > 20 else voter_id}")
                 
                 membership = run.clusters.filter(
                     cluster_type='group',
