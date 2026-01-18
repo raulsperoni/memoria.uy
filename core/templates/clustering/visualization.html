@@ -7,13 +7,13 @@
 
 {% block og_description %}{% if user_cluster_name %}Descubrí en qué burbuja estás. Votá noticias uruguayas y encontrá tu lugar en el mapa de opiniones.{% else %}Descubrí las burbujas de opinión sobre noticias uruguayas. Votá anónimamente y encontrá tu lugar en el mapa.{% endif %}{% endblock %}
 
-{% block og_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
+{% block og_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id is not None %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
 
 {% block twitter_title %}{% if user_cluster_name %}Estoy en "{{ user_cluster_name }}" 🫧{% else %}Mapa de Burbujas - Memoria.uy{% endif %}{% endblock %}
 
 {% block twitter_description %}{% if user_cluster_name %}¿En qué burbuja estás vos? Descubrilo en memoria.uy{% else %}Descubrí las burbujas de opinión sobre noticias uruguayas{% endif %}{% endblock %}
 
-{% block twitter_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
+{% block twitter_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id is not None %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
 
 {% block extra_head %}
 <!-- D3.js for visualization -->

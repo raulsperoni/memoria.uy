@@ -407,25 +407,50 @@ def cluster_og_image(request):
     """
     try:
         cluster_id_param = request.GET.get('cluster')
-        logger.info(f"[OG Image] Request for cluster: {cluster_id_param}")
+        
+        # Log crawler info for debugging
+        user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+        referer = request.META.get('HTTP_REFERER', 'No referer')
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', 'Unknown IP'))
+        
+        # Identify common crawlers
+        crawler = 'Unknown'
+        if 'whatsapp' in user_agent.lower():
+            crawler = 'WhatsApp'
+        elif 'facebookexternalhit' in user_agent.lower():
+            crawler = 'Facebook'
+        elif 'twitterbot' in user_agent.lower():
+            crawler = 'Twitter'
+        elif 'telegrambot' in user_agent.lower():
+            crawler = 'Telegram'
+        elif 'slackbot' in user_agent.lower():
+            crawler = 'Slack'
+        elif 'linkedinbot' in user_agent.lower():
+            crawler = 'LinkedIn'
+        
+        logger.info(f"[OG Image] 🔍 Request from {crawler}")
+        logger.info(f"[OG Image]    Cluster: {cluster_id_param}")
+        logger.info(f"[OG Image]    IP: {ip}")
+        logger.info(f"[OG Image]    Referer: {referer}")
+        logger.info(f"[OG Image]    User-Agent: {user_agent[:100]}...")
         
         # Serve user-uploaded image if exists
         if cluster_id_param:
             filename = f'og-cluster-{cluster_id_param}.jpg'
             filepath = os.path.join('og-images', filename)
-            logger.info(f"[OG Image] Looking for: {filepath}")
+            logger.info(f"[OG Image]    Looking for: {filepath}")
             
             if default_storage.exists(filepath):
                 try:
                     with default_storage.open(filepath, 'rb') as f:
                         image_data = f.read()
-                        logger.info(f"[OG Image] ✓ Serving user-captured image ({len(image_data)} bytes)")
+                        logger.info(f"[OG Image]    ✅ Serving user-captured image ({len(image_data)/1024:.1f} KB)")
                         return HttpResponse(image_data, content_type='image/jpeg')
                 except Exception as e:
-                    logger.error(f"[OG Image] Error reading image: {e}")
+                    logger.error(f"[OG Image]    ❌ Error reading image: {e}")
         
         # No uploaded image - return static logo
-        logger.info(f"[OG Image] No uploaded image found, returning static logo")
+        logger.info(f"[OG Image]    ℹ️  No uploaded image, redirecting to static logo")
         from django.templatetags.static import static
         from django.shortcuts import redirect
         
