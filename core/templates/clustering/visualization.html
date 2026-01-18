@@ -879,8 +879,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Try to use Web Share API (mobile-friendly)
                     // On mobile: show options for Instagram (image) vs WhatsApp (text+link)
+                    console.log('navigator.share available:', !!navigator.share);
+                    console.log('User agent:', navigator.userAgent);
+                    
                     if (navigator.share) {
                         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        console.log('Is mobile:', isMobile);
                         
                         if (isMobile) {
                             // Mobile: show choice between Instagram and WhatsApp
@@ -916,13 +920,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             overlay.classList.add('visible');
                             
                             setTimeout(() => {
-                                // WhatsApp - prioriza texto y link
+                                // WhatsApp - texto + imagen
                                 document.getElementById('share-whatsapp-btn')?.addEventListener('click', async () => {
                                     try {
-                                        // Solo texto y URL para WhatsApp
-                                        await navigator.share({
-                                            text: shareText
-                                        });
+                                        const shareData = {
+                                            text: shareText,
+                                            files: [file]
+                                        };
+                                        
+                                        if (navigator.canShare && navigator.canShare(shareData)) {
+                                            await navigator.share(shareData);
+                                        } else {
+                                            // Fallback: solo texto si no soporta archivos
+                                            await navigator.share({
+                                                text: shareText
+                                            });
+                                        }
                                         toast.classList.remove('visible');
                                         overlay.classList.remove('visible');
                                     } catch (err) {
@@ -932,10 +945,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     }
                                 });
                                 
-                                // Instagram/otras - prioriza imagen
+                                // Instagram/otras - texto + imagen
                                 document.getElementById('share-instagram-btn')?.addEventListener('click', async () => {
                                     try {
                                         const shareData = {
+                                            text: shareText,
                                             files: [file]
                                         };
                                         
