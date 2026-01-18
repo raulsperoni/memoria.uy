@@ -40,13 +40,20 @@ def compute_cluster_consensus(cluster_votes):
     consensus_scores = []
 
     for noticia_id, vote_counts in cluster_votes.items():
-        total = sum(vote_counts.values())
+        # Ignore precomputed totals to avoid double-counting.
+        total = sum(
+            value for key, value in vote_counts.items()
+            if key != "total"
+        )
         if total == 0:
             continue
 
         # Consensus = (max_count / total)
         # When everyone agrees, max_count = total, consensus = 1
-        max_count = max(vote_counts.values())
+        max_count = max(
+            value for key, value in vote_counts.items()
+            if key != "total"
+        )
         consensus = max_count / total
         consensus_scores.append(consensus)
 
