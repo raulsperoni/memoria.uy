@@ -1,425 +1,99 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guía técnica para Claude Code cuando trabaja con este repositorio.
 
-## Project Overview
+Ver también:
+- [VISION.md](VISION.md) - Visión de producto y estado actual
+- [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md) - Algoritmos y referencias científicas
 
-Memoria.uy is a Django news aggregation application. Users submit news URLs (or capture content via browser extension), which are parsed using AI (LiteLLM) and enriched with metadata (title, summary, entities, sentiment). Users can vote on news and filter by entities or sentiment.
-
-## Development Commands
-
-### Local Development (Poetry)
+## Comandos de desarrollo
 
 ```bash
-# Run development server
-make -f Makefile.local runserver
+# Servidor local
+poetry run python manage.py runserver
 
-# Run migrations
-make -f Makefile.local migrate
+# Migraciones
+poetry run python manage.py makemigrations
 poetry run python manage.py migrate
 
-# Create migrations
-make -f Makefile.local makemigrations
-poetry run python manage.py makemigrations
-
-# Run tests
-make -f Makefile.local test
+# Tests
 poetry run pytest
-
-# Run tests with coverage
-make -f Makefile.local test-cov
 poetry run pytest --cov=. --cov-report=html
-
-# Run a single test file
-poetry run pytest core/tests/test_models.py
-
-# Run tests matching a pattern
 poetry run pytest -k "test_vote"
 
-# Run Celery worker (requires Redis running)
+# Celery (requiere Redis)
 poetry run celery -A memoria worker --loglevel=info
 
-# Tailwind CSS setup
-make -f Makefile.local tailwind-install
-make -f Makefile.local tailwind-start  # Watch mode for development
+# Clustering manual
+poetry run python manage.py cluster_voters --days 30 --min-voters 50
 
-# Full development setup
-make -f Makefile.local dev  # Runs migrations and builds Tailwind
+# Tailwind
+poetry run python manage.py tailwind start
 ```
 
-### Docker Development
+## Arquitectura
 
-```bash
-# Build and start all containers
-docker-compose up -d --build
+### Flujo de datos
 
-# Run Django commands in Docker
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py createsuperuser
-docker-compose exec web python manage.py shell
+1. **Submission**: Usuario envía URL via web o extensión
+2. **Captura**: Extensión captura HTML completo (bypasea paywalls)
+3. **Enrichment**: Celery task extrae título, resumen, entidades via LLM
+4. **Voting**: Usuario vota (buena/mala/neutral)
+5. **Clustering**: Task periódico agrupa votantes por patrones
 
-# Run tests in Docker
-make test
-docker-compose exec web pytest
+### Modelos principales
 
-# View logs
-make logs
-docker-compose logs -f web
+- `Noticia`: URL, metadata, HTML capturado
+- `Voto`: Opinión de usuario sobre noticia
+- `Entidad`: Personas, organizaciones, lugares extraídos
+- `VoterCluster*`: Modelos de clustering (Run, Cluster, Projection, etc.)
 
-# Restart services
-make restart-web
-make restart-worker
-```
+### Sesiones
 
-## Architecture
+Prioridad de identificación de votante:
+1. Usuario autenticado → `usuario` field
+2. Extensión → header `X-Extension-Session` o cookie `memoria_extension_session`
+3. Django session → `session_key`
 
-### Core Data Flow
+Ver `get_voter_identifier()` en [core/views.py](core/views.py).
 
-1. **URL Submission** ([core/views.py](core/views.py))
-   - User submits URL via `NoticiaCreateView` (web) or extension
-   - Creates `Noticia` model with original URL
-   - Fetches metadata from meta tags
+## Patrones importantes
 
-2. **Content Capture**
-   - Web submission: Extracts metadata from URL
-   - Extension submission: Receives full HTML content (`captured_html`)
-   - HTML bypasses paywalls when captured by extension
+### Task locking
+Todos los Celery tasks usan `@task_lock(timeout=...)` para prevenir ejecución
+duplicada.
 
-3. **Content Enrichment Pipeline** (Celery tasks in [core/tasks.py](core/tasks.py))
-   - `enrich_from_captured_html`: Extracts structured data (title, summary, entities, sentiment) directly from HTML
-   - All tasks use `@task_lock` decorator to prevent concurrent execution on same noticia
+### Model fallback en AI parsing
+Si el modelo primario falla, automáticamente intenta el siguiente en prioridad.
+Ver [core/parse.py](core/parse.py).
 
-4. **AI Parsing** ([core/parse.py](core/parse.py))
-   - `parse_noticia_from_html`: HTML → Structured JSON (Pydantic `Articulo` model)
-   - Model fallback system with priority order
+### Clustering Polis-style
+Motor matemático en `core/clustering/`. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md)
+para detalles de algoritmos.
 
-### Key Models
+## Testing
 
-- **Noticia** ([core/models.py](core/models.py))
-  - Stores original URL (`enlace`), metadata from meta tags, and captured HTML
-  - Properties: `mostrar_titulo`, `mostrar_imagen`, `mostrar_fecha` (fallback chains)
-
-- **Voto**: User opinion on news (buena/mala/neutral)
-- **Entidad**: Named entities (persona/organizacion/lugar/otro)
-- **NoticiaEntidad**: Links news to entities with sentiment (positivo/negativo/neutral)
-
-### Request Handling
-
-- Uses `url_requests.py` with proxy rotation and retry logic
-- Proxy list can be refreshed via `refresh_proxy_list` Celery task
-
-### Frontend
-
-- HTMX-based UI for dynamic updates without full page reloads
-- Tailwind CSS in `theme/` app
-- News filtering by user votes, majority opinion, or entities ([core/views.py:71-126](core/views.py#L71-L126))
-
-## Authentication & Session Management
-
-Memoria.uy uses **anonymous voting** without requiring user registration. Session management is designed to work seamlessly across the browser extension and web interface.
-
-### Session Architecture
-
-The system supports three types of user identification:
-
-1. **Authenticated Users** (optional)
-   - Django's built-in authentication via `allauth`
-   - Currently disabled by default (`ACCOUNT_ALLOW_SIGNUPS = False`)
-   - If enabled, votes are linked to user account
-
-2. **Extension Sessions** (cross-platform)
-   - Generated by browser extension on first use
-   - Stored in `chrome.storage.local` as `sessionId`
-   - Synced to web interface via cookie and localStorage
-   - Persists across browser sessions
-
-3. **Django Sessions** (web fallback)
-   - Standard Django session framework
-   - Created automatically for anonymous web users
-   - Used only when extension session is unavailable
-
-### Session Identifier Priority
-
-The `get_voter_identifier()` function ([core/views.py:16-66](core/views.py#L16-L66)) checks for sessions in this order:
-
-1. **Authenticated user** → Use `usuario` field
-2. **Extension session (header)** → `X-Extension-Session` HTTP header (HTMX requests)
-3. **Extension session (cookie)** → `memoria_extension_session` cookie (initial page load)
-4. **Django session** → `request.session.session_key` (fallback)
-
-### Extension-Web Session Sync
-
-To maintain consistent identity across extension and web interface:
-
-**Extension Side** ([browser-extension/scripts/content.js:3-48](browser-extension/scripts/content.js#L3-L48)):
-- Content script runs on memoria.uy pages
-- Reads session ID from `chrome.storage.local`
-- Sets both cookie and localStorage:
-  ```javascript
-  document.cookie = `memoria_extension_session=${sessionId}; path=/; max-age=31536000; SameSite=Lax`;
-  localStorage.setItem('memoria_extension_session', sessionId);
-  ```
-
-**Web Side** ([core/templates/noticias/timeline_fragment.html:232-260](core/templates/noticias/timeline_fragment.html#L232-L260)):
-- JavaScript reads session ID from localStorage
-- Injects `X-Extension-Session` header into all HTMX requests:
-  ```javascript
-  document.body.addEventListener('htmx:configRequest', function(event) {
-    event.detail.headers['X-Extension-Session'] = extensionSessionId;
-  });
-  ```
-
-**Backend** ([core/views.py:33-57](core/views.py#L33-L57)):
-- Checks header first (for HTMX), then cookie (for initial load)
-- Uses same session ID for all operations
-- Ensures votes from extension and web are linked to same identity
-
-### Vote Model Design
-
-The `Voto` model ([core/models.py:77-121](core/models.py#L77-L121)) supports both authenticated and anonymous voting:
-
-```python
-class Voto(models.Model):
-    usuario = models.ForeignKey(User, null=True, blank=True)  # Optional
-    session_key = models.CharField(max_length=40, null=True, blank=True)  # Anonymous
-    noticia = models.ForeignKey(Noticia, ...)
-    opinion = models.CharField(choices=[...])  # buena/mala/neutral
-```
-
-Constraints ensure:
-- One vote per user per article (`unique_user_vote`)
-- One vote per session per article (`unique_session_vote`)
-- Either `usuario` OR `session_key` must be set (not both)
-
-### API Endpoints
-
-**Extension API** ([core/api_views.py:22-182](core/api_views.py#L22-L182)):
-- `/api/submit-from-extension/` - CSRF exempt, requires `X-Extension-Session` header
-- Receives full HTML content from extension
-- Creates vote with extension session ID
-- Triggers LLM enrichment pipeline
-
-**Web API** ([core/views.py](core/views.py)):
-- `/vote/<pk>/` - Vote on existing news (CSRF protected)
-- `/` (timeline) - View and filter news
-- Uses standard Django session or extension session (via cookie/header)
-
-### Session Debugging
-
-Comprehensive logging is enabled in DEBUG mode ([memoria/settings.py:122-157](memoria/settings.py#L122-L157)):
-
-```python
-# Browser Console (F12)
-[Memoria Extension] Extension session ID: abc123...
-[Memoria Web] ✓ Found extension session: abc123...
-[Memoria Web] Adding X-Extension-Session header to request
-
-# Django Server Logs
-[INFO] core.views: [Session Debug] Extension session from cookie: abc123...
-[INFO] core.views: [Session Debug] ✓ Using extension session: abc123...
-[INFO] core.views: [Vote Debug] Voting on noticia 42
-```
-
-### Session Flow Examples
-
-**Scenario 1: First-time extension user**
-1. User votes via extension → Creates session ID in chrome.storage
-2. Extension sends vote with `X-Extension-Session` header
-3. Vote saved with `session_key = extension_session_id`
-
-**Scenario 2: Extension user visits web (same browser)**
-1. User opens memoria.uy in browser
-2. Content script syncs session to cookie + localStorage
-3. Django reads cookie on page load → Uses extension session
-4. "Noticias nuevas" filter excludes extension-voted news ✅
-
-**Scenario 3: Web-only user**
-1. User visits memoria.uy (no extension)
-2. Django creates new session automatically
-3. User votes → Vote linked to Django session
-4. Session persists across browser tabs/reloads
-
-**Scenario 4: Cross-device (different session)**
-1. Same physical user on different device/browser
-2. Different session ID → Appears as different user
-3. Can vote again on same news (by design, no account required)
-
-### Security & Privacy
-
-- **No personal data required**: Users can vote completely anonymously
-- **No tracking**: Session IDs are random UUIDs, not linked to identity
-- **No cross-site tracking**: Sessions are domain-specific (memoria.uy only)
-- **Cookie security**: SameSite=Lax prevents CSRF, max-age=1 year
-- **CSRF protection**: Web forms use Django's CSRF tokens
-- **Extension API**: CSRF-exempt but requires session header
-
-## Important Patterns
-
-### Task Locking
-All Celery tasks use `@task_lock(timeout=...)` decorator to prevent duplicate execution. Lock keys include task name and arguments.
-
-### Model Fallback in AI Parsing
-AI parsing has fallback models configured in parse.py. If primary model fails, automatically tries next priority.
-
-### Testing
-- Uses pytest with pytest-django
-- Fixtures defined in `conftest.py` (root and per-app)
-- Tests in `core/tests/`: `test_models.py`, `test_views.py`, `test_basic.py`, `test_clustering.py`
-- Coverage configured in `.coveragerc` and `pytest.ini`
-
-## Voter Clustering (Polis-Style)
-
-Memoria.uy implements Polis-inspired clustering to identify voting patterns and group voters based on their opinions. This enables visualization of opinion clusters and consensus analysis.
-
-### Architecture
-
-**Models** ([core/models.py:260-463](core/models.py#L260-L463)):
-- `VoterClusterRun`: Tracks clustering computation runs
-- `VoterCluster`: Stores cluster results (base/group/subgroup)
-- `VoterProjection`: 2D PCA projections for visualization
-- `VoterClusterMembership`: Voter-to-cluster assignments
-- `ClusterVotingPattern`: Aggregated voting patterns per cluster
-
-**Math Engine** ([core/clustering/](core/clustering/)):
-- **Vote Matrix Builder** ([matrix_builder.py](core/clustering/matrix_builder.py)): Converts votes to sparse matrices (voters × noticias)
-- **Sparsity-Aware PCA** ([pca.py](core/clustering/pca.py)): 2D projection with scaling for sparse voters (Polis approach)
-- **K-Means Clustering** ([kmeans.py](core/clustering/kmeans.py)): Base clustering with auto k-selection
-- **Hierarchical Clustering** ([hierarchical.py](core/clustering/hierarchical.py)): Group/subgroup detection with silhouette-based k-selection
-- **Metrics** ([metrics.py](core/clustering/metrics.py)): Consensus scores, similarity, distance calculations
-
-### Clustering Pipeline
-
-1. **Build Vote Matrix**: Convert votes to sparse matrix (buena=+1, neutral=0, mala=-1)
-2. **PCA Projection**: Reduce to 2D for visualization (handles sparse voting patterns)
-3. **Base Clustering**: K-means with k≈100 (auto-selected based on voter count)
-4. **Group Clustering**: Hierarchical grouping (k=2-5, auto-selected via silhouette score)
-5. **Consensus Metrics**: Calculate within-cluster agreement scores
-6. **Save to Database**: Store clusters, projections, voting patterns
-
-### Running Clustering
-
-**Manual Trigger**:
-```bash
-# With default parameters (30 days, min 50 voters)
-poetry run python manage.py cluster_voters
-
-# Custom parameters
-poetry run python manage.py cluster_voters --days 60 --min-voters 100 --min-votes-per-voter 5
-
-# Async (Celery task)
-poetry run python manage.py cluster_voters --async
-```
-
-**Programmatic Trigger**:
-```python
-from core.tasks import update_voter_clusters
-
-# Sync
-result = update_voter_clusters(time_window_days=30, min_voters=50)
-
-# Async (Celery)
-task = update_voter_clusters.delay(time_window_days=30, min_voters=50)
-```
-
-### API Endpoints
-
-**Clustering Data** ([core/api_clustering.py](core/api_clustering.py)):
-- `GET /api/clustering/data/` - Full clustering results (Polis-compatible format)
-  - Returns: projections, clusters, centroids, consensus scores, parameters
-  - Cached for 1 hour
-  - Optional `?run_id=<id>` parameter for specific run
-
-- `GET /api/clustering/voter/me/` - Current voter's cluster membership
-  - Returns: cluster_id, projection coordinates, consensus score, distance to centroid
-  - Uses `get_voter_identifier()` for session/user detection
-
-- `GET /api/clustering/clusters/<cluster_id>/votes/` - Voting patterns for cluster
-  - Returns: vote counts by opinion, majority opinion, consensus per noticia
-
-- `POST /api/clustering/trigger/` - Manually trigger clustering
-  - Optional params: `time_window_days`, `min_voters`, `min_votes_per_voter`
-  - Returns: task_id for async tracking
-
-### Key Features from Polis
-
-✓ **Sparsity-Aware PCA**: Scales projections by `sqrt(n_noticias / n_votes_cast)` to prevent sparse voters from clustering at center
-✓ **Hierarchical Clustering**: Base clusters (k≈100) → Group clusters (k=2-5) → Subgroups
-✓ **Silhouette-Based K-Selection**: Auto-selects optimal k using silhouette coefficient
-✓ **Consensus Metrics**: Measures within-cluster agreement (0-1 score)
-✓ **Anonymous Voting Support**: Works with both session-based and authenticated voters
-✓ **Background Processing**: Celery task with locking to prevent duplicate computation
-
-### Performance Characteristics
-
-- **Time Window**: Default 30 days (configurable)
-- **Minimum Voters**: 50 (configurable, prevents poor clustering on small datasets)
-- **Minimum Votes per Voter**: 3 (configurable, filters out sparse voters)
-- **Computation Time**: ~0.3-5 seconds for 5-1000 voters
-- **Caching**: API responses cached for 1 hour
-- **Task Locking**: 30-minute lock prevents concurrent runs
-
-### Future Enhancements
-
-See [POLIS_CLUSTERING_PLAN.md](POLIS_CLUSTERING_PLAN.md) for detailed implementation plan.
-
-**Phase 5: UI Integration** (Planned)
-- Timeline view: Show cluster consensus indicators
-- Cluster visualization page: D3.js/Plotly.js scatter plot
-- Voter profile: Display cluster membership and similar voters
-
-**Phase 6: Advanced Features** (Planned)
-- Periodic scheduling: Celery beat for automatic daily clustering
-- Temporal tracking: Monitor opinion drift over time
-- Recommendations: Suggest news based on cluster preferences
-- Polarization metrics: Identify divisive topics
-- Bridge-builder detection: Find voters connecting multiple clusters
-
-**Phase 7: Optimization** (Planned)
-- Incremental PCA: Update existing model with new votes
-- Mini-batch k-means: For very large datasets (>10k voters)
-- Sampling strategy: Cluster subset, assign remainder
-- Database query optimization: Reduce vote fetching overhead
-
-## Environment Configuration
-
-- Database: SQLite (dev) or Supabase/Postgres (production via `SUPABASE_DATABASE_URL`)
-- Celery: Redis broker (default: `redis://redis:6379/0`)
-- LiteLLM: Requires OpenRouter API keys for AI models
-- Language: Spanish (es-uy), Timezone: America/Montevideo
+- pytest con pytest-django
+- Fixtures en `conftest.py`
+- Tests en `core/tests/`
 
 ## Deployment
 
-### Local Docker Deployment
+### Railway
+Tres servicios: web, worker, beat. Todos comparten `REDIS_URL`.
 
-- Docker-based deployment via docker-compose.yml
-- Nginx reverse proxy (config in `nginx/conf.d`)
-- Gunicorn WSGI server
-- Services: web, celery_worker, celery_beat, redis, nginx
-- Health check endpoint: `/health/`
+### Docker
+```bash
+docker-compose up -d --build
+```
 
-### Railway Deployment
+## Archivos clave
 
-Railway requires 3 separate services:
-
-1. **Web Service** (main app)
-   - Start Command: `/entrypoint.sh web`
-   - Handles HTTP requests via Gunicorn
-
-2. **Worker Service** (Celery worker)
-   - Start Command: `/entrypoint.sh worker`
-   - Processes async tasks (enrichment, clustering)
-
-3. **Beat Service** (Celery beat scheduler) ⚠️ NEW
-   - Start Command: `/entrypoint.sh beat`
-   - Runs scheduled tasks (daily clustering at 2 AM)
-   - Required for automatic cluster recalculation
-
-All three services must share the same `REDIS_URL` environment variable.
-
-**To add Beat service on Railway:**
-1. Create new service from same GitHub repo
-2. In service settings, point to `railway.beat.toml` (or `railway.beat.json`)
-3. Add same environment variables as web/worker (especially `REDIS_URL`)
-4. Deploy
-
-Note: Railway automatically detects `railway.<name>.toml` files for multi-service repos.
+| Archivo | Propósito |
+|---------|-----------|
+| `core/views.py` | Timeline, votación, filtros |
+| `core/api_views.py` | API para extensión |
+| `core/tasks.py` | Celery tasks |
+| `core/parse.py` | LLM parsing |
+| `core/clustering/` | Motor matemático |
+| `browser-extension/` | Chrome/Firefox extension |
