@@ -301,6 +301,9 @@ def compute_cluster_entities(cluster, top_n=5):
     entities_positive = Counter()
     entities_negative = Counter()
 
+    # Track entity info by (nombre, tipo) key
+    entity_info = {}
+
     # Entities from positively-voted noticias
     if noticias_buena:
         positive_nes = NoticiaEntidad.objects.filter(
@@ -310,6 +313,7 @@ def compute_cluster_entities(cluster, top_n=5):
         for ne in positive_nes:
             key = (ne.entidad.nombre, ne.entidad.tipo)
             entities_positive[key] += 1
+            entity_info[key] = ne.entidad.id
 
     # Entities from negatively-voted noticias
     if noticias_mala:
@@ -320,14 +324,25 @@ def compute_cluster_entities(cluster, top_n=5):
         for ne in negative_nes:
             key = (ne.entidad.nombre, ne.entidad.tipo)
             entities_negative[key] += 1
+            entity_info[key] = ne.entidad.id
 
-    # Format results
+    # Format results with id for linking
     top_positive = [
-        {"nombre": nombre, "tipo": tipo, "count": count}
+        {
+            "id": entity_info.get((nombre, tipo)),
+            "nombre": nombre,
+            "tipo": tipo,
+            "count": count
+        }
         for (nombre, tipo), count in entities_positive.most_common(top_n)
     ]
     top_negative = [
-        {"nombre": nombre, "tipo": tipo, "count": count}
+        {
+            "id": entity_info.get((nombre, tipo)),
+            "nombre": nombre,
+            "tipo": tipo,
+            "count": count
+        }
         for (nombre, tipo), count in entities_negative.most_common(top_n)
     ]
 
