@@ -10,14 +10,27 @@ import logging
 # litellm._turn_on_debug()
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# LLM Model Priority Configuration
+# =============================================================================
+# Models are tried in priority order (1 = highest). If a model fails, the next
+# priority model is used as fallback. All models must support JSON output mode.
+
+# Used by: parse_noticia_from_html()
+# Purpose: Extract structured article metadata (title, entities, sentiment) from HTML
+# Requirements: JSON output mode, good at entity extraction and sentiment analysis
 MODELS_PRIORITY_JSON = {
-    "openrouter/mistralai/mistral-saba": 1,
-    "openai/gpt-oss-20b:free": 2,
+    "google/gemini-2.5-flash-lite": 1,
+    "openrouter/mistralai/mistral-saba": 2,
+    "openai/gpt-oss-20b:free": 3,
 }
 
-MODELS_PRIORITY_MD = {
-    "openrouter/google/gemini-2.0-flash-lite-001": 1,
-    "openai/gpt-oss-20b:free": 2,
+# Used by: generate_cluster_description()
+# Purpose: Generate creative cluster names and descriptions in Spanish
+# Requirements: JSON output mode, creative writing in Spanish (rioplatense)
+MODELS_PRIORITY_CLUSTER = {
+    "google/gemini-2.5-flash-lite": 1,
+    "openrouter/mistralai/mistral-saba": 2,
 }
 
 
@@ -79,6 +92,7 @@ class EntidadNombrada(BaseModel):
 
 class ClusterDescription(BaseModel):
     """LLM-generated cluster name and description."""
+
     nombre: str = Field(
         description="Nombre corto y juguetón para el cluster (max 50 chars). "
         "Ej: 'Los Escépticos', 'Optimistas Urbanos', 'Críticos del Sistema'"
@@ -102,58 +116,8 @@ class Articulo(BaseModel):
     )
     resumen: Optional[str] = Field(None, description="A brief summary of the article.")
     imagen: Optional[str] = Field(None, description="Image URL if found in HTML")
-    descripcion: Optional[str] = Field(
-        None, description="Article description if found"
-    )
+    descripcion: Optional[str] = Field(None, description="Article description if found")
     entidades: Optional[list[EntidadNombrada]] = Field(None, alias="entidades")
-
-
-def parse_noticia(
-    markdown: str, current_model="openrouter/google/gemini-2.0-flash-lite-001"
-) -> Union[Articulo, None]:
-    """
-    Return the parsed article from the given HTML content.
-    """
-    try:
-        response = completion(
-            model=current_model,
-            caching=False,
-            response_format=Articulo,
-            extra_headers=_get_extra_headers(current_model),
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful markdown parser designed to output JSON.",
-                },
-                {
-                    "role": "user",
-                    "content": f"""From the crawled content, metadata about the news article should be extracted.
-                    The metadata should include the title (titulo), source (fuente), category (categoria), author (autor), summary (resumen), date (fecha) and entities (entidades) mentioned in the article.
-                    The entities should include the name (nombre), type (tipo), and sentiment (sentimiento) of each entity.
-                    The Markdown content to parse is as follows:
-
-                {markdown}""",
-                },
-            ],
-        )
-        article_data = response.choices[0].message.content
-        return Articulo.model_validate_json(article_data)
-    except Exception as e:
-        # Choose the next model in the priority list, if not available raise
-        # Use priority order, don't repeat models
-        for model, priority in MODELS_PRIORITY_JSON.items():
-            if (
-                model != current_model
-                and priority > MODELS_PRIORITY_JSON[current_model]
-            ):
-                try:
-                    return parse_noticia(markdown, model)
-                except Exception as e:
-                    logger.error(f"Error parsing the article: {e}")
-                    continue
-
-        logger.error(f"Error parsing the article: {e}")
-        return None
 
 
 def parse_noticia_from_html(
@@ -198,9 +162,8 @@ def parse_noticia_from_html(
         return Articulo.model_validate_json(article_data)
     except Exception as e:
         for model, priority in MODELS_PRIORITY_JSON.items():
-            if (
-                model != current_model
-                and priority > MODELS_PRIORITY_JSON.get(current_model, 0)
+            if model != current_model and priority > MODELS_PRIORITY_JSON.get(
+                current_model, 0
             ):
                 try:
                     return parse_noticia_from_html(html, model)
@@ -208,64 +171,6 @@ def parse_noticia_from_html(
                     logger.error(f"Error parsing article with {model}: {inner_e}")
                     continue
         logger.error(f"Error parsing article from HTML: {e}")
-        return None
-
-
-def parse_noticia_markdown(
-    html: str,
-    title: str,
-    current_model: str = "openrouter/google/gemini-2.0-flash-lite-001",
-) -> Union[str, None]:
-    """
-    DEPRECATED: Use parse_noticia_from_html instead.
-    Return the parsed article from the given HTML content.
-    """
-    try:
-        clean_html = remove_unnecessary_tags(html)
-        response = completion(
-            model=current_model,
-            extra_headers=_get_extra_headers(current_model),
-            messages=[
-                {
-                    "role": "system",
-                    "content": """
-                    You are a helpful html parser designed to output a markdown version of the news article.
-                    There could be other content in the creawled HTML, but you should only output the main article.
-                    The markdown should include the title, source, author, date and main content of the article.
-                    Everything else should be ignored.
-                    Markdown subtitles should be in spanish, article language should be respected.
-                    No html tags should be present in the markdown output.
-                    """,
-                },
-                {
-                    "role": "user",
-                    "content": f"""
-                    The HTML content to parse is as follows:
-
-                    {clean_html}
-
-                    The title of the article we are interested in is:
-                    {title}
-
-                    The markdown version of the article is:
-                    """,
-                },
-            ],
-        )
-        article_md = response.choices[0].message.content
-
-        return article_md
-    except Exception as e:
-        # Choose the next model in the priority list, if not available raise
-        # Use priority order, don't repeat models
-        for model, priority in MODELS_PRIORITY_MD.items():
-            if model != current_model and priority > MODELS_PRIORITY_MD[current_model]:
-                try:
-                    return parse_noticia_markdown(html, title, model)
-                except Exception as e:
-                    logger.error(f"Error parsing the article: {e}")
-                    continue
-        logger.error(f"Error parsing the article: {e}")
         return None
 
 
@@ -486,12 +391,6 @@ def parse_from_meta_tags(url):
     return None, None, None
 
 
-MODELS_PRIORITY_CLUSTER = {
-    "openrouter/google/gemini-2.0-flash-lite-001": 1,
-    "openrouter/mistralai/mistral-saba": 2,
-}
-
-
 def generate_cluster_description(
     top_noticias: list[dict],
     entities_positive: list[dict],
@@ -517,21 +416,23 @@ def generate_cluster_description(
     """
     try:
         # Build context for the prompt
-        noticias_text = "\n".join([
-            f"- {n['titulo']} (opinión: {n['majority_opinion']}, "
-            f"consenso: {n['consensus']:.0%})"
-            for n in top_noticias[:7]
-        ])
+        noticias_text = "\n".join(
+            [
+                f"- {n['titulo']} (opinión: {n['majority_opinion']}, "
+                f"consenso: {n['consensus']:.0%})"
+                for n in top_noticias[:7]
+            ]
+        )
 
-        entities_pos_text = ", ".join([
-            f"{e['nombre']} ({e['tipo']})"
-            for e in entities_positive[:5]
-        ]) or "ninguna identificada"
+        entities_pos_text = (
+            ", ".join([f"{e['nombre']} ({e['tipo']})" for e in entities_positive[:5]])
+            or "ninguna identificada"
+        )
 
-        entities_neg_text = ", ".join([
-            f"{e['nombre']} ({e['tipo']})"
-            for e in entities_negative[:5]
-        ]) or "ninguna identificada"
+        entities_neg_text = (
+            ", ".join([f"{e['nombre']} ({e['tipo']})" for e in entities_negative[:5]])
+            or "ninguna identificada"
+        )
 
         prompt = f"""Analiza este grupo de votantes de un sitio de noticias uruguayo.
 
@@ -582,9 +483,8 @@ Ejemplos de buenos nombres: "Los Escépticos", "Optimistas del Interior",
         logger.error(f"Error generating cluster description with {current_model}: {e}")
         # Try fallback models
         for model, priority in MODELS_PRIORITY_CLUSTER.items():
-            if (
-                model != current_model
-                and priority > MODELS_PRIORITY_CLUSTER.get(current_model, 0)
+            if model != current_model and priority > MODELS_PRIORITY_CLUSTER.get(
+                current_model, 0
             ):
                 try:
                     return generate_cluster_description(

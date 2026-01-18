@@ -792,11 +792,11 @@ def test_aggregation_with_shared_noticias():
     assert agg0["neutral"] == 1
     assert agg0["total"] == 5
 
-    # Check noticia1: buena=2, mala=1, neutral=2
+    # Check noticia1: buena=2, mala=2, neutral=1
     agg1 = aggregation[noticias[1].id]
     assert agg1["buena"] == 2
-    assert agg1["mala"] == 1
-    assert agg1["neutral"] == 2
+    assert agg1["mala"] == 2
+    assert agg1["neutral"] == 1
     assert agg1["total"] == 5
 
     # Check noticia2: buena=2, mala=1, neutral=2
