@@ -68,6 +68,8 @@ def reverse_migration(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    # Disable transaction to allow constraint after data modification
+    atomic = False
 
     dependencies = [
         ("core", "0016_add_cluster_llm_description"),

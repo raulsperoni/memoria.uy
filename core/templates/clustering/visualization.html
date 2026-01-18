@@ -1207,10 +1207,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </h5>
                     <div class="flex flex-wrap gap-1.5">
                         ${centroid.entities_positive.map(e => `
-                            <span class="px-2 py-0.5 text-xs bg-white border border-emerald-600 
-                                         text-emerald-900 mono">
+                            <a href="/?filter=mencionan_positiva&entidad=${e.id}"
+                               class="px-2 py-0.5 text-xs bg-white border border-emerald-600
+                                      text-emerald-900 mono hover:bg-emerald-600
+                                      hover:text-white transition-colors">
                                 ${e.nombre}
-                            </span>
+                            </a>
                         `).join('')}
                     </div>
                 </div>
@@ -1225,10 +1227,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </h5>
                     <div class="flex flex-wrap gap-1.5">
                         ${centroid.entities_negative.map(e => `
-                            <span class="px-2 py-0.5 text-xs bg-white border border-rose-600 
-                                         text-rose-900 mono">
+                            <a href="/?filter=mencionan_negativa&entidad=${e.id}"
+                               class="px-2 py-0.5 text-xs bg-white border border-rose-600
+                                      text-rose-900 mono hover:bg-rose-600
+                                      hover:text-white transition-colors">
                                 ${e.nombre}
-                            </span>
+                            </a>
                         `).join('')}
                     </div>
                 </div>
