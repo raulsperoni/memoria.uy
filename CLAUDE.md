@@ -71,6 +71,23 @@ Ver [core/parse.py](core/parse.py).
 Motor matemático en `core/clustering/`. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md)
 para detalles de algoritmos.
 
+### Viralización y compartir
+Sistema de captura del mapa de burbujas para compartir en redes sociales:
+
+1. **Botón "Compartir mi burbuja"** en `/mapa/`
+   - Captura SVG real del mapa → convierte a JPEG optimizado
+   - Mobile: Web Share API nativo (WhatsApp, etc.)
+   - Desktop: Descarga imagen + copia texto
+
+2. **Imágenes OG dinámicas** para links compartidos
+   - Endpoint: `/api/mapa/og-image/?cluster=X`
+   - Genera PNG 1200x630px con Pillow
+   - Cache: 24 horas
+   - Estilo mapa con burbujas + pin de posición
+
+Ver `svgToBlob()` en [visualization.html](core/templates/clustering/visualization.html)
+y `generate_bubble_map_og_image()` en [core/og_image.py](core/og_image.py).
+
 ## Testing
 
 - pytest con pytest-django
@@ -92,8 +109,10 @@ docker-compose up -d --build
 | Archivo | Propósito |
 |---------|-----------|
 | `core/views.py` | Timeline, votación, filtros |
+| `core/views_clustering.py` | Vistas del mapa de burbujas |
 | `core/api_views.py` | API para extensión |
 | `core/tasks.py` | Celery tasks |
 | `core/parse.py` | LLM parsing |
+| `core/og_image.py` | Generación de imágenes OG |
 | `core/clustering/` | Motor matemático |
 | `browser-extension/` | Chrome/Firefox extension |
