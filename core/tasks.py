@@ -741,6 +741,7 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
     inactive_users = (
         User.objects.filter(is_active=True)
         .exclude(email="")
+        .exclude(is_staff=True)  # Exclude staff users from reengagement emails
         .annotate(last_vote=Subquery(last_vote_subquery))
         .filter(
             Q(last_login__isnull=True) | Q(last_login__lt=threshold),
