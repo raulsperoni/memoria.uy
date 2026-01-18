@@ -86,6 +86,14 @@
     }
     .tooltip.visible {
         opacity: 1;
+        pointer-events: auto;
+    }
+    .tooltip a {
+        color: #1d4ed8;
+        text-decoration: underline;
+    }
+    .tooltip a:hover {
+        color: #1e40af;
     }
     .legend-item {
         display: flex;
@@ -397,6 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let showNews = false;
     let data = null;
     let selectedClusterId = null;
+    let activeNewsPopup = null;
+
+    // Detect mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     // Color palette - earthy, map-like colors
     const clusterColors = [
@@ -595,19 +607,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr('stroke', '#1e40af')
                 .attr('stroke-width', 1)
                 .on('mouseover', (event, d) => {
-                    const truncatedTitle = d.titulo ? 
-                        (d.titulo.length > 60 ? d.titulo.substring(0, 60) + '...' : d.titulo) : 
-                        'Sin título';
-                    showTooltip(event,
-                        `<strong>${truncatedTitle}</strong><br>` +
-                        `<em>${d.medio || 'Medio desconocido'}</em><br>` +
-                        `${d.n_votes} votos`);
-                })
-                .on('mouseout', hideTooltip)
-                .on('click', (event, d) => {
-                    if (d.slug) {
-                        window.location.href = `/noticias/${d.slug}/`;
+                    // Only show hover tooltip on desktop when no popup is active
+                    if (!isMobile && !activeNewsPopup) {
+                        const truncatedTitle = d.titulo ?
+                            (d.titulo.length > 60 ? d.titulo.substring(0, 60) + '...' : d.titulo) :
+                            'Sin título';
+                        showTooltip(event,
+                            `<strong>${truncatedTitle}</strong><br>` +
+                            `<em>${d.medio || 'Medio desconocido'}</em><br>` +
+                            `${d.n_votes} votos`);
                     }
+                })
+                .on('mouseout', () => {
+                    // Only hide if not showing a popup
+                    if (!activeNewsPopup) {
+                        hideTooltip();
+                    }
+                })
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    showNewsPopup(event, d);
                 });
         }
 
@@ -903,11 +922,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="flex flex-col gap-3 mb-3">
                                         <button id="share-whatsapp-btn"
                                                 class="px-4 py-3 bg-green-500 text-white rounded text-base hover:bg-green-600 font-semibold flex items-center justify-center gap-2">
-                                            💬 WhatsApp (con link)
+                                            💬 WhatsApp
                                         </button>
                                         <button id="share-instagram-btn"
                                                 class="px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded text-base hover:from-purple-600 hover:to-pink-600 font-semibold flex items-center justify-center gap-2">
-                                            📸 Instagram / Otras apps
+                                            📸 Instagram
                                         </button>
                                     </div>
                                     <button id="close-share-mobile"
@@ -925,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     try {
                                         const shareData = {
                                             text: shareText,
-                                            files: [file]
+                                            // files: [file] // no se soporta en WhatsApp
                                         };
                                         
                                         if (navigator.canShare && navigator.canShare(shareData)) {
@@ -1122,9 +1141,16 @@ document.addEventListener('DOMContentLoaded', function() {
             showNews = !showNews;
             d3.select('.news-points').style('display', showNews ? 'block' : 'none');
             this.textContent = showNews ? '📰 Noticias ✓' : '📰 Noticias';
+            // Active state
             this.classList.toggle('bg-blue-600', showNews);
+            this.classList.toggle('hover:bg-blue-700', showNews);
             this.classList.toggle('text-white', showNews);
             this.classList.toggle('border-blue-600', showNews);
+            // Inactive state (remove when active)
+            this.classList.toggle('bg-white/90', !showNews);
+            this.classList.toggle('hover:bg-white', !showNews);
+            this.classList.toggle('text-blue-800', !showNews);
+            this.classList.toggle('border-blue-200', !showNews);
         });
 
         // Toggle stats overlay
@@ -1339,7 +1365,63 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideTooltip() {
         const tooltip = document.getElementById('tooltip');
         if (tooltip) tooltip.classList.remove('visible');
+        activeNewsPopup = null;
     }
+
+    function showNewsPopup(event, d) {
+        // Close any existing popup
+        activeNewsPopup = d.id;
+
+        const truncatedTitle = d.titulo ?
+            (d.titulo.length > 80 ? d.titulo.substring(0, 80) + '...' : d.titulo) :
+            'Sin título';
+
+        const newsUrl = d.slug ? `/noticias/${d.slug}/` : '#';
+
+        const html = `
+            <div style="max-width: 280px;">
+                <strong>${truncatedTitle}</strong><br>
+                <em style="color: #666;">${d.medio || 'Medio desconocido'}</em><br>
+                <span style="color: #888;">${d.n_votes} votos</span>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                    <a href="${newsUrl}" style="display: inline-block; padding: 4px 12px;
+                       background: #3b82f6; color: white; text-decoration: none;
+                       border-radius: 4px; font-size: 12px;">
+                        Ver noticia →
+                    </a>
+                </div>
+            </div>
+        `;
+
+        const tooltip = document.getElementById('tooltip');
+        if (!tooltip) return;
+
+        tooltip.innerHTML = html;
+        tooltip.classList.add('visible');
+
+        // Position relative to the map container
+        const mapContainer = document.getElementById('bubble-map');
+        const rect = mapContainer.getBoundingClientRect();
+
+        let x = event.clientX - rect.left + 15;
+        let y = event.clientY - rect.top + 15;
+
+        // Keep tooltip in bounds
+        if (x + 280 > rect.width) x = event.clientX - rect.left - 295;
+        if (y + 150 > rect.height) y = event.clientY - rect.top - 160;
+        if (x < 0) x = 10;
+        if (y < 0) y = 10;
+
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    }
+
+    // Close popup when clicking elsewhere on the map
+    document.getElementById('bubble-map').addEventListener('click', (event) => {
+        if (activeNewsPopup && !event.target.closest('.tooltip')) {
+            hideTooltip();
+        }
+    });
 });
 </script>
 {% endif %}

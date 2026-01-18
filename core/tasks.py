@@ -179,8 +179,12 @@ def enrich_from_captured_html(noticia_id):
                     f"{entidad_nombrada.sentimiento})"
                 )
 
+                from core.models import normalize_entity_name
+                normalized = normalize_entity_name(entidad_nombrada.nombre)
                 entidad, _ = Entidad.objects.get_or_create(
-                    nombre=entidad_nombrada.nombre, tipo=entidad_nombrada.tipo
+                    normalized_name=normalized,
+                    tipo=entidad_nombrada.tipo,
+                    defaults={"nombre": entidad_nombrada.nombre}
                 )
 
                 NoticiaEntidad.objects.get_or_create(
