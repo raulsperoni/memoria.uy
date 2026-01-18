@@ -48,6 +48,7 @@ from core.views_clustering import (
     ClusterStatsView,
     cluster_data_json,
     cluster_og_image,
+    upload_cluster_og_image,
 )
 from memoria.views import health_check, robots_txt, favicon
 
@@ -134,13 +135,12 @@ urlpatterns = (
             cluster_og_image,
             name="api-cluster-og-image",
         ),
-        # Clustering UI endpoints
         path(
-            "clusters/visualization/",
-            ClusterVisualizationView.as_view(),
-            name="cluster-visualization",
+            "api/mapa/upload-og-image/",
+            upload_cluster_og_image,
+            name="api-upload-cluster-og-image",
         ),
-        # Short alias for sharing
+        # Clustering UI endpoint - mapa de burbujas
         path(
             "mapa/",
             ClusterVisualizationView.as_view(),

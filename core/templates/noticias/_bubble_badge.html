@@ -33,7 +33,7 @@
      data-cluster-id="{{ my_cluster.id|default:'0' }}">
 
   <!-- Collapsed State - Bubble style -->
-  <a href="{% url 'cluster-visualization' %}"
+  <a href="{% url 'mapa' %}"
      x-show="!expanded"
      x-transition
      class="bubble-badge-collapsed block cursor-pointer transition-all duration-300 hover:scale-105">
@@ -59,7 +59,7 @@
   </a>
 
   <!-- Expanded State -->
-  <a href="{% url 'cluster-visualization' %}"
+  <a href="{% url 'mapa' %}"
      x-show="expanded"
      x-transition
      class="bubble-badge-expanded block p-4 min-w-[220px] cursor-pointer transition-all">

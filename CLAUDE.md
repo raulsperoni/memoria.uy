@@ -75,18 +75,29 @@ para detalles de algoritmos.
 Sistema de captura del mapa de burbujas para compartir en redes sociales:
 
 1. **Botón "Compartir mi burbuja"** en `/mapa/`
-   - Captura SVG real del mapa → convierte a JPEG optimizado
+   - Captura SVG real del mapa → convierte a JPEG optimizado (~50-80KB)
+   - Sube imagen al servidor automáticamente (`/api/mapa/upload-og-image/`)
    - Mobile: Web Share API nativo (WhatsApp, etc.)
    - Desktop: Descarga imagen + copia texto
 
-2. **Imágenes OG dinámicas** para links compartidos
+2. **Imágenes OG para links compartidos**
    - Endpoint: `/api/mapa/og-image/?cluster=X`
-   - Genera PNG 1200x630px con Pillow
-   - Cache: 24 horas
-   - Estilo mapa con burbujas + pin de posición
+   - Sirve SOLO imágenes reales capturadas por usuarios (`media/og-images/og-cluster-X.jpg`)
+   - Sin fallback generado - si no hay captura, muestra logo estático
+   - Ventaja: Imagen OG es siempre el mapa REAL
 
-Ver `svgToBlob()` en [visualization.html](core/templates/clustering/visualization.html)
-y `generate_bubble_map_og_image()` en [core/og_image.py](core/og_image.py).
+3. **Flujo completo:**
+   ```
+   Usuario hace click "Compartir"
+   → Captura SVG del mapa en el navegador
+   → Convierte a JPEG con Canvas API
+   → Sube al servidor (fire-and-forget)
+   → Guarda como og-cluster-{id}.jpg
+   → Próximo que comparta ese link verá la imagen real
+   ```
+
+Ver `svgToBlob()` y `uploadOGImage()` en [visualization.html](core/templates/clustering/visualization.html)
+y `upload_cluster_og_image()` en [core/views_clustering.py](core/views_clustering.py).
 
 ## Testing
 
@@ -109,10 +120,9 @@ docker-compose up -d --build
 | Archivo | Propósito |
 |---------|-----------|
 | `core/views.py` | Timeline, votación, filtros |
-| `core/views_clustering.py` | Vistas del mapa de burbujas |
+| `core/views_clustering.py` | Vistas del mapa de burbujas + OG images |
 | `core/api_views.py` | API para extensión |
 | `core/tasks.py` | Celery tasks |
 | `core/parse.py` | LLM parsing |
-| `core/og_image.py` | Generación de imágenes OG |
 | `core/clustering/` | Motor matemático |
 | `browser-extension/` | Chrome/Firefox extension |
