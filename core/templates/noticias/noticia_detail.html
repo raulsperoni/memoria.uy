@@ -47,7 +47,7 @@
   <article class="border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
     <!-- Image -->
     {% if noticia.mostrar_imagen %}
-    <div class="border-b-2 border-black">
+    <div class="border-b border-gray-200">
       <img src="{{ noticia.mostrar_imagen }}"
            alt="{{ noticia.mostrar_titulo }}"
            class="w-full h-64 object-cover">
@@ -69,17 +69,18 @@
       {% endif %}
 
       <!-- Metadata -->
-      <div class="flex flex-wrap items-center gap-3 text-xs mono text-gray-600 mb-6 pb-6 border-b border-gray-300">
-        <span>📅 {{ noticia.mostrar_fecha|date:"d/m/Y H:i" }}</span>
-        <span>👁️ {{ vote_stats.total }} voto{{ vote_stats.total|pluralize }}</span>
-        <span class="text-gray-400">|</span>
+      <div class="flex flex-wrap items-center gap-3 text-xs mono text-gray-500 mb-6 pb-6 border-b border-gray-200">
+        <span>{{ noticia.mostrar_fecha|date:"d/m/Y H:i" }}</span>
+        <span class="text-gray-300">|</span>
+        <span>{{ vote_stats.total }} voto{{ vote_stats.total|pluralize }}</span>
+        <span class="text-gray-300">|</span>
         <a href="{{ noticia.enlace }}"
            target="_blank"
            rel="noopener noreferrer"
            class="hover:text-black hover:underline">
-          🔗 ver original
+          ver original
         </a>
-        <span class="text-gray-400">|</span>
+        <span class="text-gray-300">|</span>
         <button onclick="shareToWhatsApp()"
                 class="font-bold text-green-700 hover:text-green-900 hover:underline inline-flex items-center gap-1">
           <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -91,20 +92,20 @@
 
       <!-- User Vote Status / Vote Form -->
       {% if user_vote %}
-      <div class="bg-blue-50 border-2 border-blue-600 p-5 mb-6">
-        <p class="text-sm mono mb-4">
-          <strong class="text-blue-800">Tu voto:</strong>
+      <div class="bg-gray-50 border-l-4 border-blue-600 p-4 mb-6">
+        <p class="text-sm mono mb-3">
+          <strong class="text-gray-900">Tu voto:</strong>
           {% if user_vote.opinion == "buena" %}
-          <span class="font-bold text-green-700">😊 Buena noticia</span>
+          <span class="font-bold text-green-700">Buena noticia</span>
           {% elif user_vote.opinion == "mala" %}
-          <span class="font-bold text-red-700">😞 Mala noticia</span>
+          <span class="font-bold text-red-700">Mala noticia</span>
           {% else %}
-          <span class="font-bold text-gray-700">😐 Neutral</span>
+          <span class="font-bold text-gray-700">Neutral</span>
           {% endif %}
         </p>
         <a href="{% url 'timeline' %}?filter=nuevas"
-           class="block text-center bg-black text-white px-5 py-3 text-sm mono font-bold border-2 border-black hover:bg-blue-600 hover:border-blue-600 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
-          → Ver más noticias para votar
+           class="block text-center bg-black text-white px-5 py-3 text-sm mono font-bold border-2 border-black hover:bg-gray-800 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          Ver más noticias para votar
         </a>
       </div>
       {% else %}
@@ -112,7 +113,7 @@
       <form hx-post="{% url 'vote' noticia.pk %}"
             hx-swap="outerHTML"
             hx-target="this"
-            class="bg-yellow-50 border-2 border-black p-4 mb-6"
+            class="bg-gray-50 border-2 border-black p-5 mb-6"
             id="vote-form-detail">
         {% csrf_token %}
         <p class="text-sm font-bold mono mb-3">¿Qué te parece esta noticia?</p>
@@ -145,87 +146,90 @@
       </form>
       {% endif %}
 
-      <!-- Inline Bubble Info (minimized on detail page) -->
-      {% if has_cluster and cluster_pattern %}
-        <div class="bg-blue-50 border-2 border-blue-600 p-4 mb-6">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-bold mono text-blue-900">
-              Tu burbuja{% if my_cluster.llm_name %} "{{ my_cluster.llm_name }}"{% endif %} (#{{ my_cluster.id }}) votó:
-            </h2>
-          </div>
-
-          <div class="flex items-center gap-4 mb-3">
-            <div class="flex gap-2 text-xs text-gray-700">
-              <span>😊 {{ cluster_pattern.count_buena }}</span>
-              <span>😐 {{ cluster_pattern.count_neutral }}</span>
-              <span>😞 {{ cluster_pattern.count_mala }}</span>
-            </div>
-
-            {% if cluster_pattern.majority_opinion %}
-              <span class="border-2 px-3 py-1 font-bold text-sm
-                {% if cluster_pattern.majority_opinion == 'buena' %}
-                  border-green-600 bg-green-100 text-green-800
-                {% elif cluster_pattern.majority_opinion == 'mala' %}
-                  border-red-600 bg-red-100 text-red-800
-                {% else %}
-                  border-gray-600 bg-gray-100 text-gray-800
-                {% endif %}">
-                {% if cluster_pattern.majority_opinion == 'buena' %}
-                  😊 {{ cluster_pattern.count_buena|mul:100|div:cluster_pattern.total_votes }}% buena
-                {% elif cluster_pattern.majority_opinion == 'mala' %}
-                  😞 {{ cluster_pattern.count_mala|mul:100|div:cluster_pattern.total_votes }}% mala
-                {% else %}
-                  😐 neutral
-                {% endif %}
-              </span>
-            {% endif %}
-          </div>
-
-          {% if cluster_pattern.consensus_score %}
-            <div class="flex items-center gap-2 text-xs">
-              <span class="text-gray-700 mono">consenso:</span>
-              <div class="flex-1 bg-gray-200 h-2 rounded-full overflow-hidden">
-                <div class="bg-blue-600 h-full transition-all"
-                     style="width: {{ cluster_pattern.consensus_score|mul:100 }}%">
-                </div>
-              </div>
-              <span class="font-bold text-gray-800">
-                {{ cluster_pattern.consensus_score|floatformat:2 }}
-              </span>
-            </div>
-          {% endif %}
-        </div>
-      {% endif %}
-
       <!-- Vote Stats -->
-      <div class="bg-gray-50 border border-gray-300 p-4 mb-6">
-        <h2 class="text-sm font-bold mono mb-3">Opinión de los uruguayos:</h2>
-        <div class="space-y-2">
+      <div class="bg-gray-50 border border-gray-200 p-5 mb-6">
+        <h2 class="text-sm font-bold mono mb-4 text-gray-900">Opinión general</h2>
+        <div class="space-y-3">
           <div class="flex items-center justify-between text-sm mono">
-            <span class="text-green-700">👍 Buena noticia</span>
-            <span class="font-bold">{{ vote_stats.buenas }}</span>
+            <span class="text-green-700">Buena noticia</span>
+            <span class="font-bold text-gray-900">{{ vote_stats.buenas }}</span>
           </div>
           <div class="flex items-center justify-between text-sm mono">
-            <span class="text-red-700">👎 Mala noticia</span>
-            <span class="font-bold">{{ vote_stats.malas }}</span>
+            <span class="text-red-700">Mala noticia</span>
+            <span class="font-bold text-gray-900">{{ vote_stats.malas }}</span>
           </div>
           <div class="flex items-center justify-between text-sm mono">
-            <span class="text-gray-600">😐 Neutral</span>
-            <span class="font-bold">{{ vote_stats.neutrales }}</span>
+            <span class="text-gray-600">Neutral</span>
+            <span class="font-bold text-gray-900">{{ vote_stats.neutrales }}</span>
           </div>
         </div>
 
         {% if majority_opinion != "neutral" %}
-        <div class="mt-4 pt-4 border-t border-gray-300 text-sm mono">
-          <strong>Mayoría:</strong>
+        <div class="mt-4 pt-4 border-t border-gray-200 text-sm mono">
+          <strong class="text-gray-900">Mayoría:</strong>
           {% if majority_opinion == "buena" %}
-          <span class="text-green-700 font-bold">👍 Buena noticia</span>
+          <span class="text-green-700 font-bold">Buena noticia</span>
           {% else %}
-          <span class="text-red-700 font-bold">👎 Mala noticia</span>
+          <span class="text-red-700 font-bold">Mala noticia</span>
           {% endif %}
         </div>
         {% endif %}
       </div>
+
+      <!-- Bubble Info (collapsed by default) -->
+      {% if has_cluster and cluster_pattern %}
+      <details class="bg-blue-50 border border-blue-200 p-4 mb-6 mono">
+        <summary class="cursor-pointer text-sm font-bold text-blue-900 hover:text-blue-700">
+          Tu burbuja{% if my_cluster.llm_name %} "{{ my_cluster.llm_name }}"{% endif %} (#{{ my_cluster.id }})
+        </summary>
+        <div class="mt-4 space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-gray-700">Votos de tu burbuja:</span>
+            <div class="flex gap-3 text-xs">
+              <span class="text-green-700">{{ cluster_pattern.count_buena }} buena</span>
+              <span class="text-gray-600">{{ cluster_pattern.count_neutral }} neutral</span>
+              <span class="text-red-700">{{ cluster_pattern.count_mala }} mala</span>
+            </div>
+          </div>
+
+          {% if cluster_pattern.majority_opinion %}
+          <div class="flex items-center justify-between">
+            <span class="text-gray-700">Mayoría:</span>
+            <span class="font-bold
+              {% if cluster_pattern.majority_opinion == 'buena' %}
+                text-green-700
+              {% elif cluster_pattern.majority_opinion == 'mala' %}
+                text-red-700
+              {% else %}
+                text-gray-700
+              {% endif %}">
+              {{ cluster_pattern.count_buena|mul:100|div:cluster_pattern.total_votes }}% buena
+            </span>
+          </div>
+          {% endif %}
+
+          {% if cluster_pattern.consensus_score %}
+          <div class="flex items-center gap-2">
+            <span class="text-gray-700">Consenso:</span>
+            <div class="flex-1 bg-gray-200 h-2 rounded-full overflow-hidden">
+              <div class="bg-blue-600 h-full transition-all"
+                   style="width: {{ cluster_pattern.consensus_score|mul:100 }}%">
+              </div>
+            </div>
+            <span class="font-bold text-gray-800 text-xs">
+              {{ cluster_pattern.consensus_score|floatformat:2 }}
+            </span>
+          </div>
+          {% endif %}
+
+          <div class="pt-3 border-t border-blue-200">
+            <a href="{% url 'cluster-visualization' %}" class="text-xs text-blue-700 hover:text-blue-900 hover:underline">
+              Ver análisis completo de tu burbuja →
+            </a>
+          </div>
+        </div>
+      </details>
+      {% endif %}
     </div>
   </article>
 

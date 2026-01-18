@@ -1,6 +1,6 @@
 {# templates/noticias/timeline_item.html #}
 
-<div class="border-2 border-black bg-white mb-4 mono" id="noticia-{{ noticia.pk }}">
+<div class="border-2 border-black bg-white mb-4 mono shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" id="noticia-{{ noticia.pk }}">
   <!-- Refresh indicator overlay -->
   <div id="refresh-indicator-{{ noticia.pk }}" class="htmx-indicator absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-20">
     <div class="text-center">
@@ -11,7 +11,7 @@
 
   <!-- Image (if exists) -->
   {% if noticia.mostrar_imagen %}
-    <div class="border-b-2 border-black">
+    <div class="border-b border-gray-200">
       <img src="{{ noticia.mostrar_imagen }}"
            alt="{{ noticia.mostrar_titulo }}"
            class="w-full object-cover h-48 md:h-64">
@@ -19,7 +19,7 @@
   {% endif %}
 
   <!-- Vote Buttons - Always Visible -->
-  <div class="border-b-2 border-black bg-yellow-50 p-3">
+  <div class="border-b border-gray-200 bg-gray-50 p-3">
     <form hx-post="{% url 'vote' noticia.pk %}"
           {% if current_filter == 'nuevas' or not current_filter %}
           hx-target="#noticia-{{ noticia.pk }}"
@@ -60,24 +60,24 @@
   </div>
 
   <!-- Metadata Bar -->
-  <div class="border-b-2 border-black px-3 py-1.5 bg-gray-50 flex items-center justify-between text-[10px] text-gray-700">
+  <div class="border-b border-gray-200 px-3 py-2 bg-white flex items-center justify-between text-[10px] text-gray-600">
     <div class="flex flex-wrap items-center gap-x-3">
-      <a href="{{ noticia.enlace }}" target="_blank" class="hover:underline">
-        → leer original
+      <a href="{{ noticia.enlace }}" target="_blank" class="hover:text-black hover:underline">
+        leer original
       </a>
-      <a href="{% url 'noticia-detail' noticia.slug %}" class="hover:underline">
-        ↗ compartir
+      <a href="{% url 'noticia-detail' noticia.slug %}" class="hover:text-black hover:underline">
+        compartir
       </a>
       {% if noticia.mostrar_fecha %}
-        <span>{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
+        <span class="text-gray-400">{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}
     </div>
 
-    <div class="flex items-center gap-x-2 text-gray-500">
+    <div class="flex items-center gap-x-2 text-gray-400">
       {% load vote_extras %}
-      <span title="Votos buenos">😊 {{ noticia.votos|vote_count:"buena" }}</span>
-      <span title="Votos neutrales">😐 {{ noticia.votos|vote_count:"neutral" }}</span>
-      <span title="Votos malos">😞 {{ noticia.votos|vote_count:"mala" }}</span>
+      <span title="Votos buenos">{{ noticia.votos|vote_count:"buena" }}</span>
+      <span title="Votos neutrales">{{ noticia.votos|vote_count:"neutral" }}</span>
+      <span title="Votos malos">{{ noticia.votos|vote_count:"mala" }}</span>
     </div>
 
     <!-- Admin actions -->
@@ -105,88 +105,57 @@
     {% endif %}
   </div>
 
-  <!-- Bubble Consensus Badge (if in bubble) -->
+  <!-- Bubble Consensus Badge (if in bubble) - Minimal version -->
   {% if has_cluster and cluster_patterns and noticia.id in cluster_patterns %}
     {% with pattern=cluster_patterns|get_item:noticia.id %}
-      <div class="border-b-2 border-black px-3 py-2 bg-blue-50">
-        <div class="flex items-center justify-between text-xs">
-          <span class="font-semibold text-gray-700 mono">
-            tu burbuja{% if my_cluster.llm_name %} "{{ my_cluster.llm_name }}"{% endif %} (#{{ my_cluster.id }}) votó:
+      <div class="px-3 py-1.5 bg-blue-50 border-b border-gray-200">
+        <div class="flex items-center justify-between text-[10px] text-gray-600">
+          <span>
+            tu burbuja{% if my_cluster.llm_name %} "{{ my_cluster.llm_name }}"{% endif %}:
           </span>
-          <div class="flex items-center gap-2">
-            <div class="flex gap-1.5">
-              <span class="text-[10px] text-gray-600">
-                😊{{ pattern.count_buena }}
-              </span>
-              <span class="text-[10px] text-gray-600">
-                😐{{ pattern.count_neutral }}
-              </span>
-              <span class="text-[10px] text-gray-600">
-                😞{{ pattern.count_mala }}
-              </span>
-            </div>
-            {% if pattern.majority_opinion %}
-              <span class="border-2 px-2 py-0.5 font-bold text-xs
-                {% if pattern.majority_opinion == 'buena' %}
-                  border-green-600 bg-green-100 text-green-800
-                {% elif pattern.majority_opinion == 'mala' %}
-                  border-red-600 bg-red-100 text-red-800
-                {% else %}
-                  border-gray-600 bg-gray-100 text-gray-800
-                {% endif %}">
-                {% if pattern.majority_opinion == 'buena' %}
-                  😊 {{ pattern.count_buena|mul:100|div:pattern.total_votes }}% buena
-                {% elif pattern.majority_opinion == 'mala' %}
-                  😞 {{ pattern.count_mala|mul:100|div:pattern.total_votes }}% mala
-                {% else %}
-                  😐 neutral
-                {% endif %}
-              </span>
-            {% endif %}
-          </div>
-        </div>
-        {% if pattern.consensus_score %}
-          <div class="mt-1 flex items-center gap-2">
-            <span class="text-[10px] text-gray-600 mono">consenso:</span>
-            <div class="flex-1 bg-gray-200 h-1.5 rounded-full overflow-hidden">
-              <div class="bg-blue-600 h-full transition-all"
-                   style="width: {{ pattern.consensus_score|mul:100 }}%">
-              </div>
-            </div>
-            <span class="text-[10px] font-bold text-gray-700">
-              {{ pattern.consensus_score|floatformat:2 }}
+          {% if pattern.majority_opinion %}
+            <span class="font-bold
+              {% if pattern.majority_opinion == 'buena' %}
+                text-green-700
+              {% elif pattern.majority_opinion == 'mala' %}
+                text-red-700
+              {% else %}
+                text-gray-700
+              {% endif %}">
+              {{ pattern.count_buena|mul:100|div:pattern.total_votes }}% buena
             </span>
-          </div>
-        {% endif %}
+          {% else %}
+            <span class="text-gray-500">sin mayoría</span>
+          {% endif %}
+        </div>
       </div>
     {% endwith %}
   {% endif %}
 
   <!-- Content -->
-  <div class="p-3">
+  <div class="p-4">
     <!-- Title -->
-    <h3 class="text-sm md:text-base font-bold mb-1.5 leading-tight">{{ noticia.mostrar_titulo }}</h3>
+    <h3 class="text-base md:text-lg font-bold mb-2 leading-tight">{{ noticia.mostrar_titulo }}</h3>
 
     <!-- Description -->
     {% if noticia.meta_descripcion %}
-      <p class="text-[11px] md:text-xs text-gray-700 mb-2 leading-snug">{{ noticia.meta_descripcion }}</p>
+      <p class="text-xs md:text-sm text-gray-700 mb-3 leading-relaxed">{{ noticia.meta_descripcion }}</p>
     {% endif %}
 
     <!-- Entities (if enriched) -->
     {% if noticia.entidades.exists %}
-      <div class="mb-2">
-        <p class="text-[10px] text-gray-600 mb-1">menciones:</p>
+      <div class="pt-2 border-t border-gray-100">
         <div class="flex flex-wrap gap-1.5">
           {% for entidad in noticia.entidades.all %}
-            <span class="border border-black px-1.5 py-0.5 text-[10px]">
-              {{ entidad.entidad.nombre }}
-              {% if entidad.sentimiento == "positivo" %}
-                😊
-              {% elif entidad.sentimiento == "negativo" %}
-                😞
+            <span class="px-2 py-0.5 text-[10px] rounded
+              {% if entidad.sentimiento == 'positivo' %}
+                bg-green-100 text-green-800
+              {% elif entidad.sentimiento == 'negativo' %}
+                bg-red-100 text-red-800
               {% else %}
-                😐
-              {% endif %}
+                bg-gray-100 text-gray-700
+              {% endif %}">
+              {{ entidad.entidad.nombre }}
             </span>
           {% endfor %}
         </div>
