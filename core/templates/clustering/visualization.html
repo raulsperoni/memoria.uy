@@ -1,7 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Mapa de Burbujas - Memoria.uy{% endblock %}
+{% block title %}{% if user_cluster_name %}{{ user_cluster_name }} - {% endif %}Mapa de Burbujas - Memoria.uy{% endblock %}
+
+{% block og_title %}{% if user_cluster_name %}Estoy en "{{ user_cluster_name }}" 🫧 - Mapa de Burbujas{% else %}Mapa de Burbujas - Memoria.uy{% endif %}{% endblock %}
+
+{% block og_description %}{% if user_cluster_name %}Descubrí en qué burbuja estás. Votá noticias uruguayas y encontrá tu lugar en el mapa de opiniones.{% else %}Descubrí las burbujas de opinión sobre noticias uruguayas. Votá anónimamente y encontrá tu lugar en el mapa.{% endif %}{% endblock %}
+
+{% block og_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
+
+{% block twitter_title %}{% if user_cluster_name %}Estoy en "{{ user_cluster_name }}" 🫧{% else %}Mapa de Burbujas - Memoria.uy{% endif %}{% endblock %}
+
+{% block twitter_description %}{% if user_cluster_name %}¿En qué burbuja estás vos? Descubrilo en memoria.uy{% else %}Descubrí las burbujas de opinión sobre noticias uruguayas{% endif %}{% endblock %}
+
+{% block twitter_image %}https://{{ request.get_host }}{% url 'api-cluster-og-image' %}{% if user_cluster_id %}?cluster={{ user_cluster_id }}{% endif %}{% endblock %}
 
 {% block extra_head %}
 <!-- D3.js for visualization -->
@@ -87,6 +99,43 @@
         border-radius: 50%;
         border: 1px solid #5a4a3a;
     }
+    .share-toast-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+    .share-toast-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .share-toast {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.95);
+        color: white;
+        padding: 24px 32px;
+        border-radius: 12px;
+        font-size: 16px;
+        z-index: 1000;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        max-width: 90%;
+    }
+    .share-toast.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
 </style>
 {% endblock %}
 
@@ -109,6 +158,23 @@
             <div id="bubble-map" class="bubble-map w-full" style="height: 75vh; min-height: 400px; max-height: 700px;">
             </div>
             <div id="tooltip" class="tooltip"></div>
+            <div id="share-toast-overlay" class="share-toast-overlay"></div>
+            <div id="share-toast" class="share-toast mono"></div>
+            
+            <!-- Floating controls - top left (Share button) -->
+            {% if user_cluster_name %}
+            <div class="absolute top-4 left-4 flex flex-col gap-2">
+                <button id="share-bubble"
+                        class="px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg
+                               hover:from-emerald-600 hover:to-teal-600 border-2 border-white
+                               text-sm md:text-base font-bold shadow-2xl transition-all
+                               hover:scale-105 active:scale-95 flex items-center gap-2">
+                    <span class="text-xl">📤</span>
+                    <span class="hidden sm:inline">Compartir mi burbuja</span>
+                    <span class="sm:hidden">Compartir</span>
+                </button>
+            </div>
+            {% endif %}
             
             <!-- Floating controls - top right -->
             <div class="absolute top-4 right-4 flex flex-col gap-2">
@@ -684,7 +750,229 @@ document.addEventListener('DOMContentLoaded', function() {
         // No transform needed - the scales already fit the data to the viewport
     }
 
+    /**
+     * Convert SVG to PNG blob for sharing
+     * Optimized: solid background, lower scale, JPEG format
+     */
+    async function svgToBlob(svgElement) {
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size (lower scale = smaller file, still good for WhatsApp)
+        const scale = 1.5; // Reducido de 2 a 1.5
+        const bbox = svgElement.getBoundingClientRect();
+        canvas.width = bbox.width * scale;
+        canvas.height = bbox.height * scale;
+        
+        // Fill with solid background color (like the map)
+        ctx.fillStyle = '#f8f5ed'; // Same as bubble-map background
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Create image from SVG
+        const img = new Image();
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        return new Promise((resolve, reject) => {
+            img.onload = function() {
+                ctx.scale(scale, scale);
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                
+                // Use JPEG instead of PNG for smaller file size
+                // Quality 0.85 is good balance between size and quality
+                canvas.toBlob(blob => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to create blob'));
+                    }
+                }, 'image/jpeg', 0.85); // JPEG a 85% calidad
+            };
+            
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Failed to load SVG'));
+            };
+            
+            img.src = url;
+        });
+    }
+    
     function setupControls() {
+        // Share bubble button
+        const shareButton = document.getElementById('share-bubble');
+        if (shareButton) {
+            shareButton.addEventListener('click', async function(event) {
+                // Prevent losing focus
+                event.preventDefault();
+                
+                const clusterName = "{{ user_cluster_name|escapejs }}";
+                const shareUrl = window.location.origin + "/mapa/?ref=share{% if user_cluster_id %}&cluster={{ user_cluster_id }}{% endif %}";
+                
+                // Compose viral message
+                const shareText = `Estoy en la burbuja "${clusterName}" 🫧\n\n¿En cuál estás vos? Descubrilo votando noticias uruguayas:\n\n${shareUrl}`;
+                
+                // Show loading state
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<span class="text-xl">⏳</span> <span>Capturando...</span>';
+                this.disabled = true;
+                
+                try {
+                    // Capture the SVG as image first
+                    const svgElement = document.querySelector('#bubble-map svg');
+                    const imageBlob = await svgToBlob(svgElement);
+                    
+                    // Try to use Web Share API with image (mobile-friendly)
+                    if (navigator.share && navigator.canShare) {
+                        const file = new File([imageBlob], 'mi-burbuja.jpg', { type: 'image/jpeg' });
+                        const shareData = {
+                            title: `Estoy en "${clusterName}" 🫧`,
+                            text: shareText,
+                            files: [file]
+                        };
+                        
+                        if (navigator.canShare(shareData)) {
+                            try {
+                                await navigator.share(shareData);
+                                this.innerHTML = originalHTML;
+                                this.disabled = false;
+                                return;
+                            } catch (err) {
+                                if (err.name !== 'AbortError') {
+                                    console.error('Share failed:', err);
+                                }
+                                // Continue to fallback
+                            }
+                        }
+                    }
+                    
+                    // Fallback: Show download option (no clipboard write needed)
+                    const downloadUrl = URL.createObjectURL(imageBlob);
+                    const filename = `memoria-uy-${clusterName.replace(/\s+/g, '-').toLowerCase()}.jpg`;
+                    
+                    // Visual feedback
+                    this.innerHTML = '<span class="text-xl">✓</span> <span>¡Listo!</span>';
+                    this.classList.add('from-green-500', 'to-green-600');
+                    this.classList.remove('from-emerald-500', 'to-teal-500');
+                    
+                    // Show toast with options
+                    const toast = document.getElementById('share-toast');
+                    const overlay = document.getElementById('share-toast-overlay');
+                    
+                    toast.innerHTML = `
+                        <div class="text-center">
+                            <div class="mb-3 text-lg">✓ Imagen lista para compartir</div>
+                            <div class="flex gap-3 justify-center flex-wrap mb-3">
+                                <a href="${downloadUrl}" 
+                                   download="${filename}"
+                                   class="px-4 py-2 bg-emerald-500 text-white rounded text-sm hover:bg-emerald-600 inline-block font-semibold"
+                                   style="text-decoration: none;">
+                                    📥 Descargar imagen
+                                </a>
+                                <button id="copy-text-btn"
+                                        class="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 font-semibold">
+                                    📋 Copiar texto
+                                </button>
+                            </div>
+                            <button id="close-share-toast"
+                                    class="text-gray-400 hover:text-white text-xs">
+                                Cerrar
+                            </button>
+                        </div>
+                    `;
+                    toast.classList.add('visible');
+                    overlay.classList.add('visible');
+                    
+                    // Add event listeners
+                    setTimeout(() => {
+                        document.getElementById('copy-text-btn')?.addEventListener('click', async () => {
+                            try {
+                                await navigator.clipboard.writeText(shareText);
+                                const btn = document.getElementById('copy-text-btn');
+                                if (btn) {
+                                    btn.innerHTML = '✓ Copiado';
+                                    btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                                    btn.classList.add('bg-green-500');
+                                }
+                            } catch (err) {
+                                console.error('Failed to copy:', err);
+                                alert('No se pudo copiar. Por favor, copia manualmente:\n\n' + shareText);
+                            }
+                        });
+                        
+                        document.getElementById('close-share-toast')?.addEventListener('click', () => {
+                            toast.classList.remove('visible');
+                            overlay.classList.remove('visible');
+                        });
+                        
+                        overlay.addEventListener('click', () => {
+                            toast.classList.remove('visible');
+                            overlay.classList.remove('visible');
+                        });
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        this.innerHTML = originalHTML;
+                        this.classList.remove('from-green-500', 'to-green-600');
+                        this.classList.add('from-emerald-500', 'to-teal-500');
+                        this.disabled = false;
+                        toast.classList.remove('visible');
+                        overlay.classList.remove('visible');
+                        URL.revokeObjectURL(downloadUrl);
+                    }, 15000);
+                    
+                } catch (err) {
+                    console.error('Failed to capture or share:', err);
+                    
+                    this.innerHTML = originalHTML;
+                    this.disabled = false;
+                    
+                    // Show error with manual option
+                    const toast = document.getElementById('share-toast');
+                    const overlay = document.getElementById('share-toast-overlay');
+                    
+                    toast.innerHTML = `
+                        <div class="text-center">
+                            <div class="mb-3">⚠️ No se pudo capturar la imagen</div>
+                            <button id="copy-text-fallback" 
+                                    class="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 font-semibold">
+                                📋 Copiar solo texto
+                            </button>
+                        </div>
+                    `;
+                    toast.classList.add('visible');
+                    overlay.classList.add('visible');
+                    
+                    setTimeout(() => {
+                        document.getElementById('copy-text-fallback')?.addEventListener('click', async () => {
+                            try {
+                                await navigator.clipboard.writeText(shareText);
+                                toast.innerHTML = '<div class="text-center">✓ Texto copiado</div>';
+                                setTimeout(() => {
+                                    toast.classList.remove('visible');
+                                    overlay.classList.remove('visible');
+                                }, 1500);
+                            } catch (err) {
+                                alert('Copiá este texto manualmente:\n\n' + shareText);
+                            }
+                        });
+                        
+                        overlay.addEventListener('click', () => {
+                            toast.classList.remove('visible');
+                            overlay.classList.remove('visible');
+                        });
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        toast.classList.remove('visible');
+                        overlay.classList.remove('visible');
+                    }, 6000);
+                }
+            });
+        }
+        
         // Toggle news visibility
         document.getElementById('toggle-news').addEventListener('click', function() {
             showNews = !showNews;

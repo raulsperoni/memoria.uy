@@ -3,9 +3,12 @@ Views for cluster visualization and analysis.
 """
 
 from django.views.generic import TemplateView
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_GET
 from core.models import VoterClusterRun, Voto
 from core.views import get_voter_identifier
+from core.og_image import generate_bubble_map_og_image, generate_default_og_image
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -42,12 +45,33 @@ class ClusterVisualizationView(TemplateView):
 
             # Get current voter's info
             voter_info, _ = get_voter_identifier(self.request)
+            voter_type = None
+            voter_id = None
+            
             if 'usuario' in voter_info and voter_info['usuario']:
-                context['voter_type'] = 'user'
-                context['voter_id'] = str(voter_info['usuario'].id)
+                voter_type = 'user'
+                voter_id = str(voter_info['usuario'].id)
+                context['voter_type'] = voter_type
+                context['voter_id'] = voter_id
             elif 'session_key' in voter_info:
-                context['voter_type'] = 'session'
-                context['voter_id'] = voter_info['session_key']
+                voter_type = 'session'
+                voter_id = voter_info['session_key']
+                context['voter_type'] = voter_type
+                context['voter_id'] = voter_id
+
+            # Get current voter's cluster info for sharing/meta tags
+            if voter_type and voter_id:
+                membership = run.clusters.filter(
+                    cluster_type='group',
+                    members__voter_type=voter_type,
+                    members__voter_id=voter_id
+                ).first()
+                
+                if membership:
+                    context['user_cluster_name'] = membership.llm_name or f"Burbuja {membership.cluster_id}"
+                    context['user_cluster_description'] = membership.llm_description or ''
+                    context['user_cluster_id'] = membership.cluster_id
+                    context['user_cluster_size'] = membership.size
 
             # Add statistics
             context['n_voters'] = run.n_voters
@@ -297,3 +321,91 @@ def cluster_data_json(request):
         } if current_voter_type else None,
         'variance_explained': run.parameters.get('variance_explained', []),
     })
+
+
+@require_GET
+@cache_page(60 * 60 * 24)  # Cache for 24 hours
+def cluster_og_image(request):
+    """
+    Generate Open Graph image for cluster sharing.
+    
+    Returns a 1200x630px PNG image showing the user's bubble position.
+    If user is not in a cluster, returns default image.
+    
+    Query params:
+        - cluster_id: Optional cluster ID to highlight
+    """
+    try:
+        # Get latest run
+        run = VoterClusterRun.objects.filter(
+            status='completed'
+        ).order_by('-created_at').first()
+        
+        if not run:
+            # No clustering data, return default
+            img_buffer = generate_default_og_image()
+            return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        
+        # Get voter identifier
+        voter_info, _ = get_voter_identifier(request)
+        voter_type = None
+        voter_id = None
+        
+        if 'usuario' in voter_info and voter_info['usuario']:
+            voter_type = 'user'
+            voter_id = str(voter_info['usuario'].id)
+        elif 'session_key' in voter_info:
+            voter_type = 'session'
+            voter_id = voter_info['session_key']
+        
+        # Try to get cluster info from query params first (for shared links)
+        cluster_id_param = request.GET.get('cluster')
+        
+        if cluster_id_param:
+            # Generate image for specific cluster (useful for shared links)
+            try:
+                cluster_id = int(cluster_id_param)
+                cluster = run.clusters.filter(
+                    cluster_type='group',
+                    cluster_id=cluster_id
+                ).first()
+                
+                if cluster:
+                    img_buffer = generate_bubble_map_og_image(
+                        cluster_name=cluster.llm_name or f"Burbuja {cluster.cluster_id}",
+                        cluster_id=cluster.cluster_id,
+                        user_cluster_size=cluster.size,
+                        total_clusters=run.n_clusters,
+                        total_voters=run.n_voters
+                    )
+                    return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+            except (ValueError, TypeError):
+                pass
+        
+        # Fall back to current voter's cluster
+        if voter_type and voter_id:
+            membership = run.clusters.filter(
+                cluster_type='group',
+                members__voter_type=voter_type,
+                members__voter_id=voter_id
+            ).first()
+            
+            if membership:
+                img_buffer = generate_bubble_map_og_image(
+                    cluster_name=membership.llm_name or f"Burbuja {membership.cluster_id}",
+                    cluster_id=membership.cluster_id,
+                    user_cluster_size=membership.size,
+                    total_clusters=run.n_clusters,
+                    total_voters=run.n_voters
+                )
+                return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        
+        # Default image if user not in cluster
+        img_buffer = generate_default_og_image()
+        return HttpResponse(img_buffer.getvalue(), content_type='image/png')
+        
+    except Exception as e:
+        logger.error(f"Error generating OG image: {e}", exc_info=True)
+        # Return default image on error
+        img_buffer = generate_default_og_image()
+        return HttpResponse(img_buffer.getvalue(), content_type='image/png')
