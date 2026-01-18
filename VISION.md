@@ -86,11 +86,13 @@ por consenso de tu cluster.
 - [x] Visualización interactiva de clusters
 - [x] Filtro por consenso de cluster ("mi burbuja")
 - [x] Sincronización de sesión extensión ↔ web
+- [x] Rediseño del mapa (estilo cartográfico, no scatter plot)
+- [x] Noticias proyectadas en el mapa de clusters
+- [x] Scheduler automático de clustering (Celery beat)
+- [x] Reengagement emails
 
 ### Próximo
-- [ ] Rediseño del mapa (estilo cartográfico, no scatter plot)
-- [ ] Noticias proyectadas en el mapa de clusters
-- [ ] Scheduler automático de clustering (Celery beat)
+
 - [ ] Métricas de polarización
 
 ### Futuro
