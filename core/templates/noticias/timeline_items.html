@@ -8,11 +8,16 @@
 {% if not noticias and not page_obj.has_next %}
   {# Different message for "nuevas" filter vs other filters #}
   {% if current_filter == 'nuevas' or not current_filter %}
-  <div class="border-2 border-black bg-white p-8 text-center mono">
+  <div class="border-2 border-black bg-white p-8 text-center mono mb-4">
     <p class="text-gray-600 mb-2">[ votaste todas las noticias ]</p>
     <p class="text-xs text-gray-500 mb-4">¡Bien hecho! Volvé más tarde para ver nuevas noticias.</p>
     <a href="?filter=todas" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white inline-block">ver todas las noticias</a>
   </div>
+  
+  {# Show signup prompt if anonymous user with 3+ votes #}
+  {% if should_show_signup_prompt %}
+  {% include "noticias/signup_prompt.html" with show_signup_prompt=True total_votes=total_votes_count %}
+  {% endif %}
   {% else %}
   <div class="border-2 border-black bg-white p-8 text-center mono">
     <p class="text-gray-600 mb-2">[ sin noticias ]</p>

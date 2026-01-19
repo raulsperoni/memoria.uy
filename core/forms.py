@@ -1,6 +1,7 @@
 # forms.py
 
 from django import forms
+from allauth.account.forms import SignupForm
 
 VOTE_CHOICES = [
     ("buena", "Buena noticia"),
@@ -20,3 +21,56 @@ class NoticiaForm(forms.Form):
             }
         ),
     )
+
+
+class CustomSignupForm(SignupForm):
+    """
+    Custom signup form that adds alias field and preferences.
+    """
+    alias = forms.CharField(
+        max_length=30,
+        required=False,
+        label="Alias (opcional)",
+        help_text="Nombre que aparecerá en el mapa de opiniones",
+        widget=forms.TextInput(
+            attrs={
+                "class": "w-full px-4 py-3 border-2 border-black mono text-sm focus:outline-none focus:ring-2 focus:ring-black",
+                "placeholder": "ej: JuanUY, MariaM, etc.",
+            }
+        ),
+    )
+    
+    show_alias_on_map = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Mostrar mi alias en el mapa de opiniones",
+        widget=forms.CheckboxInput(
+            attrs={
+                "class": "w-4 h-4 border-2 border-black focus:ring-2 focus:ring-black",
+            }
+        ),
+    )
+    
+    weekly_email_enabled = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Recibir email semanal con nuevas noticias",
+        widget=forms.CheckboxInput(
+            attrs={
+                "class": "w-4 h-4 border-2 border-black focus:ring-2 focus:ring-black",
+            }
+        ),
+    )
+    
+    def save(self, request):
+        user = super().save(request)
+        
+        # Get or create profile and set preferences
+        from core.models import UserProfile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile.alias = self.cleaned_data.get('alias', '')
+        profile.show_alias_on_map = self.cleaned_data.get('show_alias_on_map', True)
+        profile.weekly_email_enabled = self.cleaned_data.get('weekly_email_enabled', True)
+        profile.save()
+        
+        return user

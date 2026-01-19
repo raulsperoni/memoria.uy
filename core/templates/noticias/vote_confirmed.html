@@ -20,6 +20,51 @@
     </div>
   </div>
 
+  <!-- Signup Prompt (shown on 3rd vote for anonymous users) -->
+  {% if show_signup_prompt %}
+  <div class="border-t-2 border-green-200 pt-4 mb-4">
+    <div class="bg-white border-2 border-black p-4 mb-3">
+      <div class="flex items-start gap-3 mb-3">
+        <div class="text-3xl">🗺️</div>
+        <div class="flex-1">
+          <p class="text-base mono font-bold mb-2">
+            ¡Ya votaste en {{ total_votes }} noticias!
+          </p>
+          <p class="text-sm mono text-gray-700 mb-3">
+            Creá tu cuenta para desbloquear:
+          </p>
+          <ul class="text-xs mono space-y-2 text-gray-700">
+            <li class="flex items-start gap-2">
+              <span class="text-green-600 font-bold">✓</span>
+              <span><strong>Guardar tus votos</strong> para no perder entre dispositivos</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-600 font-bold">✓</span>
+              <span><strong>Mostrar tu alias</strong> en el mapa de opiniones</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-600 font-bold">✓</span>
+              <span><strong>Recibir email semanal</strong> con nuevas noticias en tu área de interés</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <a href="{% url 'account_signup' %}?next={{ request.path }}" 
+           class="flex-1 text-center bg-black text-white px-4 py-3 text-sm mono font-bold
+                  border-2 border-black hover:bg-white hover:text-black transition-all
+                  shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+          Crear cuenta gratis
+        </a>
+        <button onclick="this.closest('.bg-white').style.display='none'" 
+                class="text-xs mono text-gray-600 hover:text-black px-3 underline">
+          Seguir sin cuenta
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Prominent CTA -->
   <div class="border-t-2 border-green-200 pt-4">
     <p class="text-xs mono text-gray-600 mb-3">

@@ -55,6 +55,21 @@ memoria-uy-brand/     # Assets de marca
 docs/                 # Documentación científica
 ```
 
+## Features
+
+### Signup Prompt (Anónimo → Registrado)
+
+El sistema invita a crear cuenta después del 3er voto o al agotar noticias disponibles.
+
+**Beneficios ofrecidos:**
+- Guardar votos entre dispositivos (claim de votos anónimos)
+- Alias opcional en mapa de clustering
+- Email semanal con noticias relevantes
+
+**Modelo:** `UserProfile` (alias, show_alias_on_map, weekly_email_enabled)  
+**Form:** `CustomSignupForm` extiende allauth con campo alias  
+**Triggers:** 3er voto + estado vacío ("votaste todas las noticias")
+
 ## Comandos
 
 ```bash

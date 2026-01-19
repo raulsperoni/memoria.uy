@@ -589,3 +589,45 @@ class ReengagementEmailLog(models.Model):
     
     def __str__(self):
         return f"Email to {self.user.email} at {self.sent_at}"
+
+
+class UserProfile(models.Model):
+    """
+    Extended user profile for additional settings.
+    Created automatically when a user signs up.
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+    alias = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Public alias shown on cluster map"
+    )
+    show_alias_on_map = models.BooleanField(
+        default=False,
+        help_text="Display alias on cluster visualization"
+    )
+    weekly_email_enabled = models.BooleanField(
+        default=False,
+        help_text="Receive weekly emails with news in your area of interest"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+        ]
+    
+    def __str__(self):
+        return f"Profile for {self.user.email}"
+    
+    @property
+    def display_name(self):
+        """Get display name: alias if set and visible, otherwise anonymous."""
+        if self.alias and self.show_alias_on_map:
+            return self.alias
+        return "Anónimo"

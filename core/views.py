@@ -484,6 +484,14 @@ class NewsTimelineView(ListView):
 
         # Add filter description to context
         context["filter_description"] = self.get_filter_description()
+        
+        # Check if should show signup prompt (for empty state)
+        if not self.request.user.is_authenticated:
+            total_votes = Voto.objects.filter(**lookup_data).count()
+            context["should_show_signup_prompt"] = total_votes >= 3
+            context["total_votes_count"] = total_votes
+        else:
+            context["should_show_signup_prompt"] = False
 
         # Get entities available in the current filtered queryset
         queryset = self.get_queryset()
@@ -686,14 +694,32 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
         )
 
         if from_detail_page:
+            # Count total votes for this voter (for signup prompt)
+            total_votes = Voto.objects.filter(**lookup_data).count()
+            
+            # Show signup prompt on 3rd vote for anonymous users
+            show_signup_prompt = (
+                not request.user.is_authenticated and 
+                total_votes == 3
+            )
+            
             # Return post-vote message with CTA to more news
             context = {
                 "noticia": noticia,
                 "vote": vote,
+                "show_signup_prompt": show_signup_prompt,
+                "total_votes": total_votes,
             }
             return render(request, "noticias/vote_confirmed.html", context)
 
         # Render the updated vote area partial (for timeline)
+        # Count total votes for signup prompt
+        total_votes = Voto.objects.filter(**lookup_data).count()
+        show_signup_prompt = (
+            not request.user.is_authenticated and 
+            total_votes == 3
+        )
+        
         context = {
             "noticia": noticia,
             "user": request.user,
@@ -703,7 +729,21 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
                 else None
             ),
         }
-        return render(request, "noticias/vote_area.html", context)
+        
+        # Render vote area
+        vote_area_html = render(request, "noticias/vote_area.html", context).content.decode()
+        
+        # If it's the 3rd vote, append signup prompt with out-of-band swap
+        if show_signup_prompt:
+            from django.template.loader import render_to_string
+            signup_prompt_html = render_to_string(
+                "noticias/signup_prompt.html",
+                {"show_signup_prompt": True, "total_votes": total_votes},
+                request=request
+            )
+            return HttpResponse(vote_area_html + signup_prompt_html)
+        
+        return HttpResponse(vote_area_html)
 
 
 @method_decorator(ratelimit(key='ip', rate='10/h', method='POST'), name='dispatch')

@@ -90,12 +90,16 @@ por consenso de tu cluster.
 - [x] Noticias proyectadas en el mapa de clusters
 - [x] Scheduler automático de clustering (Celery beat)
 - [x] Reengagement emails
+- [x] Signup prompt (3er voto + estado vacío) con perfil y alias
 
 ### Próximo
 
 - [ ] Métricas de polarización
 
 ### Futuro
+- [ ] Alias visible en mapa de clustering
+- [ ] Email semanal automático basado en cluster
+- [ ] Página de settings de usuario
 - [ ] Seguimiento temporal de entidades (evolución de sentimiento)
 - [ ] Recomendaciones basadas en cluster
 - [ ] Bridge-builder detection (votantes que conectan clusters)

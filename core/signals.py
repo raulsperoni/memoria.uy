@@ -1,11 +1,13 @@
 """
 Signal handlers for the core app.
-Handles vote reclaim when users login.
+Handles vote reclaim when users login and user profile creation.
 """
 import logging
 from django.dispatch import receiver
+from django.db.models.signals import post_save
+from django.contrib.auth.models import User
 from allauth.account.signals import user_logged_in
-from core.models import Voto
+from core.models import Voto, UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -72,3 +74,13 @@ def reclaim_session_votes(sender, request, user, **kwargs):
         f"{skipped} skipped (user already voted)"
     )
     logger.info("=" * 60)
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """
+    Automatically create a UserProfile when a new user is created.
+    """
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
+        logger.info(f"[Profile] Created profile for user: {instance.email}")
