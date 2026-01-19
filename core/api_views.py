@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from core.models import Noticia, Voto
 from core import parse
 from core.views import get_voter_identifier
+from core.utils import normalize_url
 import json
 import logging
 import validators
@@ -123,6 +124,10 @@ class SubmitFromExtensionView(View):
             except ValidationError as e:
                 logger.warning(f"[Extension API] Invalid URL rejected: {url} - {str(e)}")
                 return JsonResponse({"error": str(e)}, status=400)
+            
+            # Normalize URL (strip tracking params and fragments)
+            url = normalize_url(url)
+            logger.info(f"[Extension API] Normalized URL: {url}")
 
             # Get voter identifier (handles extension/Django session priority)
             voter_data, lookup_data = get_voter_identifier(request)
