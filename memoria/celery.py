@@ -43,5 +43,6 @@ if os.getenv("ENABLE_REENGAGEMENT_EMAILS", "False") == "True":
         "kwargs": {
             "days_inactive": int(os.getenv("REENGAGEMENT_DAYS_INACTIVE", "7")),
             "max_emails": int(os.getenv("REENGAGEMENT_MAX_EMAILS", "500")),
+            "min_days_between_emails": int(os.getenv("REENGAGEMENT_MIN_DAYS_BETWEEN", "7")),
         },
     }

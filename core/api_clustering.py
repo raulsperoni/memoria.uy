@@ -6,7 +6,7 @@ Provides clustering data for visualization and analysis.
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from django.core.cache import cache
 from django.db.models import Prefetch
 from core.models import (
@@ -350,12 +350,13 @@ def cluster_voting_patterns(request, cluster_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def trigger_clustering(request):
     """
     POST /api/clustering/trigger/
 
     Manually trigger clustering computation (async).
+    RESTRICTED: Only staff/admin users can trigger clustering.
 
     Request body (optional):
         {

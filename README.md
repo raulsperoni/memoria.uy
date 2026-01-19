@@ -106,6 +106,14 @@ OPENROUTER_API_KEY=...  # fallback
 
 # Celery
 REDIS_URL=redis://localhost:6379/0
+
+# Re-engagement emails (optional)
+ENABLE_REENGAGEMENT_EMAILS=True          # Enable re-engagement emails
+REENGAGEMENT_EMAIL_HOUR=10               # Hour to send (default: 10 AM)
+REENGAGEMENT_EMAIL_MINUTE=0              # Minute to send (default: 0)
+REENGAGEMENT_DAYS_INACTIVE=7             # Days of inactivity to trigger email
+REENGAGEMENT_MAX_EMAILS=500              # Max emails per run
+REENGAGEMENT_MIN_DAYS_BETWEEN=7          # Minimum days between emails to same user
 ```
 
 ## Deployment (Railway)

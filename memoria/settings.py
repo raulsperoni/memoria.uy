@@ -193,13 +193,17 @@ LOGGING = {
     },
 }
 
-# Cache configuration for task locking
+# Cache configuration for task locking and rate limiting
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "unique-snowflake",
     }
 }
+
+# Rate limiting configuration
+RATELIMIT_ENABLE = os.getenv("RATELIMIT_ENABLE", "True") == "True"
+RATELIMIT_USE_CACHE = "default"
 
 
 AUTHENTICATION_BACKENDS = [

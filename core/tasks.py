@@ -180,11 +180,12 @@ def enrich_from_captured_html(noticia_id):
                 )
 
                 from core.models import normalize_entity_name
+
                 normalized = normalize_entity_name(entidad_nombrada.nombre)
                 entidad, _ = Entidad.objects.get_or_create(
                     normalized_name=normalized,
                     tipo=entidad_nombrada.tipo,
-                    defaults={"nombre": entidad_nombrada.nombre}
+                    defaults={"nombre": entidad_nombrada.nombre},
                 )
 
                 NoticiaEntidad.objects.get_or_create(
@@ -583,7 +584,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
             # Compute consensus for the group cluster
             cluster_votes = {nid: agg for nid, agg in vote_agg.items()}
             consensus = compute_cluster_consensus(cluster_votes)
-            
+
             # Update cluster consensus score
             cluster_obj.consensus_score = float(consensus)
             cluster_obj.save()
@@ -630,7 +631,9 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                             "titulo": noticia.mostrar_titulo or noticia.enlace,
                             "resumen": noticia.meta_descripcion or "",
                             "majority_opinion": pattern.majority_opinion,
-                            "consensus": pattern.consensus_score if pattern.consensus_score is not None else 0.0,
+                            "consensus": pattern.consensus_score
+                            if pattern.consensus_score is not None
+                            else 0.0,
                         }
                     )
 
@@ -645,7 +648,9 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                     entities_positive=entities_pos,
                     entities_negative=entities_neg,
                     cluster_size=cluster_obj.size,
-                    consensus_score=cluster_obj.consensus_score if cluster_obj.consensus_score is not None else 0.0,
+                    consensus_score=cluster_obj.consensus_score
+                    if cluster_obj.consensus_score is not None
+                    else 0.0,
                 )
 
                 # 7.4: Save to cluster
@@ -723,16 +728,28 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
 
 @shared_task
 @task_lock(timeout=60 * 30)  # 30 min lock
-def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True):
+def send_reengagement_emails(
+    days_inactive=7, max_emails=500, notify_staff=True, min_days_between_emails=7
+):
     """
     Send a playful re-engagement email to users who have been inactive.
 
     Inactive means:
     - last_login is older than days_inactive (or null)
     - last vote is older than days_inactive (or null)
+    - no reengagement email sent in the last min_days_between_emails days
+
+    Args:
+        days_inactive: Number of days of inactivity to consider
+        max_emails: Maximum number of emails to send
+        notify_staff: Whether to send a summary email to staff
+        min_days_between_emails: Minimum days between reengagement emails (default: 7)
     """
+    from core.models import ReengagementEmailLog
+
     now = timezone.now()
     threshold = now - timezone.timedelta(days=days_inactive)
+    email_threshold = now - timezone.timedelta(days=min_days_between_emails)
 
     last_vote_subquery = (
         Voto.objects.filter(usuario=OuterRef("pk"))
@@ -741,15 +758,29 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
         .values("last_vote")[:1]
     )
 
+    # Subquery to get the last reengagement email sent date
+    last_email_subquery = (
+        ReengagementEmailLog.objects.filter(user=OuterRef("pk"))
+        .values("user")
+        .annotate(last_email=Max("sent_at"))
+        .values("last_email")[:1]
+    )
+
     User = get_user_model()
     inactive_users = (
         User.objects.filter(is_active=True)
         .exclude(email="")
         .exclude(is_staff=True)  # Exclude staff users from reengagement emails
-        .annotate(last_vote=Subquery(last_vote_subquery))
+        .annotate(
+            last_vote=Subquery(last_vote_subquery),
+            last_reengagement_email=Subquery(last_email_subquery),
+        )
         .filter(
             Q(last_login__isnull=True) | Q(last_login__lt=threshold),
             Q(last_vote__isnull=True) | Q(last_vote__lt=threshold),
+            # Exclude users who received an email recently
+            Q(last_reengagement_email__isnull=True)
+            | Q(last_reengagement_email__lt=email_threshold),
         )
         .order_by("id")[:max_emails]
     )
@@ -838,6 +869,8 @@ def send_reengagement_emails(days_inactive=7, max_emails=500, notify_staff=True)
                 recipient_list=[user.email],
                 connection=connection,
             )
+            # Log the sent email
+            ReengagementEmailLog.objects.create(user=user, email_type="reengagement")
             sent_count += 1
             sent_recipients.append(user.email)
         except Exception as exc:
