@@ -656,7 +656,7 @@ core/tests/test_security.py::TestEndpointProtection::test_clustering_trigger_req
 ```toml
 [tool.poetry.dependencies]
 django-ratelimit = "^4.1.0"  # Rate limiting
-validators = "^0.22.0"       # Validación de URLs
+validators = "^0.20.0"       # Validación de URLs
 ```
 
 ### Configuración de Settings
