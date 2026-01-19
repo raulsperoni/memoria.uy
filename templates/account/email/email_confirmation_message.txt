@@ -1,0 +1,17 @@
+{% load account %}{% user_display user as user_display %}{% load i18n %}{% autoescape off %}
+Hola {{ user_display }},
+
+Gracias por crear una cuenta en memoria.uy!
+
+Para completar tu registro, necesitamos verificar tu dirección de email.
+
+Hacé click en el siguiente enlace para confirmar tu cuenta:
+
+{{ activate_url }}
+
+Si no creaste una cuenta en memoria.uy, podés ignorar este email.
+
+---
+memoria.uy
+Votá noticias. Descubrí patrones. Salí de tu burbuja.
+{% endautoescape %}
