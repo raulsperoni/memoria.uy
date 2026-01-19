@@ -1,7 +1,9 @@
 {# templates/noticias/timeline_fragment.html #}
 {% load vote_extras %}
 
-<div id="timeline-container" class="max-w-3xl mx-auto mono">
+<div id="timeline-container" class="max-w-3xl mx-auto mono" 
+     data-should-show-signup="{{ should_show_signup_prompt|yesno:'true,false' }}"
+     data-total-votes="{{ total_votes_count|default:0 }}">
   <!-- Notification area -->
   <div id="notification-area" class="fixed top-20 right-4 z-50 max-w-md"></div>
 
@@ -221,6 +223,18 @@
   select {
     font-family: 'IBM Plex Mono', monospace;
   }
+
+  /* Signup prompt animation */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 </style>
 
 <!-- JavaScript -->
@@ -329,11 +343,46 @@
     const spinner = document.getElementById('load-more-trigger');
 
     if (newsItems.length === 0 && !spinner) {
-      container.innerHTML = '<div class="border-2 border-black bg-white p-8 text-center mono">' +
+      // Check if should show signup prompt
+      const timelineContainer = document.getElementById('timeline-container');
+      const shouldShowSignup = timelineContainer?.getAttribute('data-should-show-signup') === 'true';
+      const totalVotes = parseInt(timelineContainer?.getAttribute('data-total-votes') || '0');
+      
+      let html = '<div class="border-2 border-black bg-white p-8 text-center mono mb-4">' +
         '<p class="text-gray-600 mb-2">[ votaste todas las noticias ]</p>' +
         '<p class="text-xs text-gray-500 mb-4">¡Bien hecho! Volvé más tarde para ver nuevas noticias.</p>' +
         '<a href="?filter=todas" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white inline-block">ver todas las noticias</a>' +
         '</div>';
+      
+      // Add signup prompt if conditions are met
+      if (shouldShowSignup && totalVotes >= 3) {
+        html += '<div id="signup-prompt-banner" ' +
+          'class="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-md z-50 ' +
+          'bg-white border-4 border-black p-4 ' +
+          'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ' +
+          'animate-[slideUp_0.4s_ease-out]">' +
+          '<button onclick="this.closest(\'#signup-prompt-banner\').remove()" ' +
+          'class="absolute top-2 right-2 text-xl hover:text-gray-600 transition" aria-label="Cerrar">✕</button>' +
+          '<div class="flex items-start gap-3 mb-3">' +
+          '<div class="text-3xl">🗺️</div>' +
+          '<div class="flex-1">' +
+          '<p class="text-base mono font-bold mb-2">¡Ya votaste en ' + totalVotes + ' noticias!</p>' +
+          '<p class="text-xs mono text-gray-700 mb-3">Creá tu cuenta para desbloquear:</p>' +
+          '<ul class="text-xs mono space-y-1.5 text-gray-700 mb-4">' +
+          '<li class="flex items-start gap-2"><span class="text-green-600 font-bold">✓</span><span><strong>Guardar tus votos</strong> entre dispositivos</span></li>' +
+          '<li class="flex items-start gap-2"><span class="text-green-600 font-bold">✓</span><span><strong>Tu alias</strong> en el mapa de opiniones</span></li>' +
+          '<li class="flex items-start gap-2"><span class="text-green-600 font-bold">✓</span><span><strong>Email semanal</strong> con nuevas noticias</span></li>' +
+          '</ul></div></div>' +
+          '<div class="flex flex-col sm:flex-row gap-2">' +
+          '<a href="/accounts/signup/?next=/" ' +
+          'class="flex-1 text-center bg-black text-white px-4 py-2.5 text-sm mono font-bold border-2 border-black hover:bg-white hover:text-black transition-all">' +
+          'Crear cuenta gratis</a>' +
+          '<button onclick="this.closest(\'#signup-prompt-banner\').remove()" ' +
+          'class="text-xs mono text-gray-600 hover:text-black underline">Seguir sin cuenta</button>' +
+          '</div></div>';
+      }
+      
+      container.innerHTML = html;
     }
   }
 

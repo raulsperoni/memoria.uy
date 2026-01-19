@@ -44,9 +44,10 @@ poetry run python manage.py tailwind start
 ### Modelos principales
 
 - `Noticia`: URL, metadata, HTML capturado
-- `Voto`: Opinión de usuario sobre noticia
+- `Voto`: Opinión de usuario sobre noticia (usuario o session_key)
 - `Entidad`: Personas, organizaciones, lugares extraídos
 - `VoterCluster*`: Modelos de clustering (Run, Cluster, Projection, etc.)
+- `UserProfile`: Alias, preferencias de email, show_alias_on_map
 
 ### Sesiones
 
@@ -58,6 +59,20 @@ Prioridad de identificación de votante:
 Ver `get_voter_identifier()` en [core/views.py](core/views.py).
 
 ## Patrones importantes
+
+### Signup prompt
+Aparece después del 3er voto o al agotar noticias disponibles ("estado vacío").
+- Lógica en `VoteView.post()` y `NewsTimelineView.get_context_data()`
+- Banner flotante: `signup_prompt.html`
+- Form custom: `CustomSignupForm` (extiende allauth)
+- Al crear cuenta: signal auto-crea `UserProfile`
+
+### Vote claiming
+Al hacer login/signup, los votos anónimos se vinculan a la cuenta:
+- Signal `reclaim_session_votes` en [core/signals.py](core/signals.py)
+- Detecta session_key de extensión o Django
+- Transfiere votos a usuario
+- Previene duplicados (prioridad a voto de usuario)
 
 ### Task locking
 Todos los Celery tasks usan `@task_lock(timeout=...)` para prevenir ejecución
@@ -119,10 +134,12 @@ docker-compose up -d --build
 
 | Archivo | Propósito |
 |---------|-----------|
-| `core/views.py` | Timeline, votación, filtros |
+| `core/views.py` | Timeline, votación, filtros, signup prompt |
 | `core/views_clustering.py` | Vistas del mapa de burbujas + OG images |
 | `core/api_views.py` | API para extensión |
 | `core/tasks.py` | Celery tasks |
 | `core/parse.py` | LLM parsing |
+| `core/forms.py` | CustomSignupForm con alias |
+| `core/signals.py` | Vote claiming, UserProfile auto-create |
 | `core/clustering/` | Motor matemático |
 | `browser-extension/` | Chrome/Firefox extension |
