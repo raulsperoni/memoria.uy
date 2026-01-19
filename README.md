@@ -62,8 +62,13 @@ docs/                 # Documentación científica
 poetry run python manage.py runserver
 poetry run python manage.py makemigrations
 poetry run python manage.py migrate
+
+# Tests
 poetry run pytest
 poetry run pytest --cov=. --cov-report=html
+
+# Tests de seguridad
+poetry run pytest core/tests/test_security.py -v
 
 # Celery (requiere Redis)
 poetry run celery -A memoria worker --loglevel=info
