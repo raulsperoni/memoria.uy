@@ -19,8 +19,18 @@
 
     <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
       {% csrf_token %}
-      <button type="submit" class="bg-black text-white px-6 py-3 hover:bg-gray-800 transition-colors border-2 border-black font-semibold">
-        [confirmar]
+      
+      <div class="bg-gray-50 border-2 border-black p-4 mb-4 text-xs mono">
+        <p class="font-bold mb-2">Al confirmar tu email:</p>
+        <ul class="space-y-1 text-gray-700">
+          <li>✓ Iniciás sesión automáticamente</li>
+          <li>✓ Tus votos anónimos se vinculan a tu cuenta</li>
+          <li>✓ Ya podés configurar tu alias y preferencias</li>
+        </ul>
+      </div>
+      
+      <button type="submit" class="bg-black text-white px-6 py-3 hover:bg-white hover:text-black transition-colors border-2 border-black font-semibold">
+        [confirmar email e iniciar sesión]
       </button>
     </form>
   {% else %}

@@ -217,6 +217,10 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 ACCOUNT_ADAPTER = "memoria.adapter.CustomAccountAdapter"
 
+# Email confirmation redirects
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/"  # Redirige a timeline
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/"  # Redirige a timeline después de confirmar
+
 # A custom variable we created to tell the CustomAccountAdapter whether to
 # allow signups.
 ACCOUNT_ALLOW_SIGNUPS = os.getenv("ACCOUNT_ALLOW_SIGNUPS", "False") == "True"
@@ -243,6 +247,7 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = os.getenv("ACCOUNT_EMAIL_VERIFICATION", "mandatory")
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True  # Auto-login after email confirmation
 SOCIALACCOUNT_AUTO_SIGNUP = True
 ACCOUNT_FORMS = {
     'signup': 'core.forms.CustomSignupForm',
