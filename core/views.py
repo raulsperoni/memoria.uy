@@ -10,6 +10,9 @@ from django.views.generic import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils.decorators import method_decorator
+from django.core.exceptions import ValidationError
+from django_ratelimit.decorators import ratelimit
 from core.models import (
     Noticia,
     Voto,
@@ -17,6 +20,8 @@ from core.models import (
     VoterClusterRun,
     VoterClusterMembership,
 )
+import validators
+from urllib.parse import urlparse
 
 
 from core.forms import NoticiaForm
@@ -25,6 +30,51 @@ from django.db.models import Count, Q, F
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Blacklist de dominios conocidos por spam/malware
+BLACKLISTED_DOMAINS = [
+    'spam.com',
+    'malware.net',
+    'example-spam.org',
+]
+
+# TLDs sospechosos
+SUSPICIOUS_TLDS = [
+    '.ru', '.cn', '.tk', '.ml', '.ga', '.cf', '.gq',
+]
+
+
+def validate_noticia_url(url):
+    """
+    Valida que la URL sea legítima y segura.
+    
+    Raises:
+        ValidationError: Si la URL no es válida
+    
+    Returns:
+        bool: True si la URL es válida
+    """
+    if not validators.url(url):
+        raise ValidationError("URL inválida")
+    
+    if not url.startswith('https://'):
+        raise ValidationError("Solo se permiten URLs HTTPS")
+    
+    try:
+        domain = urlparse(url).netloc.lower()
+    except Exception:
+        raise ValidationError("Dominio inválido")
+    
+    if any(blacklisted in domain for blacklisted in BLACKLISTED_DOMAINS):
+        raise ValidationError("Este dominio no está permitido")
+    
+    if any(url.lower().endswith(tld) for tld in SUSPICIOUS_TLDS):
+        logger.warning(f"Suspicious TLD in URL: {url}")
+    
+    if len(url) > 2000:
+        raise ValidationError("URL demasiado larga")
+    
+    return True
 
 
 def get_voter_identifier(request):
@@ -588,6 +638,7 @@ class NewsTimelineView(ListView):
         return super().render_to_response(context, **response_kwargs)
 
 
+@method_decorator(ratelimit(key='ip', rate='100/h', method='POST'), name='dispatch')
 class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
     def post(self, request, pk):
         logger.info(f"[Vote Debug] Voting on noticia {pk}")
@@ -655,6 +706,7 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
         return render(request, "noticias/vote_area.html", context)
 
 
+@method_decorator(ratelimit(key='ip', rate='10/h', method='POST'), name='dispatch')
 class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
     template_name = "noticias/timeline_fragment.html"
     form_class = NoticiaForm
@@ -663,6 +715,14 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
     def form_valid(self, form):
         vote_opinion = form.cleaned_data.get("opinion")
         enlace = form.cleaned_data.get("enlace")
+
+        # Validate URL
+        try:
+            validate_noticia_url(enlace)
+        except ValidationError as e:
+            logger.warning(f"[NoticiaCreate] Invalid URL rejected: {enlace} - {str(e)}")
+            form.add_error('enlace', str(e))
+            return self.form_invalid(form)
 
         # Get or create noticia
         noticia, created = Noticia.objects.get_or_create(

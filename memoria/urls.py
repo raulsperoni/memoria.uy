@@ -60,6 +60,7 @@ sitemaps = {
 
 # Custom error handlers
 handler500 = "core.error_handlers.server_error"
+handler429 = "core.error_handlers.ratelimited_error"
 
 urlpatterns = (
     [

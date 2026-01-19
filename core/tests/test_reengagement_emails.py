@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from core.models import (
     Noticia,
+    ReengagementEmailLog,
     VoterCluster,
     VoterClusterMembership,
     VoterClusterRun,
@@ -98,3 +99,99 @@ def test_send_reengagement_emails_skips_when_no_pending_news():
     assert result["skipped"] == 1
     assert result["staff_notified"] is False
     assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def test_send_reengagement_emails_skips_recent_recipients():
+    """
+    Test that users who received a reengagement email recently
+    are not sent another one within min_days_between_emails.
+    """
+    # Create an inactive user with pending news
+    user = User.objects.create_user(
+        username="inactive3",
+        email="inactive3@example.com",
+        password="pass1234",
+    )
+    user.last_login = timezone.now() - timezone.timedelta(days=10)
+    user.save()
+
+    # Create a pending noticia
+    noticia = Noticia.objects.create(enlace="https://example.com/4")
+    
+    # User has an old vote (inactive)
+    vote = Voto.objects.create(usuario=user, noticia=noticia, opinion="buena")
+    Voto.objects.filter(pk=vote.pk).update(
+        fecha_voto=timezone.now() - timezone.timedelta(days=10)
+    )
+    
+    # Create another noticia the user hasn't voted on
+    Noticia.objects.create(enlace="https://example.com/5")
+
+    # Log that this user received an email 3 days ago (less than 7 days)
+    ReengagementEmailLog.objects.create(
+        user=user,
+        email_type="reengagement"
+    )
+    # Backdate the log to 3 days ago
+    ReengagementEmailLog.objects.filter(user=user).update(
+        sent_at=timezone.now() - timezone.timedelta(days=3)
+    )
+
+    # Try to send reengagement emails (should skip this user)
+    result = send_reengagement_emails(days_inactive=7, min_days_between_emails=7)
+
+    assert result["sent"] == 0
+    assert result["skipped"] == 0  # User is filtered out before email sending
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def test_send_reengagement_emails_sends_after_threshold():
+    """
+    Test that users who received a reengagement email more than
+    min_days_between_emails ago CAN receive another one.
+    """
+    # Create an inactive user with pending news
+    user = User.objects.create_user(
+        username="inactive4",
+        email="inactive4@example.com",
+        password="pass1234",
+    )
+    user.last_login = timezone.now() - timezone.timedelta(days=10)
+    user.save()
+
+    # Create a pending noticia
+    noticia = Noticia.objects.create(enlace="https://example.com/6")
+    
+    # User has an old vote (inactive)
+    vote = Voto.objects.create(usuario=user, noticia=noticia, opinion="buena")
+    Voto.objects.filter(pk=vote.pk).update(
+        fecha_voto=timezone.now() - timezone.timedelta(days=10)
+    )
+    
+    # Create another noticia the user hasn't voted on
+    Noticia.objects.create(enlace="https://example.com/7")
+
+    # Log that this user received an email 8 days ago (more than 7 days)
+    ReengagementEmailLog.objects.create(
+        user=user,
+        email_type="reengagement"
+    )
+    # Backdate the log to 8 days ago
+    ReengagementEmailLog.objects.filter(user=user).update(
+        sent_at=timezone.now() - timezone.timedelta(days=8)
+    )
+
+    # Try to send reengagement emails (should send to this user)
+    result = send_reengagement_emails(days_inactive=7, min_days_between_emails=7, notify_staff=False)
+
+    assert result["sent"] == 1
+    assert result["skipped"] == 0
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ["inactive4@example.com"]
+    
+    # Verify that a new log entry was created
+    assert ReengagementEmailLog.objects.filter(user=user).count() == 2

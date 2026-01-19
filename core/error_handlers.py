@@ -7,6 +7,7 @@ import logging
 from urllib.parse import quote
 from django.shortcuts import render
 from django.conf import settings
+from django.http import JsonResponse
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,43 @@ def get_github_issue_url(
         params.append(f"labels={quote(','.join(labels))}")
 
     return f"{base_url}?{'&'.join(params)}"
+
+
+def ratelimited_error(request, exception):
+    """
+    Custom 429 error handler for rate limiting.
+    Returns JSON for API requests, HTML for web requests.
+    """
+    logger.warning(
+        f"Rate limit exceeded: {request.path} from {request.META.get('REMOTE_ADDR')}",
+        extra={
+            "path": request.path,
+            "method": request.method,
+            "ip": request.META.get("REMOTE_ADDR"),
+            "user_agent": request.META.get("HTTP_USER_AGENT"),
+        },
+    )
+
+    # Check if it's an API request (JSON response expected)
+    if request.path.startswith('/api/') or request.headers.get('Accept') == 'application/json':
+        return JsonResponse(
+            {
+                "error": "Rate limit exceeded",
+                "message": "Demasiadas solicitudes. Por favor intenta más tarde.",
+                "retry_after": "1 hour"
+            },
+            status=429
+        )
+    
+    # HTML response for web requests
+    return render(
+        request,
+        "429.html",
+        {
+            "message": "Has excedido el límite de solicitudes. Por favor intenta más tarde."
+        },
+        status=429
+    )
 
 
 def server_error(request, *args, **kwargs):

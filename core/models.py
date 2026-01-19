@@ -562,3 +562,30 @@ class ClusterVotingPattern(models.Model):
             f"Cluster {self.cluster.cluster_id} on {self.noticia.mostrar_titulo[:30]}: "
             f"{self.majority_opinion or 'no consensus'}"
         )
+
+
+class ReengagementEmailLog(models.Model):
+    """
+    Track when re-engagement emails are sent to users.
+    Prevents sending too many emails in a short period.
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reengagement_emails'
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    email_type = models.CharField(
+        max_length=50,
+        default="reengagement",
+        help_text="Type of re-engagement email sent"
+    )
+    
+    class Meta:
+        ordering = ['-sent_at']
+        indexes = [
+            models.Index(fields=['user', '-sent_at']),
+        ]
+    
+    def __str__(self):
+        return f"Email to {self.user.email} at {self.sent_at}"

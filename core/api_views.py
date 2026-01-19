@@ -5,16 +5,76 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import IntegrityError
+from django_ratelimit.decorators import ratelimit
+from django_ratelimit.exceptions import Ratelimited
+from django.core.exceptions import ValidationError
 from core.models import Noticia, Voto
 from core import parse
 from core.views import get_voter_identifier
 import json
 import logging
+import validators
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+# Blacklist de dominios conocidos por spam/malware
+BLACKLISTED_DOMAINS = [
+    'spam.com',
+    'malware.net',
+    'example-spam.org',
+    # Añadir más según sea necesario
+]
+
+# TLDs sospechosos comunes en spam
+SUSPICIOUS_TLDS = [
+    '.ru', '.cn', '.tk', '.ml', '.ga', '.cf', '.gq',
+]
+
+
+def validate_noticia_url(url):
+    """
+    Valida que la URL sea legítima y segura.
+    
+    Raises:
+        ValidationError: Si la URL no es válida
+    
+    Returns:
+        bool: True si la URL es válida
+    """
+    # 1. Validar formato de URL
+    if not validators.url(url):
+        raise ValidationError("URL inválida. Por favor proporciona una URL válida.")
+    
+    # 2. Requiere HTTPS (seguridad)
+    if not url.startswith('https://'):
+        raise ValidationError("Solo se permiten URLs HTTPS. La URL debe comenzar con https://")
+    
+    # 3. Verificar dominio no está en blacklist
+    try:
+        domain = urlparse(url).netloc.lower()
+    except Exception:
+        raise ValidationError("No se pudo extraer el dominio de la URL.")
+    
+    if any(blacklisted in domain for blacklisted in BLACKLISTED_DOMAINS):
+        raise ValidationError("Este dominio no está permitido.")
+    
+    # 4. Verificar TLDs sospechosos
+    if any(url.lower().endswith(tld) for tld in SUSPICIOUS_TLDS):
+        logger.warning(f"Suspicious TLD detected in URL: {url}")
+        # No bloquear automáticamente, solo loggear por ahora
+        # En producción se podría enviar a moderación
+    
+    # 5. Validar longitud razonable
+    if len(url) > 2000:
+        raise ValidationError("La URL es demasiado larga.")
+    
+    return True
+
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(ratelimit(key='ip', rate='10/h', method='POST'), name='dispatch')
+@method_decorator(ratelimit(key='header:x-extension-session', rate='20/h', method='POST'), name='dispatch')
 class SubmitFromExtensionView(View):
     """
     API endpoint to receive article HTML and vote from browser extension.
@@ -56,6 +116,13 @@ class SubmitFromExtensionView(View):
                 return JsonResponse(
                     {"error": "Voto inválido. Usa: buena, mala o neutral"}, status=400
                 )
+            
+            # Validate URL security and format
+            try:
+                validate_noticia_url(url)
+            except ValidationError as e:
+                logger.warning(f"[Extension API] Invalid URL rejected: {url} - {str(e)}")
+                return JsonResponse({"error": str(e)}, status=400)
 
             # Get voter identifier (handles extension/Django session priority)
             voter_data, lookup_data = get_voter_identifier(request)
@@ -200,6 +267,7 @@ class SubmitFromExtensionView(View):
             return JsonResponse({"error": "Error interno del servidor"}, status=500)
 
 
+@method_decorator(ratelimit(key='ip', rate='300/h', method='GET'), name='dispatch')
 class CheckVoteView(View):
     """
     API endpoint to check if user has already voted on a URL.
