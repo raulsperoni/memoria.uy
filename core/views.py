@@ -685,6 +685,26 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
 
         if on_nuevas_filter:
             logger.info("[Vote Debug] Returning empty response (item will be removed)")
+            
+            # Check if should show signup prompt on 3rd vote
+            if not request.user.is_authenticated:
+                total_votes = Voto.objects.filter(**lookup_data).count()
+                logger.info(f"[Signup Prompt Debug] Anonymous user - Total votes: {total_votes}")
+                if total_votes == 3:
+                    logger.info("[Signup Prompt Debug] ✓ Showing signup prompt (3rd vote)")
+                    # Show signup prompt via out-of-band swap
+                    from django.template.loader import render_to_string
+                    signup_prompt_html = render_to_string(
+                        "noticias/signup_prompt.html",
+                        {"show_signup_prompt": True, "total_votes": total_votes},
+                        request=request
+                    )
+                    return HttpResponse(signup_prompt_html)
+                else:
+                    logger.info(f"[Signup Prompt Debug] Not 3rd vote yet (need 3, have {total_votes})")
+            else:
+                logger.info("[Signup Prompt Debug] User is authenticated, no prompt needed")
+            
             return HttpResponse("")
 
         # Check if voting from detail page
@@ -702,6 +722,9 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
                 not request.user.is_authenticated and 
                 total_votes == 3
             )
+            
+            if not request.user.is_authenticated:
+                logger.info(f"[Signup Prompt Debug] Detail page - Total votes: {total_votes}, Show prompt: {show_signup_prompt}")
             
             # Return post-vote message with CTA to more news
             context = {
