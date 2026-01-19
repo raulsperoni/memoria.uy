@@ -20,6 +20,7 @@ from core.models import (
     VoterClusterRun,
     VoterClusterMembership,
 )
+from core.utils import normalize_url
 import validators
 from urllib.parse import urlparse
 
@@ -786,6 +787,10 @@ class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
             logger.warning(f"[NoticiaCreate] Invalid URL rejected: {enlace} - {str(e)}")
             form.add_error('enlace', str(e))
             return self.form_invalid(form)
+        
+        # Normalize URL (strip tracking params and fragments)
+        enlace = normalize_url(enlace)
+        logger.info(f"[NoticiaCreate] Normalized URL: {enlace}")
 
         # Get or create noticia
         noticia, created = Noticia.objects.get_or_create(

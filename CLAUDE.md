@@ -58,6 +58,16 @@ Prioridad de identificación de votante:
 
 Ver `get_voter_identifier()` en [core/views.py](core/views.py).
 
+### URL normalization
+
+URLs are automatically normalized before storage to prevent duplicates:
+- Strips tracking parameters (utm_*, fbclid, gclid, etc.)
+- Removes URL fragments (# anchors)
+- Preserves functional parameters (search queries, IDs, etc.)
+- Ensures same article from different sources deduplicates
+
+Ver `normalize_url()` en [core/utils.py](core/utils.py).
+
 ## Patrones importantes
 
 ### Signup prompt

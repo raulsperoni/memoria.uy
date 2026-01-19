@@ -15,7 +15,7 @@ class Noticia(models.Model):
     A news article submitted by a user (or anonymously).
     Stores the original URL and metadata extracted from meta tags.
     """
-    enlace = models.URLField(unique=True, help_text="Original news article URL")
+    enlace = models.URLField(max_length=2000, unique=True, help_text="Original news article URL")
 
     # SEO-friendly slug for URLs
     slug = models.SlugField(
