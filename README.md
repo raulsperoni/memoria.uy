@@ -68,7 +68,8 @@ El sistema invita a crear cuenta después del 3er voto o al agotar noticias disp
 
 **Modelo:** `UserProfile` (alias, show_alias_on_map, weekly_email_enabled)  
 **Form:** `CustomSignupForm` extiende allauth con campo alias  
-**Triggers:** 3er voto + estado vacío ("votaste todas las noticias")
+**Triggers:** 3er voto + estado vacío ("votaste todas las noticias")  
+**Email verification:** Mandatory (se envía email de confirmación al registrarse)
 
 ## Comandos
 
