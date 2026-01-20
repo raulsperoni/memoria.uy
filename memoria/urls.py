@@ -63,104 +63,101 @@ sitemaps = {
 handler500 = "core.error_handlers.server_error"
 handler429 = "core.error_handlers.ratelimited_error"
 
-urlpatterns = (
-    [
-        path("admin/", admin.site.urls),
-        path("favicon.ico", favicon, name="favicon"),
-        path("robots.txt", robots_txt, name="robots_txt"),
-        path(
-            "sitemap.xml",
-            sitemap,
-            {"sitemaps": sitemaps},
-            name="django.contrib.sitemaps.views.sitemap",
-        ),
-        path("", NewsTimelineView.as_view(), name="timeline"),
-        path("acerca-de/", AcercaDeView.as_view(), name="acerca_de"),
-        path("privacidad/", PrivacidadView.as_view(), name="privacidad"),
-        path("bienvenida/", BienvenidaView.as_view(), name="bienvenida"),
-        path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
-        path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
-        path(
-            "noticias/<slug:slug>/",
-            NoticiaDetailView.as_view(),
-            name="noticia-detail",
-        ),
-        path(
-            "noticias/<int:pk>/refresh/",
-            RefreshNoticiaView.as_view(),
-            name="noticia-refresh",
-        ),
-        path(
-            "noticias/<int:pk>/delete/",
-            DeleteNoticiaView.as_view(),
-            name="noticia-delete",
-        ),
-        # Extension API endpoints
-        path(
-            "api/submit-from-extension/",
-            SubmitFromExtensionView.as_view(),
-            name="api-submit-extension",
-        ),
-        path(
-            "api/check-vote/",
-            CheckVoteView.as_view(),
-            name="api-check-vote",
-        ),
-        # Clustering API endpoints
-        path(
-            "api/clustering/data/",
-            cluster_data,
-            name="api-cluster-data",
-        ),
-        path(
-            "api/clustering/voter/me/",
-            voter_cluster_membership,
-            name="api-voter-cluster",
-        ),
-        path(
-            "api/clustering/clusters/<int:cluster_id>/votes/",
-            cluster_voting_patterns,
-            name="api-cluster-votes",
-        ),
-        path(
-            "api/clustering/trigger/",
-            trigger_clustering,
-            name="api-trigger-clustering",
-        ),
-        path(
-            "api/clustering/data/json/",
-            cluster_data_json,
-            name="api-cluster-data-json",
-        ),
-        path(
-            "api/clustering/evolution/",
-            cluster_evolution_json,
-            name="api-cluster-evolution",
-        ),
-        path(
-            "api/mapa/og-image/",
-            cluster_og_image,
-            name="api-cluster-og-image",
-        ),
-        path(
-            "api/mapa/upload-og-image/",
-            upload_cluster_og_image,
-            name="api-upload-cluster-og-image",
-        ),
-        # Clustering UI endpoint - mapa de burbujas
-        path(
-            "mapa/",
-            ClusterVisualizationView.as_view(),
-            name="mapa",
-        ),
-        path(
-            "clusters/stats/",
-            ClusterStatsView.as_view(),
-            name="cluster-stats",
-        ),
-        path("accounts/", include("allauth.urls")),
-        path("__reload__/", include("django_browser_reload.urls")),
-        path("health/", health_check, name="health_check"),
-    ]
-    + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-)
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("favicon.ico", favicon, name="favicon"),
+    path("robots.txt", robots_txt, name="robots_txt"),
+    path(
+        "sitemap.xml",
+        sitemap,
+        {"sitemaps": sitemaps},
+        name="django.contrib.sitemaps.views.sitemap",
+    ),
+    path("", NewsTimelineView.as_view(), name="timeline"),
+    path("acerca-de/", AcercaDeView.as_view(), name="acerca_de"),
+    path("privacidad/", PrivacidadView.as_view(), name="privacidad"),
+    path("bienvenida/", BienvenidaView.as_view(), name="bienvenida"),
+    path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
+    path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
+    path(
+        "noticias/<slug:slug>/",
+        NoticiaDetailView.as_view(),
+        name="noticia-detail",
+    ),
+    path(
+        "noticias/<int:pk>/refresh/",
+        RefreshNoticiaView.as_view(),
+        name="noticia-refresh",
+    ),
+    path(
+        "noticias/<int:pk>/delete/",
+        DeleteNoticiaView.as_view(),
+        name="noticia-delete",
+    ),
+    # Extension API endpoints
+    path(
+        "api/submit-from-extension/",
+        SubmitFromExtensionView.as_view(),
+        name="api-submit-extension",
+    ),
+    path(
+        "api/check-vote/",
+        CheckVoteView.as_view(),
+        name="api-check-vote",
+    ),
+    # Clustering API endpoints
+    path(
+        "api/clustering/data/",
+        cluster_data,
+        name="api-cluster-data",
+    ),
+    path(
+        "api/clustering/voter/me/",
+        voter_cluster_membership,
+        name="api-voter-cluster",
+    ),
+    path(
+        "api/clustering/clusters/<int:cluster_id>/votes/",
+        cluster_voting_patterns,
+        name="api-cluster-votes",
+    ),
+    path(
+        "api/clustering/trigger/",
+        trigger_clustering,
+        name="api-trigger-clustering",
+    ),
+    path(
+        "api/clustering/data/json/",
+        cluster_data_json,
+        name="api-cluster-data-json",
+    ),
+    path(
+        "api/clustering/evolution/",
+        cluster_evolution_json,
+        name="api-cluster-evolution",
+    ),
+    path(
+        "api/mapa/og-image/",
+        cluster_og_image,
+        name="api-cluster-og-image",
+    ),
+    path(
+        "api/mapa/upload-og-image/",
+        upload_cluster_og_image,
+        name="api-upload-cluster-og-image",
+    ),
+    # Clustering UI endpoint - mapa de burbujas
+    path(
+        "mapa/",
+        ClusterVisualizationView.as_view(),
+        name="mapa",
+    ),
+    path(
+        "clusters/stats/",
+        ClusterStatsView.as_view(),
+        name="cluster-stats",
+    ),
+    path("accounts/", include("allauth.urls")),
+    path("__reload__/", include("django_browser_reload.urls")),
+    path("health/", health_check, name="health_check"),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
