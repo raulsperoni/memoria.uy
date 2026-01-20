@@ -47,6 +47,7 @@ poetry run python manage.py tailwind start
 - `Voto`: Opinión de usuario sobre noticia (usuario o session_key)
 - `Entidad`: Personas, organizaciones, lugares extraídos
 - `VoterCluster*`: Modelos de clustering (Run, Cluster, Projection, etc.)
+- `ClusterNameCache`: Cache de nombres LLM con TTL de 7 días
 - `UserProfile`: Alias, preferencias de email, show_alias_on_map
 
 ### Sesiones
@@ -95,6 +96,49 @@ Ver [core/parse.py](core/parse.py).
 ### Clustering Polis-style
 Motor matemático en `core/clustering/`. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md)
 para detalles de algoritmos.
+
+### Cluster name caching
+Los nombres de clusters generados por LLM se cachean para evitar cambios
+frecuentes cuando el contenido (noticias/entidades) no cambia:
+- Modelo `ClusterNameCache`: hash del contenido → nombre + descripción
+- TTL de 7 días: después se regenera aunque el contenido sea igual
+- Hash basado en: top noticia IDs + entity names (ordenados)
+- Ver `get_or_create_cluster_name()` en [core/tasks.py](core/tasks.py)
+
+### Analytics page (`/clusters/stats/`)
+Página completa de estadísticas con múltiples secciones:
+
+**1. Usuarios y Actividad**
+- Total de usuarios registrados
+- Nuevos usuarios (7d y 30d)
+- Usuarios activos (votaron o enviaron news en 30d)
+- Votantes únicos (incluye anónimos con session_key)
+- Gráficos: nuevos usuarios por día, noticias enviadas por día
+
+**2. Actividad de Votación**
+- Total de votos, últimos 7d, últimos 30d
+- Gráfico de votos por día (últimos 30d)
+- Breakdown por opinión (buena/mala/neutral)
+
+**3. Evolución de Burbujas** (Sankey diagram)
+- API: `/api/clustering/evolution/?runs=N` (default: 5, max: 20)
+- Compara membresías entre corridas consecutivas
+- Clasifica relaciones: continuation (>80%), split, merge, minor (<20%)
+- Selector de rango: 3, 5, 10, 15 corridas
+- Visualización interactiva con Plotly (hover, drag)
+- Datos históricos completos en `VoterClusterMembership` y `VoterClusterRun`
+
+**4. Resumen de Clustering**
+- Número de burbujas, última actualización, tiempo de cómputo
+- Total de votantes en último clustering
+
+**5. Detalle por Burbuja**
+- Tamaño, consenso promedio, centroide
+- Entidades vistas positiva/negativamente
+- Top noticias con mayor consenso
+
+Ver `ClusterStatsView` en [core/views_clustering.py](core/views_clustering.py).
+Análisis técnico de evolución en [docs/CLUSTER_EVOLUTION_ANALYSIS.md](docs/CLUSTER_EVOLUTION_ANALYSIS.md).
 
 ### Viralización y compartir
 Sistema de captura del mapa de burbujas para compartir en redes sociales:
@@ -145,7 +189,8 @@ docker-compose up -d --build
 | Archivo | Propósito |
 |---------|-----------|
 | `core/views.py` | Timeline, votación, filtros, signup prompt |
-| `core/views_clustering.py` | Vistas del mapa de burbujas + OG images |
+| `core/views_clustering.py` | Mapa de burbujas, stats page (users/activity/clustering), evolution API |
+| `core/templates/clustering/stats.html` | Analytics: usuarios, actividad, votos, clusters, evolución |
 | `core/api_views.py` | API para extensión |
 | `core/tasks.py` | Celery tasks |
 | `core/parse.py` | LLM parsing |
