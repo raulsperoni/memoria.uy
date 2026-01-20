@@ -10,6 +10,7 @@ from core.models import (
     NoticiaProjection,
     VoterClusterMembership,
     ClusterVotingPattern,
+    ClusterNameCache,
     Voto,
 )
 from core import parse
@@ -22,9 +23,98 @@ from functools import wraps
 from core import url_requests
 from django.utils import timezone
 import time
+import hashlib
 import numpy as np
+from datetime import timedelta
 
 logger = get_task_logger(__name__)
+
+CLUSTER_NAME_CACHE_TTL_DAYS = 7
+
+
+def compute_cluster_content_hash(noticia_ids, entities_pos, entities_neg):
+    """
+    Compute a SHA256 hash of cluster content for cache lookup.
+    """
+    sorted_noticia_ids = sorted(noticia_ids)
+    sorted_pos = sorted([e["nombre"] for e in entities_pos])
+    sorted_neg = sorted([e["nombre"] for e in entities_neg])
+    content = f"{sorted_noticia_ids}|{sorted_pos}|{sorted_neg}"
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def get_or_create_cluster_name(
+    noticia_ids, entities_pos, entities_neg, cluster_size, consensus_score
+):
+    """
+    Get cluster name from cache or generate via LLM.
+    Returns (name, description, from_cache) tuple.
+    """
+    content_hash = compute_cluster_content_hash(
+        noticia_ids, entities_pos, entities_neg
+    )
+
+    # Try to find existing cache entry
+    cached = ClusterNameCache.objects.filter(content_hash=content_hash).first()
+
+    if cached and not cached.is_expired():
+        # Update usage stats
+        cached.use_count += 1
+        cached.save(update_fields=["use_count", "last_used_at"])
+        logger.info(f"Cache hit for cluster name: {cached.name}")
+        return cached.name, cached.description, True
+
+    # Need to generate - get full noticia data for LLM
+    from core.models import Noticia
+    noticias = Noticia.objects.filter(id__in=noticia_ids)
+    top_noticias = [
+        {
+            "titulo": n.mostrar_titulo or n.enlace,
+            "resumen": n.meta_descripcion or "",
+            "majority_opinion": "",  # Not needed for name generation
+            "consensus": 0.0,
+        }
+        for n in noticias
+    ]
+
+    description = parse.generate_cluster_description(
+        top_noticias=top_noticias,
+        entities_positive=entities_pos,
+        entities_negative=entities_neg,
+        cluster_size=cluster_size,
+        consensus_score=consensus_score,
+    )
+
+    if not description:
+        return None, None, False
+
+    # Store in cache
+    expires_at = timezone.now() + timedelta(days=CLUSTER_NAME_CACHE_TTL_DAYS)
+
+    if cached:
+        # Update expired entry
+        cached.name = description.nombre[:100]
+        cached.description = description.descripcion
+        cached.noticia_ids = sorted(noticia_ids)
+        cached.entities_positive = entities_pos
+        cached.entities_negative = entities_neg
+        cached.expires_at = expires_at
+        cached.use_count = 1
+        cached.save()
+        logger.info(f"Refreshed expired cache for cluster: {cached.name}")
+    else:
+        ClusterNameCache.objects.create(
+            content_hash=content_hash,
+            name=description.nombre[:100],
+            description=description.descripcion,
+            noticia_ids=sorted(noticia_ids),
+            entities_positive=entities_pos,
+            entities_negative=entities_neg,
+            expires_at=expires_at,
+        )
+        logger.info(f"Created new cache entry for cluster: {description.nombre}")
+
+    return description.nombre[:100], description.descripcion, False
 
 
 def task_lock(timeout=60 * 10):
@@ -612,7 +702,7 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
         ClusterVotingPattern.objects.bulk_create(group_voting_pattern_objs)
         logger.info(f"Saved {len(group_voting_pattern_objs)} group voting patterns")
 
-        # Step 7: Generate LLM descriptions for group clusters
+        # Step 7: Generate LLM descriptions for group clusters (with caching)
         logger.info("Step 7: Generating LLM descriptions for group clusters")
         from core.clustering.metrics import compute_cluster_entities
 
@@ -623,47 +713,33 @@ def update_voter_clusters(time_window_days=30, min_voters=10, min_votes_per_vote
                     cluster=cluster_obj
                 ).order_by("-consensus_score")[:10]
 
-                top_noticias = []
-                for pattern in top_patterns:
-                    noticia = pattern.noticia
-                    top_noticias.append(
-                        {
-                            "titulo": noticia.mostrar_titulo or noticia.enlace,
-                            "resumen": noticia.meta_descripcion or "",
-                            "majority_opinion": pattern.majority_opinion,
-                            "consensus": pattern.consensus_score
-                            if pattern.consensus_score is not None
-                            else 0.0,
-                        }
-                    )
+                noticia_ids = [p.noticia_id for p in top_patterns]
 
                 # 7.2: Get distinctive entities
                 entities_pos, entities_neg = compute_cluster_entities(
                     cluster_obj, top_n=5
                 )
 
-                # 7.3: Generate description with LLM
-                description = parse.generate_cluster_description(
-                    top_noticias=top_noticias,
-                    entities_positive=entities_pos,
-                    entities_negative=entities_neg,
+                # 7.3: Get name from cache or generate via LLM
+                name, description, from_cache = get_or_create_cluster_name(
+                    noticia_ids=noticia_ids,
+                    entities_pos=entities_pos,
+                    entities_neg=entities_neg,
                     cluster_size=cluster_obj.size,
-                    consensus_score=cluster_obj.consensus_score
-                    if cluster_obj.consensus_score is not None
-                    else 0.0,
+                    consensus_score=cluster_obj.consensus_score or 0.0,
                 )
 
                 # 7.4: Save to cluster
-                if description:
-                    cluster_obj.llm_name = description.nombre[:100]
-                    cluster_obj.llm_description = description.descripcion
+                if name:
+                    cluster_obj.llm_name = name
+                    cluster_obj.llm_description = description
                     cluster_obj.top_entities_positive = entities_pos
                     cluster_obj.top_entities_negative = entities_neg
                     cluster_obj.description_generated_at = timezone.now()
                     cluster_obj.save()
+                    cache_status = "from cache" if from_cache else "newly generated"
                     logger.info(
-                        f"Generated description for group {group_id}: "
-                        f"{description.nombre}"
+                        f"Group {group_id}: {name} ({cache_status})"
                     )
                 else:
                     # Still save entities even if LLM fails

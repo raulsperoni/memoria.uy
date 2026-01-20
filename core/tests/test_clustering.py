@@ -805,3 +805,268 @@ def test_aggregation_with_shared_noticias():
     assert agg2["mala"] == 1
     assert agg2["neutral"] == 2
     assert agg2["total"] == 5
+
+
+# ============================================================================
+# Tests for ClusterNameCache (LLM name caching with TTL)
+# ============================================================================
+
+
+@pytest.mark.django_db
+def test_cluster_name_cache_model():
+    """Test ClusterNameCache model creation and is_expired method."""
+    from core.models import ClusterNameCache
+    from django.utils import timezone
+    from datetime import timedelta
+
+    # Create a cache entry that expires in the future
+    future_expiry = timezone.now() + timedelta(days=7)
+    cache = ClusterNameCache.objects.create(
+        content_hash="abc123",
+        name="Los Escépticos",
+        description="Grupo crítico del gobierno",
+        noticia_ids=[1, 2, 3],
+        entities_positive=[{"nombre": "Juan", "tipo": "persona"}],
+        entities_negative=[{"nombre": "Gobierno", "tipo": "organizacion"}],
+        expires_at=future_expiry,
+    )
+
+    assert cache.id is not None
+    assert cache.name == "Los Escépticos"
+    assert cache.use_count == 1
+    assert not cache.is_expired()
+
+    # Create an expired cache entry
+    past_expiry = timezone.now() - timedelta(days=1)
+    expired_cache = ClusterNameCache.objects.create(
+        content_hash="def456",
+        name="Los Optimistas",
+        description="Grupo positivo",
+        noticia_ids=[4, 5],
+        entities_positive=[],
+        entities_negative=[],
+        expires_at=past_expiry,
+    )
+
+    assert expired_cache.is_expired()
+
+
+@pytest.mark.django_db
+def test_compute_cluster_content_hash():
+    """Test content hash computation is deterministic and order-independent."""
+    from core.tasks import compute_cluster_content_hash
+
+    entities_pos = [
+        {"nombre": "Juan", "tipo": "persona"},
+        {"nombre": "Maria", "tipo": "persona"},
+    ]
+    entities_neg = [{"nombre": "Gobierno", "tipo": "organizacion"}]
+
+    hash1 = compute_cluster_content_hash([1, 2, 3], entities_pos, entities_neg)
+    hash2 = compute_cluster_content_hash([1, 2, 3], entities_pos, entities_neg)
+
+    # Same inputs should produce same hash
+    assert hash1 == hash2
+
+    # Order of noticia_ids shouldn't matter (they get sorted)
+    hash3 = compute_cluster_content_hash([3, 1, 2], entities_pos, entities_neg)
+    assert hash1 == hash3
+
+    # Order of entities shouldn't matter (names get sorted)
+    entities_pos_reversed = [
+        {"nombre": "Maria", "tipo": "persona"},
+        {"nombre": "Juan", "tipo": "persona"},
+    ]
+    hash4 = compute_cluster_content_hash([1, 2, 3], entities_pos_reversed, entities_neg)
+    assert hash1 == hash4
+
+    # Different inputs should produce different hash
+    hash5 = compute_cluster_content_hash([1, 2, 4], entities_pos, entities_neg)
+    assert hash1 != hash5
+
+
+@pytest.mark.django_db
+def test_get_or_create_cluster_name_cache_hit():
+    """Test that cache hit returns cached name without calling LLM."""
+    from unittest.mock import patch
+    from core.models import ClusterNameCache
+    from core.tasks import get_or_create_cluster_name, compute_cluster_content_hash
+    from django.utils import timezone
+    from datetime import timedelta
+
+    # Create noticias for the test
+    noticia1 = Noticia.objects.create(
+        enlace="http://cache-test1.com", meta_titulo="Cache Test 1"
+    )
+    noticia2 = Noticia.objects.create(
+        enlace="http://cache-test2.com", meta_titulo="Cache Test 2"
+    )
+
+    noticia_ids = [noticia1.id, noticia2.id]
+    entities_pos = [{"nombre": "Juan", "tipo": "persona"}]
+    entities_neg = [{"nombre": "Gobierno", "tipo": "organizacion"}]
+
+    # Pre-populate cache
+    content_hash = compute_cluster_content_hash(noticia_ids, entities_pos, entities_neg)
+    ClusterNameCache.objects.create(
+        content_hash=content_hash,
+        name="Cached Name",
+        description="Cached description",
+        noticia_ids=sorted(noticia_ids),
+        entities_positive=entities_pos,
+        entities_negative=entities_neg,
+        expires_at=timezone.now() + timedelta(days=7),
+        use_count=1,
+    )
+
+    # Mock the LLM call to ensure it's not called
+    with patch("core.tasks.parse.generate_cluster_description") as mock_generate:
+        name, description, from_cache = get_or_create_cluster_name(
+            noticia_ids=noticia_ids,
+            entities_pos=entities_pos,
+            entities_neg=entities_neg,
+            cluster_size=10,
+            consensus_score=0.8,
+        )
+
+        assert name == "Cached Name"
+        assert description == "Cached description"
+        assert from_cache is True
+        mock_generate.assert_not_called()
+
+    # Check use_count was incremented
+    cache = ClusterNameCache.objects.get(content_hash=content_hash)
+    assert cache.use_count == 2
+
+
+@pytest.mark.django_db
+def test_get_or_create_cluster_name_cache_miss():
+    """Test that cache miss calls LLM and stores result."""
+    from unittest.mock import patch
+    from core.models import ClusterNameCache
+    from core.tasks import get_or_create_cluster_name, compute_cluster_content_hash
+    from core.parse import ClusterDescription
+
+    # Create noticias
+    noticia1 = Noticia.objects.create(
+        enlace="http://miss-test1.com", meta_titulo="Miss Test 1"
+    )
+    noticia2 = Noticia.objects.create(
+        enlace="http://miss-test2.com", meta_titulo="Miss Test 2"
+    )
+
+    noticia_ids = [noticia1.id, noticia2.id]
+    entities_pos = [{"nombre": "Pedro", "tipo": "persona"}]
+    entities_neg = []
+
+    # Mock LLM to return a description
+    mock_description = ClusterDescription(
+        nombre="Generated Name", descripcion="Generated description"
+    )
+    with patch(
+        "core.tasks.parse.generate_cluster_description", return_value=mock_description
+    ):
+        name, description, from_cache = get_or_create_cluster_name(
+            noticia_ids=noticia_ids,
+            entities_pos=entities_pos,
+            entities_neg=entities_neg,
+            cluster_size=5,
+            consensus_score=0.7,
+        )
+
+    assert name == "Generated Name"
+    assert description == "Generated description"
+    assert from_cache is False
+
+    # Check cache was created
+    content_hash = compute_cluster_content_hash(noticia_ids, entities_pos, entities_neg)
+    cache = ClusterNameCache.objects.get(content_hash=content_hash)
+    assert cache.name == "Generated Name"
+    assert cache.use_count == 1
+
+
+@pytest.mark.django_db
+def test_get_or_create_cluster_name_expired_cache():
+    """Test that expired cache triggers LLM regeneration."""
+    from unittest.mock import patch
+    from core.models import ClusterNameCache
+    from core.tasks import get_or_create_cluster_name, compute_cluster_content_hash
+    from core.parse import ClusterDescription
+    from django.utils import timezone
+    from datetime import timedelta
+
+    # Create noticias
+    noticia1 = Noticia.objects.create(
+        enlace="http://expired-test1.com", meta_titulo="Expired Test 1"
+    )
+
+    noticia_ids = [noticia1.id]
+    entities_pos = []
+    entities_neg = []
+
+    # Create expired cache entry
+    content_hash = compute_cluster_content_hash(noticia_ids, entities_pos, entities_neg)
+    ClusterNameCache.objects.create(
+        content_hash=content_hash,
+        name="Old Expired Name",
+        description="Old description",
+        noticia_ids=sorted(noticia_ids),
+        entities_positive=entities_pos,
+        entities_negative=entities_neg,
+        expires_at=timezone.now() - timedelta(days=1),  # Expired yesterday
+        use_count=5,
+    )
+
+    # Mock LLM
+    mock_description = ClusterDescription(
+        nombre="Refreshed Name", descripcion="Refreshed description"
+    )
+    with patch(
+        "core.tasks.parse.generate_cluster_description", return_value=mock_description
+    ):
+        name, description, from_cache = get_or_create_cluster_name(
+            noticia_ids=noticia_ids,
+            entities_pos=entities_pos,
+            entities_neg=entities_neg,
+            cluster_size=3,
+            consensus_score=0.6,
+        )
+
+    assert name == "Refreshed Name"
+    assert description == "Refreshed description"
+    assert from_cache is False
+
+    # Check cache was updated (not duplicated)
+    assert ClusterNameCache.objects.filter(content_hash=content_hash).count() == 1
+    cache = ClusterNameCache.objects.get(content_hash=content_hash)
+    assert cache.name == "Refreshed Name"
+    assert cache.use_count == 1  # Reset on refresh
+
+
+@pytest.mark.django_db
+def test_get_or_create_cluster_name_llm_failure():
+    """Test graceful handling when LLM fails."""
+    from unittest.mock import patch
+    from core.models import ClusterNameCache
+    from core.tasks import get_or_create_cluster_name
+
+    noticia1 = Noticia.objects.create(
+        enlace="http://fail-test.com", meta_titulo="Fail Test"
+    )
+
+    # Mock LLM to return None (failure)
+    with patch("core.tasks.parse.generate_cluster_description", return_value=None):
+        name, description, from_cache = get_or_create_cluster_name(
+            noticia_ids=[noticia1.id],
+            entities_pos=[],
+            entities_neg=[],
+            cluster_size=2,
+            consensus_score=0.5,
+        )
+
+    assert name is None
+    assert description is None
+    assert from_cache is False
+
+    # No cache entry should be created on failure
+    assert ClusterNameCache.objects.count() == 0

@@ -47,6 +47,7 @@ poetry run python manage.py tailwind start
 - `Voto`: Opinión de usuario sobre noticia (usuario o session_key)
 - `Entidad`: Personas, organizaciones, lugares extraídos
 - `VoterCluster*`: Modelos de clustering (Run, Cluster, Projection, etc.)
+- `ClusterNameCache`: Cache de nombres LLM con TTL de 7 días
 - `UserProfile`: Alias, preferencias de email, show_alias_on_map
 
 ### Sesiones
@@ -95,6 +96,14 @@ Ver [core/parse.py](core/parse.py).
 ### Clustering Polis-style
 Motor matemático en `core/clustering/`. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md)
 para detalles de algoritmos.
+
+### Cluster name caching
+Los nombres de clusters generados por LLM se cachean para evitar cambios
+frecuentes cuando el contenido (noticias/entidades) no cambia:
+- Modelo `ClusterNameCache`: hash del contenido → nombre + descripción
+- TTL de 7 días: después se regenera aunque el contenido sea igual
+- Hash basado en: top noticia IDs + entity names (ordenados)
+- Ver `get_or_create_cluster_name()` en [core/tasks.py](core/tasks.py)
 
 ### Viralización y compartir
 Sistema de captura del mapa de burbujas para compartir en redes sociales:

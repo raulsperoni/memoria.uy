@@ -3,6 +3,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.utils.text import slugify
 from core import parse
 import logging
@@ -562,6 +563,55 @@ class ClusterVotingPattern(models.Model):
             f"Cluster {self.cluster.cluster_id} on {self.noticia.mostrar_titulo[:30]}: "
             f"{self.majority_opinion or 'no consensus'}"
         )
+
+
+class ClusterNameCache(models.Model):
+    """
+    Cache LLM-generated cluster names based on content fingerprint.
+    Reuses names when cluster content (noticias/entities) matches exactly,
+    with TTL for eventual freshness.
+    """
+    content_hash = models.CharField(
+        max_length=64,
+        unique=True,
+        db_index=True,
+        help_text="SHA256 hash of sorted noticia IDs + entity names"
+    )
+
+    # Cached name/description
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+
+    # Content that produced this (for debugging/inspection)
+    noticia_ids = models.JSONField(
+        help_text="Sorted list of top noticia IDs used"
+    )
+    entities_positive = models.JSONField(
+        help_text="Sorted list of positive entity names"
+    )
+    entities_negative = models.JSONField(
+        help_text="Sorted list of negative entity names"
+    )
+
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+    use_count = models.IntegerField(default=1)
+
+    # TTL - 7 days default
+    expires_at = models.DateTimeField(
+        help_text="After this date, regenerate even if content matches"
+    )
+
+    class Meta:
+        verbose_name = "Cluster Name Cache"
+        verbose_name_plural = "Cluster Name Caches"
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"{self.name} (used {self.use_count}x, expires {self.expires_at})"
 
 
 class ReengagementEmailLog(models.Model):
