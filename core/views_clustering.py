@@ -490,19 +490,36 @@ def cluster_evolution_json(request):
     JSON endpoint for cluster evolution data (Sankey diagram).
     
     Query params:
-        - runs: Number of recent runs to analyze (default: 5, max: 20)
+        - runs: Number of runs to sample (default: 5, max: 10)
+        - mode: 'recent' (consecutive recent runs) or 'spread' (evenly spread over time, default)
     """
     from collections import defaultdict
     
     try:
         n_runs = int(request.GET.get('runs', 5))
-        n_runs = min(max(n_runs, 2), 20)  # Between 2 and 20
+        n_runs = min(max(n_runs, 2), 10)  # Between 2 and 10
+        mode = request.GET.get('mode', 'spread')  # 'recent' or 'spread'
         
-        # Get recent completed runs
-        runs = list(VoterClusterRun.objects.filter(
+        # Get all completed runs
+        all_runs = list(VoterClusterRun.objects.filter(
             status='completed'
-        ).order_by('-created_at')[:n_runs])
-        runs.reverse()  # Chronological order
+        ).order_by('created_at'))
+        
+        if len(all_runs) < 2:
+            return JsonResponse({'error': 'Need at least 2 completed runs'}, status=404)
+        
+        # Sample runs based on mode
+        if mode == 'recent':
+            # Take the most recent N runs (consecutive)
+            runs = all_runs[-n_runs:]
+        else:
+            # Spread runs evenly across the timeline to show real evolution
+            if len(all_runs) <= n_runs:
+                runs = all_runs
+            else:
+                # Sample evenly: take first, last, and evenly spaced in between
+                indices = [int(i * (len(all_runs) - 1) / (n_runs - 1)) for i in range(n_runs)]
+                runs = [all_runs[i] for i in indices]
         
         if len(runs) < 2:
             return JsonResponse({'error': 'Need at least 2 completed runs'}, status=404)
@@ -584,6 +601,14 @@ def cluster_evolution_json(request):
                             'color': color,
                         })
         
+        # Calculate time spans
+        if len(runs) > 1:
+            time_span = (runs[-1].created_at - runs[0].created_at).days
+            mode_label = 'últimas' if mode == 'recent' else 'distribuidas'
+        else:
+            time_span = 0
+            mode_label = ''
+        
         return JsonResponse({
             'data': [{
                 'type': 'sankey',
@@ -602,7 +627,7 @@ def cluster_evolution_json(request):
                 }
             }],
             'layout': {
-                'title': f'Evolución de Burbujas ({len(runs)} corridas)',
+                'title': f'Evolución de Burbujas - {len(runs)} corridas {mode_label} ({time_span} días)',
                 'font': {'size': 12},
                 'height': 600,
             },
@@ -614,7 +639,9 @@ def cluster_evolution_json(request):
                     'n_clusters': r.n_clusters,
                 }
                 for r in runs
-            ]
+            ],
+            'time_span_days': time_span,
+            'mode': mode,
         })
         
     except Exception as e:

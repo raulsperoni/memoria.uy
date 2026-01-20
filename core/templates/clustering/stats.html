@@ -281,24 +281,37 @@
 
         <!-- Cluster Evolution (Sankey Diagram) -->
         <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900">
-                        Evolución de Burbujas
-                    </h2>
-                    <p class="text-sm text-gray-600 mt-1">
-                        Cómo se dividen, fusionan y evolucionan las burbujas a lo largo del tiempo
-                    </p>
-                </div>
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-gray-900">
+                    Evolución de Burbujas
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">
+                    Cómo se dividen, fusionan y evolucionan las burbujas a lo largo del tiempo
+                </p>
+            </div>
+            
+            <!-- Controls -->
+            <div class="flex flex-wrap gap-4 mb-4 items-center">
                 <div class="flex items-center gap-2">
-                    <label for="runs-select" class="text-sm text-gray-600">Últimas:</label>
+                    <label for="runs-select" class="text-sm font-medium text-gray-700">Corridas:</label>
                     <select id="runs-select" 
                             class="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="3">3 corridas</option>
-                        <option value="5" selected>5 corridas</option>
-                        <option value="10">10 corridas</option>
-                        <option value="15">15 corridas</option>
+                        <option value="3">3</option>
+                        <option value="5" selected>5</option>
+                        <option value="7">7</option>
+                        <option value="10">10</option>
                     </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="mode-select" class="text-sm font-medium text-gray-700">Modo:</label>
+                    <select id="mode-select" 
+                            class="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="spread" selected>Distribuidas en el tiempo</option>
+                        <option value="recent">Últimas consecutivas</option>
+                    </select>
+                </div>
+                <div class="text-xs text-gray-500 ml-auto">
+                    💡 Modo "Distribuidas" muestra cambios reales a lo largo del tiempo
                 </div>
             </div>
 
@@ -346,7 +359,9 @@
 
         <script>
             // Load cluster evolution data
-            function loadEvolution(runs = 5) {
+            function loadEvolution() {
+                const runs = parseInt(document.getElementById('runs-select').value);
+                const mode = document.getElementById('mode-select').value;
                 const loading = document.getElementById('evolution-loading');
                 const chart = document.getElementById('evolution-chart');
                 const error = document.getElementById('evolution-error');
@@ -356,7 +371,7 @@
                 chart.classList.add('hidden');
                 error.classList.add('hidden');
                 
-                fetch(`/api/clustering/evolution/?runs=${runs}`)
+                fetch(`/api/clustering/evolution/?runs=${runs}&mode=${mode}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -384,12 +399,11 @@
             }
             
             // Initial load
-            loadEvolution(5);
+            loadEvolution();
             
-            // Listen for dropdown changes
-            document.getElementById('runs-select').addEventListener('change', (e) => {
-                loadEvolution(parseInt(e.target.value));
-            });
+            // Listen for control changes
+            document.getElementById('runs-select').addEventListener('change', loadEvolution);
+            document.getElementById('mode-select').addEventListener('change', loadEvolution);
         </script>
 
         <!-- Bubble Details -->
