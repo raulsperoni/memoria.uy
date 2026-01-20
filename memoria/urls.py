@@ -47,6 +47,7 @@ from core.views_clustering import (
     ClusterVisualizationView,
     ClusterStatsView,
     cluster_data_json,
+    cluster_evolution_json,
     cluster_og_image,
     upload_cluster_og_image,
 )
@@ -130,6 +131,11 @@ urlpatterns = (
             "api/clustering/data/json/",
             cluster_data_json,
             name="api-cluster-data-json",
+        ),
+        path(
+            "api/clustering/evolution/",
+            cluster_evolution_json,
+            name="api-cluster-evolution",
         ),
         path(
             "api/mapa/og-image/",
