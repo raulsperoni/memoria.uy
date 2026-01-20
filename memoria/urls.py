@@ -46,10 +46,15 @@ from core.api_clustering import (
 from core.views_clustering import (
     ClusterVisualizationView,
     ClusterStatsView,
+    ClusterReportView,
     cluster_data_json,
     cluster_evolution_json,
     cluster_og_image,
     upload_cluster_og_image,
+    consensus_data_json,
+    bridges_data_json,
+    polarization_timeline_json,
+    cluster_stability_json,
 )
 from memoria.views import health_check, robots_txt, favicon
 
@@ -146,6 +151,27 @@ urlpatterns = [
         upload_cluster_og_image,
         name="api-upload-cluster-og-image",
     ),
+    # New clustering analysis APIs
+    path(
+        "api/clustering/consensus/",
+        consensus_data_json,
+        name="api-consensus-data",
+    ),
+    path(
+        "api/clustering/bridges/",
+        bridges_data_json,
+        name="api-bridges-data",
+    ),
+    path(
+        "api/clustering/polarization-timeline/",
+        polarization_timeline_json,
+        name="api-polarization-timeline",
+    ),
+    path(
+        "api/clustering/stability/",
+        cluster_stability_json,
+        name="api-cluster-stability",
+    ),
     # Clustering UI endpoint - mapa de burbujas
     path(
         "mapa/",
@@ -156,6 +182,11 @@ urlpatterns = [
         "clusters/stats/",
         ClusterStatsView.as_view(),
         name="cluster-stats",
+    ),
+    path(
+        "clusters/report/",
+        ClusterReportView.as_view(),
+        name="cluster-report",
     ),
     path("accounts/", include("allauth.urls")),
     path("__reload__/", include("django_browser_reload.urls")),

@@ -1,0 +1,274 @@
+<!-- Bridge-Builders Section -->
+<div class="mb-16">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-black mb-3 uppercase font-mono tracking-wide">
+            Los Puentes
+        </h2>
+        <p class="text-gray-700 font-mono text-sm">
+            Votantes que conectan diferentes burbujas de opinión.
+        </p>
+    </div>
+
+    {% if bridge_stats and bridge_stats.total_bridges > 0 %}
+    
+    <!-- Bridge Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="border-2 border-black p-6 bg-white">
+            <div class="text-3xl font-bold text-black font-mono mb-2">
+                {{ bridge_stats.total_bridges }}
+            </div>
+            <div class="text-sm text-gray-700 font-mono">
+                puentes identificados
+            </div>
+        </div>
+        <div class="border-2 border-black p-6 bg-white">
+            <div class="text-3xl font-bold text-black font-mono mb-2">
+                {{ bridge_stats.avg_votes|floatformat:0 }}
+            </div>
+            <div class="text-sm text-gray-700 font-mono">
+                votos promedio por puente
+            </div>
+        </div>
+        <div class="border-2 border-black p-6 bg-white">
+            <div class="text-3xl font-bold text-black font-mono mb-2">
+                {{ bridge_stats.avg_connections|floatformat:1 }}
+            </div>
+            <div class="text-sm text-gray-700 font-mono">
+                burbujas conectadas por puente
+            </div>
+        </div>
+        <div class="border-2 border-black p-6 bg-white">
+            {% if bridge_stats.strongest_bridge %}
+            <div class="text-3xl font-bold text-black font-mono mb-2">
+                {{ bridge_stats.strongest_bridge.bridge_strength|floatformat:2 }}
+            </div>
+            <div class="text-sm text-gray-700 font-mono">
+                fuerza del puente más fuerte
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Network Visualization -->
+    <div class="border-2 border-black bg-white p-6 mb-8">
+        <h3 class="text-xl font-bold text-black mb-4 uppercase font-mono">
+            Red de Conexiones
+        </h3>
+        <p class="text-sm text-gray-700 font-mono mb-6">
+            Los puntos negros grandes son burbujas. Los puntos grises son votantes que actúan como puentes.
+        </p>
+        
+        <div id="bridges-network" style="height: 600px; width: 100%;"></div>
+        
+        <div class="mt-4 text-xs text-gray-600 font-mono">
+            Esta visualización se carga dinámicamente desde la API. Puede tardar unos segundos.
+        </div>
+    </div>
+
+    <!-- Top Bridges List -->
+    {% if top_bridges %}
+    <div class="border-2 border-black bg-white p-6">
+        <h3 class="text-xl font-bold text-black mb-4 uppercase font-mono">
+            Top Puentes por Fuerza de Conexión
+        </h3>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full font-mono text-sm">
+                <thead>
+                    <tr class="border-b-2 border-black">
+                        <th class="text-left py-3 px-2 font-bold">#</th>
+                        <th class="text-left py-3 px-2 font-bold">Tipo</th>
+                        <th class="text-left py-3 px-2 font-bold">Burbuja Asignada</th>
+                        <th class="text-left py-3 px-2 font-bold">Conecta Burbujas</th>
+                        <th class="text-left py-3 px-2 font-bold">Fuerza</th>
+                        <th class="text-left py-3 px-2 font-bold">Votos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bridge in top_bridges %}
+                    {% if forloop.counter <= 15 %}
+                    <tr class="border-b border-gray-300 hover:bg-gray-50">
+                        <td class="py-3 px-2">{{ forloop.counter }}</td>
+                        <td class="py-3 px-2 uppercase text-xs">
+                            {{ bridge.voter_type }}
+                        </td>
+                        <td class="py-3 px-2 font-bold">
+                            B{{ bridge.assigned_cluster }}
+                        </td>
+                        <td class="py-3 px-2">
+                            {% for cid in bridge.connected_clusters %}
+                            <span class="inline-block bg-gray-200 px-2 py-1 text-xs mr-1 mb-1">
+                                B{{ cid }}
+                            </span>
+                            {% endfor %}
+                        </td>
+                        <td class="py-3 px-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-16 bg-gray-200 h-3 border border-gray-400">
+                                    <div class="bg-black h-full" 
+                                         style="width: {{ bridge.bridge_strength|floatformat:0 }}%"></div>
+                                </div>
+                                <span class="text-xs">{{ bridge.bridge_strength|floatformat:2 }}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-2">
+                            {{ bridge.n_votes }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- What makes a bridge? -->
+    <div class="mt-8 bg-gray-50 border-2 border-black p-6">
+        <h3 class="text-sm uppercase font-bold text-black font-mono mb-3 tracking-wide">
+            ¿Qué es un puente?
+        </h3>
+        <p class="text-gray-800 font-mono text-sm leading-relaxed mb-3">
+            Un votante es identificado como "puente" cuando sus patrones de votación lo posicionan 
+            cerca de los centroides de múltiples burbujas. Esto indica que comparten opiniones 
+            con diferentes grupos, conectando perspectivas diversas.
+        </p>
+        <p class="text-gray-800 font-mono text-sm leading-relaxed">
+            Los puentes son importantes porque demuestran que no estamos completamente fragmentados. 
+            Hay personas que naturalmente mantienen opiniones que resuenan con diferentes burbujas, 
+            actuando como conectores en el panorama de opinión.
+        </p>
+    </div>
+
+    {% else %}
+    <div class="border-2 border-black p-8 bg-gray-50">
+        <p class="text-gray-700 font-mono text-center">
+            No hay datos de puentes disponibles
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Load D3.js for network visualization -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch bridge network data from API
+    fetch('/api/clustering/bridges/?format=network&limit=50')
+        .then(response => response.json())
+        .then(data => {
+            if (data.network) {
+                renderBridgeNetwork(data.network);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading bridge network:', error);
+            document.getElementById('bridges-network').innerHTML = 
+                '<div class="text-center text-gray-600 font-mono text-sm py-20">Error cargando red de puentes</div>';
+        });
+});
+
+function renderBridgeNetwork(networkData) {
+    const container = document.getElementById('bridges-network');
+    const width = container.clientWidth;
+    const height = 600;
+    
+    // Clear existing
+    container.innerHTML = '';
+    
+    // Create SVG
+    const svg = d3.select('#bridges-network')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height);
+    
+    // Create force simulation
+    const simulation = d3.forceSimulation(networkData.nodes)
+        .force('link', d3.forceLink(networkData.edges)
+            .id(d => d.id)
+            .distance(d => 100))
+        .force('charge', d3.forceManyBody().strength(-200))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(d => d.type === 'cluster' ? 40 : 10));
+    
+    // Draw edges
+    const link = svg.append('g')
+        .selectAll('line')
+        .data(networkData.edges)
+        .join('line')
+        .attr('stroke', '#999')
+        .attr('stroke-opacity', d => d.weight * 0.6)
+        .attr('stroke-width', d => d.weight * 2);
+    
+    // Draw nodes
+    const node = svg.append('g')
+        .selectAll('circle')
+        .data(networkData.nodes)
+        .join('circle')
+        .attr('r', d => d.type === 'cluster' ? 20 : 5)
+        .attr('fill', d => d.type === 'cluster' ? '#000000' : '#999999')
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended));
+    
+    // Add labels for clusters
+    const label = svg.append('g')
+        .selectAll('text')
+        .data(networkData.nodes.filter(d => d.type === 'cluster'))
+        .join('text')
+        .text(d => d.label)
+        .attr('font-size', 10)
+        .attr('font-family', 'IBM Plex Mono, monospace')
+        .attr('text-anchor', 'middle')
+        .attr('dy', -25);
+    
+    // Tooltips
+    node.append('title')
+        .text(d => {
+            if (d.type === 'cluster') {
+                return `${d.label}\nTamaño: ${d.size}`;
+            } else {
+                return `Puente\nFuerza: ${d.strength.toFixed(2)}\nVotos: ${d.n_votes}`;
+            }
+        });
+    
+    // Update positions on tick
+    simulation.on('tick', () => {
+        link
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+        
+        node
+            .attr('cx', d => d.x)
+            .attr('cy', d => d.y);
+        
+        label
+            .attr('x', d => d.x)
+            .attr('y', d => d.y);
+    });
+    
+    // Drag functions
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+    
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+    
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+}
+</script>

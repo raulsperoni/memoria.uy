@@ -1,586 +1,345 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Estadísticas de Burbujas - Memoria.uy{% endblock %}
+{% block title %}Estadísticas - Memoria.uy{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                Estadísticas de Burbujas
-            </h1>
-            <p class="text-gray-600">
-                Análisis detallado de los patrones de votación por burbuja
-            </p>
-        </div>
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="mb-12">
+        <h1 class="text-4xl font-bold text-black mb-3 uppercase tracking-wide font-mono">
+            Estadísticas de Plataforma
+        </h1>
+        <p class="text-lg text-gray-700 font-mono">
+            Métricas de usuarios y actividad de votación
+        </p>
+    </div>
 
-        <!-- User Growth & Activity -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Usuarios y Actividad</h2>
-            
-            <!-- User Stats Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                <div>
-                    <div class="text-sm text-gray-600">Usuarios Totales</div>
-                    <div class="text-2xl font-bold text-indigo-600">
-                        {{ total_users }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Nuevos (7d)</div>
-                    <div class="text-2xl font-bold text-green-600">
-                        {{ users_last_7_days }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Nuevos (30d)</div>
-                    <div class="text-2xl font-bold text-green-600">
-                        {{ users_last_30_days }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Usuarios Activos (30d)</div>
-                    <div class="text-2xl font-bold text-blue-600">
-                        {{ active_users_30_days }}
-                    </div>
-                    <div class="text-xs text-gray-500">
-                        votaron o enviaron news
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Votantes Únicos (30d)</div>
-                    <div class="text-2xl font-bold text-purple-600">
-                        {{ unique_voters_30_days }}
-                    </div>
-                    <div class="text-xs text-gray-500">
-                        incluye anónimos
-                    </div>
+    <!-- Link to Full Report -->
+    <div class="mb-8 border-2 border-black bg-gray-50 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-black font-mono uppercase mb-2">
+                    Reporte de Investigación Completo
+                </h2>
+                <p class="text-sm text-gray-700 font-mono">
+                    Análisis profundo: consenso, polarización, bridge-builders y evolución temporal
+                </p>
+            </div>
+            <a href="{% url 'cluster-report' %}"
+               class="px-6 py-3 bg-black text-white font-mono uppercase text-sm tracking-wide hover:bg-gray-800 transition-colors border-2 border-black whitespace-nowrap">
+                Ver Reporte →
+            </a>
+        </div>
+    </div>
+
+    <!-- User Growth & Activity -->
+    <div class="border-2 border-black bg-white p-8 mb-8">
+        <h2 class="text-2xl font-bold text-black mb-6 uppercase font-mono tracking-wide">
+            Usuarios y Actividad
+        </h2>
+        
+        <!-- User Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Usuarios Totales</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ total_users }}
                 </div>
             </div>
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Nuevos (7d)</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ users_last_7_days }}
+                </div>
+            </div>
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Nuevos (30d)</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ users_last_30_days }}
+                </div>
+            </div>
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Activos (30d)</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ active_users_30_days }}
+                </div>
+                <div class="text-xs text-gray-500 font-mono mt-1">
+                    votaron/enviaron
+                </div>
+            </div>
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Votantes (30d)</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ unique_voters_30_days }}
+                </div>
+                <div class="text-xs text-gray-500 font-mono mt-1">
+                    incl. anónimos
+                </div>
+            </div>
+        </div>
 
-            <!-- Charts Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- New Users Chart -->
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">
-                        Nuevos Usuarios (Últimos 30 Días)
-                    </h3>
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- New Users Chart -->
+            <div>
+                <h3 class="text-sm font-bold text-black font-mono uppercase mb-4 tracking-wide">
+                    Nuevos Usuarios (Últimos 30 Días)
+                </h3>
+                <div class="border-2 border-black p-4 bg-white">
                     <div class="h-64" id="users-chart"></div>
                 </div>
-                
-                <!-- News Submissions Chart -->
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">
-                        Noticias Enviadas (Últimos 30 Días)
-                    </h3>
-                    <div class="h-64" id="news-chart"></div>
-                    <div class="text-center text-sm text-gray-600 mt-2">
-                        Total de noticias: <span class="font-bold text-gray-900">{{ total_noticias }}</span>
-                    </div>
-                </div>
             </div>
-        </div>
-
-        {% if has_data %}
-        <!-- Clustering Overview -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Clustering - Resumen</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                    <div class="text-sm text-gray-600">Total de Burbujas</div>
-                    <div class="text-2xl font-bold text-blue-600">
-                        {{ cluster_stats|length }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Última Actualización</div>
-                    <div class="text-lg font-semibold text-gray-800">
-                        {{ cluster_run.completed_at|date:"d/m/Y H:i" }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Tiempo de Cómputo</div>
-                    <div class="text-lg font-semibold text-gray-800">
-                        {{ cluster_run.computation_time|floatformat:2 }}s
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Total de Votantes</div>
-                    <div class="text-2xl font-bold text-green-600">
-                        {{ cluster_run.n_voters }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Votes Over Time -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">
-                Actividad de Votación
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                    <div class="text-sm text-gray-600">Total de Votos</div>
-                    <div class="text-2xl font-bold text-purple-600">
-                        {{ total_votes }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Últimos 7 Días</div>
-                    <div class="text-2xl font-bold text-blue-600">
-                        {{ votes_last_7_days }}
-                    </div>
-                </div>
-                <div>
-                    <div class="text-sm text-gray-600">Últimos 30 Días</div>
-                    <div class="text-2xl font-bold text-green-600">
-                        {{ votes_last_30_days }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Votes by Day Chart -->
-            <div class="mt-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-3">
-                    Votos por Día (Últimos 30 Días)
+            
+            <!-- News Submissions Chart -->
+            <div>
+                <h3 class="text-sm font-bold text-black font-mono uppercase mb-4 tracking-wide">
+                    Noticias Enviadas (Últimos 30 Días)
                 </h3>
-                <div class="h-64" id="votes-chart"></div>
+                <div class="border-2 border-black p-4 bg-white">
+                    <div class="h-64" id="news-chart"></div>
+                    <div class="text-center text-sm text-gray-700 font-mono mt-3 pt-3 border-t-2 border-gray-300">
+                        Total: <span class="font-bold text-black">{{ total_noticias }}</span> noticias
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Votes Activity -->
+    <div class="border-2 border-black bg-white p-8 mb-8">
+        <h2 class="text-2xl font-bold text-black mb-6 uppercase font-mono tracking-wide">
+            Actividad de Votación
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Total de Votos</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ total_votes|default:"0" }}
+                </div>
+            </div>
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Últimos 7 Días</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ votes_last_7_days|default:"0" }}
+                </div>
+            </div>
+            <div class="border-2 border-black p-4">
+                <div class="text-xs uppercase text-gray-600 font-mono mb-2">Últimos 30 Días</div>
+                <div class="text-3xl font-bold text-black font-mono">
+                    {{ votes_last_30_days|default:"0" }}
+                </div>
             </div>
         </div>
 
-        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-        <script>
-            // User growth chart
-            const usersData = {{ users_by_day|safe }};
-            const usersDates = usersData.map(d => d.day);
-            const usersCounts = usersData.map(d => d.count);
-            
-            Plotly.newPlot('users-chart', 
-                [{
-                    x: usersDates,
-                    y: usersCounts,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    fill: 'tozeroy',
-                    name: 'Nuevos Usuarios',
-                    line: { color: '#6366f1', width: 2 },
-                    marker: { size: 6, color: '#6366f1' },
-                    fillcolor: 'rgba(99, 102, 241, 0.1)'
-                }],
-                {
-                    xaxis: { title: 'Fecha', type: 'date' },
-                    yaxis: { title: 'Usuarios' },
-                    hovermode: 'x unified',
-                    showlegend: false,
-                    margin: { l: 50, r: 30, t: 20, b: 50 }
-                },
-                { responsive: true }
-            );
-            
-            // News submissions chart
-            const newsData = {{ news_by_day|safe }};
-            const newsDates = newsData.map(d => d.day);
-            const newsCounts = newsData.map(d => d.count);
-            
-            Plotly.newPlot('news-chart',
-                [{
-                    x: newsDates,
-                    y: newsCounts,
-                    type: 'bar',
-                    name: 'Noticias',
-                    marker: { color: '#10b981' }
-                }],
-                {
-                    xaxis: { title: 'Fecha', type: 'date' },
-                    yaxis: { title: 'Noticias Enviadas' },
-                    hovermode: 'x unified',
-                    showlegend: false,
-                    margin: { l: 50, r: 30, t: 20, b: 50 }
-                },
-                { responsive: true }
-            );
-
-            {% if has_data %}
-            // Prepare data for votes chart
-            const votesData = {{ votes_by_day|safe }};
-            const votesByOpinionData = {{ votes_by_opinion_day|safe }};
-
-            // Total votes per day
-            const dates = votesData.map(d => d.day);
-            const counts = votesData.map(d => d.count);
-
-            // Votes by opinion
-            const opinionMap = {};
-            votesByOpinionData.forEach(d => {
-                if (!opinionMap[d.opinion]) {
-                    opinionMap[d.opinion] = { dates: [], counts: [] };
-                }
-                opinionMap[d.opinion].dates.push(d.day);
-                opinionMap[d.opinion].counts.push(d.count);
-            });
-
-            // Create traces
-            const traces = [
-                {
-                    x: dates,
-                    y: counts,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    name: 'Total',
-                    line: { color: '#8b5cf6', width: 2 },
-                    marker: { size: 6 }
-                }
-            ];
-
-            // Add opinion traces
-            const opinionColors = {
-                'buena': '#10b981',
-                'mala': '#ef4444',
-                'neutral': '#6b7280'
-            };
-
-            Object.keys(opinionMap).forEach(opinion => {
-                traces.push({
-                    x: opinionMap[opinion].dates,
-                    y: opinionMap[opinion].counts,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    name: opinion.charAt(0).toUpperCase() + opinion.slice(1),
-                    line: { color: opinionColors[opinion], width: 2 },
-                    marker: { size: 5 }
-                });
-            });
-
-            // Layout
-            const layout = {
-                xaxis: {
-                    title: 'Fecha',
-                    type: 'date'
-                },
-                yaxis: {
-                    title: 'Cantidad de Votos'
-                },
-                hovermode: 'x unified',
-                showlegend: true,
-                legend: {
-                    x: 0,
-                    y: 1,
-                    bgcolor: 'rgba(255,255,255,0.8)'
-                },
-                margin: { l: 50, r: 30, t: 30, b: 50 }
-            };
-
-            // Plot
-            Plotly.newPlot('votes-chart', traces, layout, {
-                responsive: true
-            });
-            {% endif %}
-        </script>
-
-        <!-- Cluster Evolution (Sankey Diagram) -->
-        <div class="bg-white rounded-lg shadow p-6 mb-8">
-            <div class="mb-4">
-                <h2 class="text-xl font-bold text-gray-900">
-                    Evolución de Burbujas
-                </h2>
-                <p class="text-sm text-gray-600 mt-1">
-                    Cómo se dividen, fusionan y evolucionan las burbujas a lo largo del tiempo
-                </p>
+        <!-- Votes by Day Chart -->
+        {% if has_data %}
+        <div>
+            <h3 class="text-sm font-bold text-black font-mono uppercase mb-4 tracking-wide">
+                Votos por Día (Últimos 30 Días)
+            </h3>
+            <div class="border-2 border-black p-4 bg-white">
+                <div class="h-80" id="votes-chart"></div>
             </div>
-            
-            <!-- Controls -->
-            <div class="flex flex-wrap gap-4 mb-4 items-center">
-                <div class="flex items-center gap-2">
-                    <label for="runs-select" class="text-sm font-medium text-gray-700">Corridas:</label>
-                    <select id="runs-select" 
-                            class="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="3">3</option>
-                        <option value="5" selected>5</option>
-                        <option value="7">7</option>
-                        <option value="10">10</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <label for="mode-select" class="text-sm font-medium text-gray-700">Modo:</label>
-                    <select id="mode-select" 
-                            class="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="spread" selected>Distribuidas en el tiempo</option>
-                        <option value="recent">Últimas consecutivas</option>
-                    </select>
-                </div>
-                <div class="text-xs text-gray-500 ml-auto">
-                    💡 Modo "Distribuidas" muestra cambios reales a lo largo del tiempo
-                </div>
-            </div>
-
-            <!-- Loading State -->
-            <div id="evolution-loading" class="text-center py-12">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p class="text-gray-600 mt-2">Cargando evolución de burbujas...</p>
-            </div>
-
-            <!-- Chart -->
-            <div id="evolution-chart" class="hidden" style="height: 600px;"></div>
-
-            <!-- Error State -->
-            <div id="evolution-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <p class="text-red-800 font-medium">Error al cargar datos de evolución</p>
-                <p class="text-red-600 text-sm mt-1" id="evolution-error-message"></p>
-            </div>
-
-            <!-- Legend -->
-            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div class="text-sm font-semibold text-gray-700 mb-2">Leyenda:</div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div class="flex items-center gap-2">
-                        <div class="w-12 h-3 rounded" style="background: rgba(0, 200, 0, 0.4);"></div>
-                        <span class="text-gray-700">Continuación (&gt;80%)</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-12 h-3 rounded" style="background: rgba(255, 165, 0, 0.4);"></div>
-                        <span class="text-gray-700">División (split)</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-12 h-3 rounded" style="background: rgba(0, 100, 255, 0.4);"></div>
-                        <span class="text-gray-700">Fusión (merge)</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-12 h-3 rounded" style="background: rgba(100, 100, 100, 0.2);"></div>
-                        <span class="text-gray-700">Migración menor</span>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-500 mt-3">
-                    💡 <strong>Tip:</strong> Pasa el mouse sobre los flujos para ver detalles. Arrastra los nodos para reorganizar.
-                </p>
-            </div>
-        </div>
-
-        <script>
-            // Load cluster evolution data
-            function loadEvolution() {
-                const runs = parseInt(document.getElementById('runs-select').value);
-                const mode = document.getElementById('mode-select').value;
-                const loading = document.getElementById('evolution-loading');
-                const chart = document.getElementById('evolution-chart');
-                const error = document.getElementById('evolution-error');
-                
-                // Show loading state
-                loading.classList.remove('hidden');
-                chart.classList.add('hidden');
-                error.classList.add('hidden');
-                
-                fetch(`/api/clustering/evolution/?runs=${runs}&mode=${mode}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Hide loading, show chart
-                        loading.classList.add('hidden');
-                        chart.classList.remove('hidden');
-                        
-                        // Render Sankey diagram
-                        Plotly.newPlot('evolution-chart', data.data, data.layout, {
-                            responsive: true,
-                            displayModeBar: true,
-                            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
-                        });
-                    })
-                    .catch(err => {
-                        console.error('Error loading evolution data:', err);
-                        loading.classList.add('hidden');
-                        error.classList.remove('hidden');
-                        document.getElementById('evolution-error-message').textContent = err.message;
-                    });
-            }
-            
-            // Initial load
-            loadEvolution();
-            
-            // Listen for control changes
-            document.getElementById('runs-select').addEventListener('change', loadEvolution);
-            document.getElementById('mode-select').addEventListener('change', loadEvolution);
-        </script>
-
-        <!-- Bubble Details -->
-        <div class="space-y-6">
-            {% for stat in cluster_stats %}
-            <div id="{{ stat.cluster.cluster_id }}" class="bg-white rounded-lg shadow overflow-hidden scroll-mt-20">
-                <!-- Bubble Header -->
-                <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h3 class="text-xl font-bold text-white">
-                                {% if stat.cluster.llm_name %}
-                                    {{ stat.cluster.llm_name }}
-                                {% else %}
-                                    Burbuja {{ stat.cluster.cluster_id }}
-                                {% endif %}
-                            </h3>
-                            {% if stat.cluster.llm_description %}
-                            <p class="text-blue-100 text-sm mt-1">
-                                {{ stat.cluster.llm_description }}
-                            </p>
-                            {% endif %}
-                        </div>
-                        <div class="text-white text-sm">
-                            {{ stat.cluster.size }} votantes
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bubble Stats -->
-                <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div>
-                            <div class="text-sm text-gray-600">Tamaño</div>
-                            <div class="text-xl font-bold text-gray-900">
-                                {{ stat.cluster.size }} votantes
-                            </div>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-600">Consenso Promedio</div>
-                            <div class="text-xl font-bold">
-                                <span class="{% if stat.avg_consensus >= 0.7 %}text-green-600{% elif stat.avg_consensus >= 0.5 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                                    {{ stat.avg_consensus|floatformat:2 }}
-                                </span>
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                {% if stat.avg_consensus >= 0.7 %}
-                                    Alto consenso
-                                {% elif stat.avg_consensus >= 0.5 %}
-                                    Consenso moderado
-                                {% else %}
-                                    Bajo consenso
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-600">Centroide</div>
-                            <div class="text-sm font-mono text-gray-700">
-                                ({{ stat.cluster.centroid_x|floatformat:2 }}, {{ stat.cluster.centroid_y|floatformat:2 }})
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Entities Section -->
-                    {% if stat.cluster.top_entities_positive or stat.cluster.top_entities_negative %}
-                    <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {% if stat.cluster.top_entities_positive %}
-                        <div class="bg-green-50 rounded-lg p-4">
-                            <h4 class="text-sm font-semibold text-green-800 mb-2">
-                                👍 Ven positivamente
-                            </h4>
-                            <div class="flex flex-wrap gap-2">
-                                {% for entity in stat.cluster.top_entities_positive %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {{ entity.nombre }}
-                                    <span class="ml-1 text-green-600">({{ entity.count }})</span>
-                                </span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if stat.cluster.top_entities_negative %}
-                        <div class="bg-red-50 rounded-lg p-4">
-                            <h4 class="text-sm font-semibold text-red-800 mb-2">
-                                👎 Ven negativamente
-                            </h4>
-                            <div class="flex flex-wrap gap-2">
-                                {% for entity in stat.cluster.top_entities_negative %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    {{ entity.nombre }}
-                                    <span class="ml-1 text-red-600">({{ entity.count }})</span>
-                                </span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    <!-- Top Noticias -->
-                    {% if stat.top_patterns %}
-                    <div>
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3">
-                            Noticias con Mayor Consenso en esta Burbuja:
-                        </h4>
-                        <div class="space-y-2">
-                            {% for pattern in stat.top_patterns %}
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div class="flex-1">
-                                    <a href="{% url 'noticia-detail' pattern.noticia.slug %}"
-                                       class="text-sm font-medium text-blue-600 hover:text-blue-800">
-                                        {{ pattern.noticia.mostrar_titulo|truncatewords:15 }}
-                                    </a>
-                                    <div class="flex gap-3 mt-1 text-xs text-gray-600">
-                                        <span class="text-green-600">
-                                            ✓ {{ pattern.count_buena }} buena
-                                        </span>
-                                        <span class="text-red-600">
-                                            ✗ {{ pattern.count_mala }} mala
-                                        </span>
-                                        <span class="text-gray-500">
-                                            ○ {{ pattern.count_neutral }} neutral
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-sm font-bold
-                                        {% if pattern.majority_opinion == 'buena' %}text-green-600
-                                        {% elif pattern.majority_opinion == 'mala' %}text-red-600
-                                        {% else %}text-gray-600{% endif %}">
-                                        {{ pattern.majority_opinion|capfirst }}
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ pattern.consensus_score|floatformat:2 }} consenso
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="text-sm text-gray-500 text-center py-4">
-                        No hay patrones de votación disponibles para esta burbuja
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Actions -->
-        <div class="mt-8 flex gap-4">
-            <a href="{% url 'mapa' %}"
-               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Ver Visualización
-            </a>
-            <a href="{% url 'timeline' %}"
-               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                Volver al Timeline
-            </a>
-        </div>
-
-        {% else %}
-        <!-- No Data State -->
-        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg">
-            <h2 class="text-xl font-bold text-yellow-900 mb-2">
-                No hay datos de clustering disponibles
-            </h2>
-            <p class="text-yellow-800 mb-4">
-                Se necesitan al menos 50 votantes con 3 votos cada uno para generar estadísticas.
-            </p>
-            <a href="{% url 'timeline' %}"
-               class="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
-                Ir a Votar Noticias
-            </a>
         </div>
         {% endif %}
     </div>
+
+    <!-- Actions -->
+    <div class="flex gap-4 pb-8">
+        <a href="{% url 'cluster-report' %}"
+           class="px-6 py-3 bg-black text-white font-mono uppercase text-sm tracking-wide hover:bg-gray-800 transition-colors border-2 border-black">
+            Ver Reporte Completo
+        </a>
+        <a href="{% url 'mapa' %}"
+           class="px-6 py-3 bg-white text-black font-mono uppercase text-sm tracking-wide hover:bg-gray-100 transition-colors border-2 border-black">
+            Ver Mapa
+        </a>
+        <a href="{% url 'timeline' %}"
+           class="px-6 py-3 bg-white text-black font-mono uppercase text-sm tracking-wide hover:bg-gray-100 transition-colors border-2 border-black">
+            Timeline
+        </a>
+    </div>
 </div>
+
+<!-- Load Plotly for visualizations -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Monochrome Plotly theme
+    const monochromeLayout = {
+        font: {
+            family: 'IBM Plex Mono, monospace',
+            size: 12,
+            color: '#000000'
+        },
+        plot_bgcolor: '#FFFFFF',
+        paper_bgcolor: '#FFFFFF',
+        xaxis: {
+            gridcolor: '#E5E5E5',
+            linecolor: '#000000',
+            linewidth: 2,
+        },
+        yaxis: {
+            gridcolor: '#E5E5E5',
+            linecolor: '#000000',
+            linewidth: 2,
+        },
+        hovermode: 'x unified',
+        showlegend: false,
+        margin: { l: 50, r: 20, t: 20, b: 50 }
+    };
+    
+    const monochromeConfig = {
+        responsive: true,
+        displayModeBar: false,
+    };
+
+    // User growth chart
+    const usersData = {{ users_by_day|safe }};
+    const usersDates = usersData.map(d => d.day);
+    const usersCounts = usersData.map(d => d.count);
+    
+    Plotly.newPlot('users-chart', 
+        [{
+            x: usersDates,
+            y: usersCounts,
+            type: 'scatter',
+            mode: 'lines+markers',
+            fill: 'tozeroy',
+            line: { color: '#000000', width: 2 },
+            marker: { size: 6, color: '#000000' },
+            fillcolor: 'rgba(0, 0, 0, 0.1)'
+        }],
+        {
+            ...monochromeLayout,
+            xaxis: { 
+                ...monochromeLayout.xaxis,
+                title: 'Fecha', 
+                type: 'date' 
+            },
+            yaxis: { 
+                ...monochromeLayout.yaxis,
+                title: 'Usuarios' 
+            },
+        },
+        monochromeConfig
+    );
+    
+    // News submissions chart
+    const newsData = {{ news_by_day|safe }};
+    const newsDates = newsData.map(d => d.day);
+    const newsCounts = newsData.map(d => d.count);
+    
+    Plotly.newPlot('news-chart',
+        [{
+            x: newsDates,
+            y: newsCounts,
+            type: 'bar',
+            marker: { 
+                color: '#000000',
+                line: { color: '#000000', width: 1 }
+            }
+        }],
+        {
+            ...monochromeLayout,
+            xaxis: { 
+                ...monochromeLayout.xaxis,
+                title: 'Fecha', 
+                type: 'date' 
+            },
+            yaxis: { 
+                ...monochromeLayout.yaxis,
+                title: 'Noticias' 
+            },
+        },
+        monochromeConfig
+    );
+
+    {% if has_data %}
+    // Votes by day chart
+    const votesData = {{ votes_by_day|safe }};
+    const votesByOpinionData = {{ votes_by_opinion_day|safe }};
+
+    // Total votes per day
+    const dates = votesData.map(d => d.day);
+    const counts = votesData.map(d => d.count);
+
+    // Votes by opinion
+    const opinionMap = {};
+    votesByOpinionData.forEach(d => {
+        if (!opinionMap[d.opinion]) {
+            opinionMap[d.opinion] = { dates: [], counts: [] };
+        }
+        opinionMap[d.opinion].dates.push(d.day);
+        opinionMap[d.opinion].counts.push(d.count);
+    });
+
+    // Create traces - monochrome with different patterns
+    const traces = [
+        {
+            x: dates,
+            y: counts,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Total',
+            line: { color: '#000000', width: 3 },
+            marker: { size: 8, color: '#000000' }
+        }
+    ];
+
+    // Add opinion traces with different shades of gray
+    const opinionColors = {
+        'buena': '#000000',    // Black
+        'mala': '#666666',     // Dark gray
+        'neutral': '#999999'   // Light gray
+    };
+
+    Object.keys(opinionMap).forEach(opinion => {
+        traces.push({
+            x: opinionMap[opinion].dates,
+            y: opinionMap[opinion].counts,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: opinion.charAt(0).toUpperCase() + opinion.slice(1),
+            line: { 
+                color: opinionColors[opinion], 
+                width: 2,
+                dash: opinion === 'neutral' ? 'dot' : 'solid'
+            },
+            marker: { size: 6, color: opinionColors[opinion] }
+        });
+    });
+
+    Plotly.newPlot('votes-chart', traces, {
+        ...monochromeLayout,
+        xaxis: {
+            ...monochromeLayout.xaxis,
+            title: 'Fecha',
+            type: 'date'
+        },
+        yaxis: {
+            ...monochromeLayout.yaxis,
+            title: 'Votos'
+        },
+        showlegend: true,
+        legend: {
+            x: 0,
+            y: 1,
+            bgcolor: 'rgba(255,255,255,0.9)',
+            bordercolor: '#000000',
+            borderwidth: 1,
+            font: {
+                family: 'IBM Plex Mono, monospace',
+                size: 11,
+                color: '#000000'
+            }
+        },
+        margin: { l: 50, r: 20, t: 20, b: 50 }
+    }, monochromeConfig);
+    {% endif %}
+});
+</script>
 {% endblock %}
