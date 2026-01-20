@@ -129,15 +129,125 @@ class ClusterVisualizationView(TemplateView):
         return context
 
 
+class ClusterReportView(TemplateView):
+    """
+    Comprehensive cluster analysis report.
+    
+    Narrative-driven insights focusing on:
+    - Executive summary with key findings
+    - Cross-cluster consensus (hidden agreement)
+    - Divisive issues (what separates us)
+    - Bridge-builders (voters connecting bubbles)
+    - Temporal evolution
+    - Per-bubble details
+    """
+    template_name = 'clustering/report.html'
+    
+    def get_context_data(self, **kwargs):
+        from django.core.cache import cache
+        from core.clustering.consensus import (
+            calculate_cross_cluster_consensus,
+            calculate_consensus_news,
+            calculate_divisive_news,
+            calculate_polarization_score,
+            get_consensus_by_entity_type,
+        )
+        from core.clustering.bridges import (
+            identify_bridge_builders,
+            analyze_bridge_activity,
+        )
+        from core.clustering.evolution import (
+            calculate_polarization_timeline,
+        )
+        
+        context = super().get_context_data(**kwargs)
+        
+        # Get latest run
+        run = VoterClusterRun.objects.filter(
+            status='completed'
+        ).order_by('-created_at').first()
+        
+        if not run:
+            context['has_data'] = False
+            return context
+        
+        context['has_data'] = True
+        context['cluster_run'] = run
+        
+        # Check cache for expensive computations
+        cache_key = f'cluster_report_{run.id}'
+        cached_data = cache.get(cache_key)
+        
+        if cached_data:
+            context.update(cached_data)
+            return context
+        
+        # === EXECUTIVE SUMMARY ===
+        polarization_data = calculate_polarization_score(run)
+        bridges = identify_bridge_builders(run, distance_threshold=0.5, min_connections=2)
+        bridge_stats = analyze_bridge_activity(bridges)
+        entity_consensus = get_consensus_by_entity_type(run)
+        
+        # Key insights for executive summary
+        consensus_pct = int(polarization_data['consensus_score'] * 100)
+        n_consensus_news = polarization_data['n_consensus_news']
+        n_divisive_news = polarization_data['n_divisive_news']
+        n_bridges = bridge_stats['total_bridges']
+        
+        context['executive_summary'] = {
+            'consensus_pct': consensus_pct,
+            'n_consensus_news': n_consensus_news,
+            'n_divisive_news': n_divisive_news,
+            'n_bridges': n_bridges,
+            'avg_bridge_votes': int(bridge_stats['avg_votes']),
+            'entity_consensus': entity_consensus,
+        }
+        
+        # === CONSENSUS SECTION ===
+        consensus_news = calculate_consensus_news(run, top_n=20)
+        context['consensus_news'] = consensus_news[:10]  # Top 10 for carousel
+        
+        # === DIVISIVE SECTION ===
+        divisive_news = calculate_divisive_news(run, top_n=20)
+        context['divisive_news'] = divisive_news[:10]
+        
+        # === BRIDGES SECTION ===
+        context['top_bridges'] = bridges[:25]  # Top 25 for display
+        context['bridge_stats'] = bridge_stats
+        
+        # === TEMPORAL EVOLUTION ===
+        # Get last 6 months of runs
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(days=180)
+        recent_runs = VoterClusterRun.objects.filter(
+            status='completed',
+            created_at__gte=cutoff
+        ).order_by('created_at')
+        
+        if recent_runs.exists():
+            timeline = calculate_polarization_timeline(recent_runs)
+            context['polarization_timeline'] = timeline
+        
+        # Cache computed data for 1 hour
+        cache_data = {
+            'executive_summary': context['executive_summary'],
+            'consensus_news': context['consensus_news'],
+            'divisive_news': context['divisive_news'],
+            'top_bridges': context['top_bridges'],
+            'bridge_stats': context['bridge_stats'],
+            'polarization_timeline': context.get('polarization_timeline', []),
+        }
+        cache.set(cache_key, cache_data, 3600)
+        
+        return context
+
+
 class ClusterStatsView(TemplateView):
     """
-    Cluster statistics and analytics page.
-
-    Shows:
-    - Cluster sizes and consensus scores
-    - Top voted noticias per cluster
-    - Polarization metrics
-    - Temporal trends (if available)
+    DEPRECATED: Use ClusterReportView instead.
+    
+    Kept for backward compatibility.
     """
     template_name = 'clustering/stats.html'
 
@@ -718,3 +828,300 @@ def cluster_og_image(request):
         from django.templatetags.static import static
         from django.shortcuts import redirect
         return redirect(static('core/logo.svg'))
+
+
+@require_GET
+def consensus_data_json(request):
+    """
+    JSON endpoint for consensus analysis data.
+    
+    Returns news with cross-cluster consensus scores.
+    
+    Query params:
+        - run_id: Optional specific run (default: latest)
+        - type: 'consensus'|'divisive'|'all' (default: 'all')
+        - limit: Number of results (default: 20)
+    """
+    from core.clustering.consensus import (
+        calculate_cross_cluster_consensus,
+        calculate_consensus_news,
+        calculate_divisive_news,
+    )
+    from django.core.cache import cache
+    
+    try:
+        run_id = request.GET.get('run_id')
+        data_type = request.GET.get('type', 'all')
+        limit = int(request.GET.get('limit', 20))
+        
+        # Get run
+        if run_id:
+            run = VoterClusterRun.objects.get(id=run_id, status='completed')
+        else:
+            run = VoterClusterRun.objects.filter(
+                status='completed'
+            ).order_by('-created_at').first()
+        
+        if not run:
+            return JsonResponse({'error': 'No clustering data available'}, status=404)
+        
+        # Check cache
+        cache_key = f'consensus_data_{run.id}_{data_type}_{limit}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data)
+        
+        # Calculate based on type
+        if data_type == 'consensus':
+            results = calculate_consensus_news(run, top_n=limit)
+        elif data_type == 'divisive':
+            results = calculate_divisive_news(run, top_n=limit)
+        else:  # all
+            results = calculate_cross_cluster_consensus(run)[:limit]
+        
+        # Format for JSON
+        data = {
+            'run_id': run.id,
+            'created_at': run.created_at.isoformat(),
+            'type': data_type,
+            'results': [
+                {
+                    'noticia_id': r['noticia_id'],
+                    'titulo': r['noticia'].mostrar_titulo,
+                    'slug': r['noticia'].slug,
+                    'enlace': r['noticia'].enlace,
+                    'imagen': r['noticia'].mostrar_imagen,
+                    'consensus_score': r['consensus_score'],
+                    'polarization_score': r['polarization_score'],
+                    'majority_opinion': r['majority_opinion'],
+                    'agreement_rate': r['agreement_rate'],
+                    'n_clusters_voted': r['n_clusters_voted'],
+                    'cluster_votes': {
+                        str(k): v for k, v in r['cluster_votes'].items()
+                    },
+                }
+                for r in results
+            ],
+        }
+        
+        # Cache for 1 hour
+        cache.set(cache_key, data, 3600)
+        
+        return JsonResponse(data)
+        
+    except VoterClusterRun.DoesNotExist:
+        return JsonResponse({'error': 'Run not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error generating consensus data: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def bridges_data_json(request):
+    """
+    JSON endpoint for bridge-builder analysis.
+    
+    Returns voters who connect multiple clusters.
+    
+    Query params:
+        - run_id: Optional specific run (default: latest)
+        - limit: Number of bridges to return (default: 50)
+        - threshold: Distance threshold (default: 0.5)
+    """
+    from core.clustering.bridges import (
+        identify_bridge_builders,
+        build_bridge_network_data,
+        analyze_bridge_activity,
+    )
+    from django.core.cache import cache
+    
+    try:
+        run_id = request.GET.get('run_id')
+        limit = int(request.GET.get('limit', 50))
+        threshold = float(request.GET.get('threshold', 0.5))
+        format_type = request.GET.get('format', 'list')  # 'list' or 'network'
+        
+        # Get run
+        if run_id:
+            run = VoterClusterRun.objects.get(id=run_id, status='completed')
+        else:
+            run = VoterClusterRun.objects.filter(
+                status='completed'
+            ).order_by('-created_at').first()
+        
+        if not run:
+            return JsonResponse({'error': 'No clustering data available'}, status=404)
+        
+        # Check cache
+        cache_key = f'bridges_data_{run.id}_{limit}_{threshold}_{format_type}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data)
+        
+        # Calculate
+        bridges = identify_bridge_builders(run, distance_threshold=threshold)
+        activity_stats = analyze_bridge_activity(bridges)
+        
+        if format_type == 'network':
+            # Network format for visualization
+            network_data = build_bridge_network_data(run, distance_threshold=threshold)
+            data = {
+                'run_id': run.id,
+                'created_at': run.created_at.isoformat(),
+                'format': 'network',
+                'network': network_data,
+                'stats': activity_stats,
+            }
+        else:
+            # List format
+            data = {
+                'run_id': run.id,
+                'created_at': run.created_at.isoformat(),
+                'format': 'list',
+                'bridges': bridges[:limit],
+                'stats': activity_stats,
+            }
+        
+        # Cache for 6 hours (less frequent changes)
+        cache.set(cache_key, data, 21600)
+        
+        return JsonResponse(data)
+        
+    except VoterClusterRun.DoesNotExist:
+        return JsonResponse({'error': 'Run not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error generating bridges data: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def polarization_timeline_json(request):
+    """
+    JSON endpoint for polarization metrics over time.
+    
+    Query params:
+        - days: Number of days to look back (default: 180)
+        - metric: 'polarization'|'consensus'|'n_clusters'|'silhouette' (default: all)
+    """
+    from core.clustering.evolution import (
+        calculate_polarization_timeline,
+        get_metrics_over_time,
+    )
+    from django.core.cache import cache
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    try:
+        days = int(request.GET.get('days', 180))
+        metric = request.GET.get('metric', 'all')
+        
+        # Check cache
+        cache_key = f'polarization_timeline_{days}_{metric}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data)
+        
+        # Get runs from time range
+        cutoff = timezone.now() - timedelta(days=days)
+        runs = VoterClusterRun.objects.filter(
+            status='completed',
+            created_at__gte=cutoff
+        ).order_by('created_at')
+        
+        if not runs.exists():
+            return JsonResponse({'error': 'No data in time range'}, status=404)
+        
+        # Calculate timeline
+        timeline = calculate_polarization_timeline(runs)
+        
+        if metric == 'all':
+            # Return all metrics
+            data = {
+                'timeline': timeline,
+                'metrics': {
+                    'polarization': get_metrics_over_time(runs, 'polarization'),
+                    'consensus': get_metrics_over_time(runs, 'consensus'),
+                    'n_clusters': get_metrics_over_time(runs, 'n_clusters'),
+                    'silhouette': get_metrics_over_time(runs, 'silhouette'),
+                },
+            }
+        else:
+            # Return specific metric
+            data = {
+                'metric': metric,
+                'data': get_metrics_over_time(runs, metric),
+            }
+        
+        # Cache for 24 hours
+        cache.set(cache_key, data, 86400)
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error(f"Error generating polarization timeline: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def cluster_stability_json(request):
+    """
+    JSON endpoint for cluster stability analysis.
+    
+    Compares recent runs to show stability metrics.
+    
+    Query params:
+        - runs: Number of recent runs to analyze (default: 5)
+    """
+    from core.clustering.evolution import calculate_stability_index
+    from django.core.cache import cache
+    
+    try:
+        n_runs = int(request.GET.get('runs', 5))
+        n_runs = min(max(n_runs, 2), 20)  # Between 2 and 20
+        
+        # Check cache
+        cache_key = f'cluster_stability_{n_runs}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data)
+        
+        # Get recent runs
+        runs = list(VoterClusterRun.objects.filter(
+            status='completed'
+        ).order_by('-created_at')[:n_runs])
+        
+        if len(runs) < 2:
+            return JsonResponse({'error': 'Need at least 2 runs'}, status=404)
+        
+        runs.reverse()  # Oldest first
+        
+        # Calculate stability between consecutive runs
+        stability_data = []
+        
+        for i in range(len(runs) - 1):
+            stability = calculate_stability_index(runs[i], runs[i + 1])
+            stability_data.append({
+                'run1_id': runs[i].id,
+                'run2_id': runs[i + 1].id,
+                'run1_date': runs[i].created_at.isoformat(),
+                'run2_date': runs[i + 1].created_at.isoformat(),
+                'stability_score': stability['stability_score'],
+                'voter_retention': stability['voter_retention'],
+                'n_common_voters': stability['n_common_voters'],
+                'cluster_persistence': stability['cluster_persistence'],
+            })
+        
+        data = {
+            'n_comparisons': len(stability_data),
+            'avg_stability': sum(s['stability_score'] for s in stability_data) / len(stability_data),
+            'comparisons': stability_data,
+        }
+        
+        # Cache for 24 hours
+        cache.set(cache_key, data, 86400)
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error(f"Error generating stability data: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)

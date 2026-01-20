@@ -1,0 +1,230 @@
+<!-- Evolution Section -->
+<div class="mb-16">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-black mb-3 uppercase font-mono tracking-wide">
+            Evolución Temporal
+        </h2>
+        <p class="text-gray-700 font-mono text-sm">
+            Cómo las burbujas de opinión cambian y evolucionan con el tiempo.
+        </p>
+    </div>
+
+    <!-- Sankey Diagram (from existing stats page) -->
+    <div class="border-2 border-black bg-white p-6 mb-8">
+        <div class="mb-4">
+            <h3 class="text-xl font-bold text-black uppercase font-mono">
+                Evolución de Burbujas
+            </h3>
+            <p class="text-sm text-gray-600 font-mono mt-1">
+                Cómo se dividen, fusionan y evolucionan las burbujas a lo largo del tiempo
+            </p>
+        </div>
+        
+        <!-- Controls -->
+        <div class="flex flex-wrap gap-4 mb-4 items-center">
+            <div class="flex items-center gap-2">
+                <label for="runs-select" class="text-sm font-medium text-gray-700 font-mono">Corridas:</label>
+                <select id="runs-select" 
+                        class="border border-gray-300 px-3 py-1 text-sm font-mono focus:ring-2 focus:ring-black">
+                    <option value="3">3</option>
+                    <option value="5" selected>5</option>
+                    <option value="7">7</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="mode-select" class="text-sm font-medium text-gray-700 font-mono">Modo:</label>
+                <select id="mode-select" 
+                        class="border border-gray-300 px-3 py-1 text-sm font-mono focus:ring-2 focus:ring-black">
+                    <option value="spread" selected>Distribuidas en el tiempo</option>
+                    <option value="recent">Últimas consecutivas</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="evolution-loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+            <p class="text-gray-600 font-mono mt-2">Cargando evolución de burbujas...</p>
+        </div>
+
+        <!-- Chart -->
+        <div id="evolution-chart" class="hidden" style="height: 600px;"></div>
+
+        <!-- Error State -->
+        <div id="evolution-error" class="hidden bg-red-50 border border-red-200 p-4 text-center">
+            <p class="text-red-800 font-medium font-mono">Error al cargar datos de evolución</p>
+            <p class="text-red-600 text-sm font-mono mt-1" id="evolution-error-message"></p>
+        </div>
+
+        <!-- Legend -->
+        <div class="mt-4 p-4 bg-gray-50 border border-gray-300">
+            <div class="text-sm font-semibold text-gray-700 font-mono mb-2">Leyenda:</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm font-mono">
+                <div class="flex items-center gap-2">
+                    <div class="w-12 h-3 rounded" style="background: rgba(0, 200, 0, 0.4);"></div>
+                    <span class="text-gray-700">Continuación (&gt;80%)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-12 h-3 rounded" style="background: rgba(255, 165, 0, 0.4);"></div>
+                    <span class="text-gray-700">División (split)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-12 h-3 rounded" style="background: rgba(0, 100, 255, 0.4);"></div>
+                    <span class="text-gray-700">Fusión (merge)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-12 h-3 rounded" style="background: rgba(100, 100, 100, 0.2);"></div>
+                    <span class="text-gray-700">Migración menor</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stability Metrics -->
+    <div class="border-2 border-black bg-white p-6 mb-8">
+        <h3 class="text-xl font-bold text-black mb-4 uppercase font-mono">
+            Índice de Estabilidad
+        </h3>
+        <p class="text-sm text-gray-700 font-mono mb-6">
+            ¿Qué tan estables son las burbujas entre corridas consecutivas?
+        </p>
+        
+        <div id="stability-chart" style="height: 400px;"></div>
+        
+        <div id="stability-loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-black"></div>
+            <p class="text-gray-600 font-mono text-sm mt-2">Cargando datos de estabilidad...</p>
+        </div>
+    </div>
+
+    <!-- Interpretation -->
+    <div class="bg-gray-50 border-2 border-black p-6">
+        <h3 class="text-sm uppercase font-bold text-black font-mono mb-3 tracking-wide">
+            Interpretación
+        </h3>
+        <p class="text-gray-800 font-mono text-sm leading-relaxed mb-3">
+            La evolución de burbujas revela cómo los patrones de opinión cambian con el tiempo. 
+            Las burbujas pueden:
+        </p>
+        <ul class="list-disc list-inside text-gray-800 font-mono text-sm space-y-2 mb-3 ml-4">
+            <li><strong>Continuar</strong>: Mantener su composición (~80%+ de votantes permanecen)</li>
+            <li><strong>Dividirse</strong>: Fracturarse en múltiples burbujas más pequeñas</li>
+            <li><strong>Fusionarse</strong>: Unirse con otras burbujas para formar grupos más grandes</li>
+            <li><strong>Migrar</strong>: Votantes cambian de burbuja por cambios en sus opiniones</li>
+        </ul>
+        <p class="text-gray-800 font-mono text-sm leading-relaxed">
+            Un índice de estabilidad alto indica que las burbujas son consistentes en el tiempo. 
+            Un índice bajo sugiere que la opinión pública está en flujo activo.
+        </p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load cluster evolution data
+    loadEvolution();
+    
+    // Load stability data
+    loadStability();
+    
+    // Listen for control changes
+    document.getElementById('runs-select').addEventListener('change', loadEvolution);
+    document.getElementById('mode-select').addEventListener('change', loadEvolution);
+});
+
+function loadEvolution() {
+    const runs = parseInt(document.getElementById('runs-select').value);
+    const mode = document.getElementById('mode-select').value;
+    const loading = document.getElementById('evolution-loading');
+    const chart = document.getElementById('evolution-chart');
+    const error = document.getElementById('evolution-error');
+    
+    // Show loading state
+    loading.classList.remove('hidden');
+    chart.classList.add('hidden');
+    error.classList.add('hidden');
+    
+    fetch(`/api/clustering/evolution/?runs=${runs}&mode=${mode}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Hide loading, show chart
+            loading.classList.add('hidden');
+            chart.classList.remove('hidden');
+            
+            // Render Sankey diagram
+            Plotly.newPlot('evolution-chart', data.data, data.layout, {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            });
+        })
+        .catch(err => {
+            console.error('Error loading evolution data:', err);
+            loading.classList.add('hidden');
+            error.classList.remove('hidden');
+            document.getElementById('evolution-error-message').textContent = err.message;
+        });
+}
+
+function loadStability() {
+    const loading = document.getElementById('stability-loading');
+    const chart = document.getElementById('stability-chart');
+    
+    fetch('/api/clustering/stability/?runs=10')
+        .then(response => response.json())
+        .then(data => {
+            loading.classList.add('hidden');
+            
+            if (data.comparisons && data.comparisons.length > 0) {
+                // Extract data
+                const labels = data.comparisons.map((c, i) => `Run ${i+1}→${i+2}`);
+                const stability = data.comparisons.map(c => c.stability_score);
+                
+                const trace = {
+                    x: labels,
+                    y: stability,
+                    type: 'bar',
+                    marker: {
+                        color: stability.map(s => s > 0.8 ? '#000000' : s > 0.5 ? '#666666' : '#999999'),
+                    },
+                };
+                
+                const layout = {
+                    xaxis: {
+                        title: 'Comparación entre corridas',
+                    },
+                    yaxis: {
+                        title: 'Índice de Estabilidad (0-1)',
+                        range: [0, 1],
+                    },
+                    showlegend: false,
+                    margin: { l: 60, r: 30, t: 30, b: 80 },
+                    font: {
+                        family: 'IBM Plex Mono, monospace',
+                        size: 12,
+                    },
+                    plot_bgcolor: '#FFFFFF',
+                    paper_bgcolor: '#FFFFFF',
+                };
+                
+                Plotly.newPlot('stability-chart', [trace], layout, {
+                    responsive: true,
+                    displayModeBar: false,
+                });
+            } else {
+                chart.innerHTML = '<div class="text-center text-gray-600 font-mono text-sm py-12">No hay suficientes corridas para calcular estabilidad</div>';
+            }
+        })
+        .catch(err => {
+            console.error('Error loading stability data:', err);
+            loading.classList.add('hidden');
+            chart.innerHTML = '<div class="text-center text-gray-600 font-mono text-sm py-12">Error cargando datos de estabilidad</div>';
+        });
+}
+</script>

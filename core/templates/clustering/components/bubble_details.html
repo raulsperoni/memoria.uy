@@ -1,0 +1,194 @@
+<!-- Bubble Details Section -->
+<div class="mb-16">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-black mb-3 uppercase font-mono tracking-wide">
+            Análisis por Burbuja
+        </h2>
+        <p class="text-gray-700 font-mono text-sm">
+            Perfil detallado de cada burbuja de opinión.
+        </p>
+    </div>
+
+    {% if cluster_run %}
+    {% for cluster in cluster_run.clusters.all %}
+    {% if cluster.cluster_type == 'group' %}
+    
+    <div class="mb-8 border-2 border-black bg-white overflow-hidden" id="bubble-{{ cluster.cluster_id }}">
+        <!-- Header -->
+        <div class="bg-black px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-2xl font-bold text-white font-mono">
+                        {% if cluster.llm_name %}
+                            {{ cluster.llm_name }}
+                        {% else %}
+                            Burbuja {{ cluster.cluster_id }}
+                        {% endif %}
+                    </h3>
+                    {% if cluster.llm_description %}
+                    <p class="text-gray-300 text-sm font-mono mt-1">
+                        {{ cluster.llm_description }}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="text-white text-sm font-mono">
+                    {{ cluster.size }} votantes
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <div class="text-sm text-gray-600 font-mono uppercase">Tamaño</div>
+                    <div class="text-2xl font-bold text-black font-mono">
+                        {{ cluster.size }} votantes
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono">
+                        {{ cluster.size|floatformat:0 }}% del total
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600 font-mono uppercase">Consenso Interno</div>
+                    <div class="text-2xl font-bold font-mono
+                        {% if cluster.consensus_score >= 0.7 %}text-green-600
+                        {% elif cluster.consensus_score >= 0.5 %}text-yellow-600
+                        {% else %}text-red-600{% endif %}">
+                        {% if cluster.consensus_score %}
+                        {{ cluster.consensus_score|floatformat:2 }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono">
+                        {% if cluster.consensus_score %}
+                            {% if cluster.consensus_score >= 0.7 %}
+                                Alta cohesión interna
+                            {% elif cluster.consensus_score >= 0.5 %}
+                                Cohesión moderada
+                            {% else %}
+                                Baja cohesión interna
+                            {% endif %}
+                        {% else %}
+                            Sin datos
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600 font-mono uppercase">Centroide</div>
+                    <div class="text-sm font-mono text-gray-900 font-bold">
+                        ({{ cluster.centroid_x|floatformat:2 }}, {{ cluster.centroid_y|floatformat:2 }})
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono">
+                        Posición en el mapa
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entities Section -->
+            {% if cluster.top_entities_positive or cluster.top_entities_negative %}
+            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if cluster.top_entities_positive %}
+                <div class="bg-gray-50 border border-gray-300 p-4">
+                    <h4 class="text-sm font-semibold text-gray-900 font-mono mb-3 uppercase">
+                        Ven Positivamente
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                        {% for entity in cluster.top_entities_positive %}
+                        <span class="inline-flex items-center px-3 py-1 border border-gray-400 text-xs font-mono bg-white">
+                            {{ entity.nombre }}
+                            <span class="ml-1 text-gray-600">({{ entity.count }})</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if cluster.top_entities_negative %}
+                <div class="bg-gray-50 border border-gray-300 p-4">
+                    <h4 class="text-sm font-semibold text-gray-900 font-mono mb-3 uppercase">
+                        Ven Negativamente
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                        {% for entity in cluster.top_entities_negative %}
+                        <span class="inline-flex items-center px-3 py-1 border border-gray-400 text-xs font-mono bg-white">
+                            {{ entity.nombre }}
+                            <span class="ml-1 text-gray-600">({{ entity.count }})</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Top News Patterns -->
+            {% with patterns=cluster.voting_patterns.all|slice:":5" %}
+            {% if patterns %}
+            <div>
+                <h4 class="text-sm font-semibold text-gray-900 font-mono mb-3 uppercase">
+                    Noticias con Mayor Consenso en esta Burbuja
+                </h4>
+                <div class="space-y-2">
+                    {% for pattern in patterns %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-300 hover:bg-gray-100 transition-colors">
+                        <div class="flex-1">
+                            <a href="{% url 'noticia-detail' pattern.noticia.slug %}"
+                               class="text-sm font-medium text-black font-mono hover:underline">
+                                {{ pattern.noticia.mostrar_titulo|truncatewords:15 }}
+                            </a>
+                            <div class="flex gap-3 mt-1 text-xs text-gray-600 font-mono">
+                                <span class="{% if pattern.majority_opinion == 'buena' %}text-black font-bold{% endif %}">
+                                    {{ pattern.count_buena }} buena
+                                </span>
+                                <span class="{% if pattern.majority_opinion == 'mala' %}text-black font-bold{% endif %}">
+                                    {{ pattern.count_mala }} mala
+                                </span>
+                                <span class="{% if pattern.majority_opinion == 'neutral' %}text-black font-bold{% endif %}">
+                                    {{ pattern.count_neutral }} neutral
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ml-4 text-right">
+                            <div class="text-sm font-bold font-mono
+                                {% if pattern.majority_opinion == 'buena' %}text-green-700
+                                {% elif pattern.majority_opinion == 'mala' %}text-red-700
+                                {% else %}text-gray-700{% endif %}">
+                                {{ pattern.majority_opinion|upper }}
+                            </div>
+                            <div class="text-xs text-gray-500 font-mono">
+                                {{ pattern.consensus_score|floatformat:2 }} consenso
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="text-sm text-gray-500 text-center py-4 font-mono">
+                No hay patrones de votación disponibles para esta burbuja
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Actions -->
+            <div class="mt-6 pt-6 border-t border-gray-300">
+                <a href="{% url 'mapa' %}?cluster={{ cluster.cluster_id }}" 
+                   class="inline-block px-4 py-2 bg-black text-white font-mono text-sm uppercase hover:bg-gray-800 transition-colors">
+                    Ver en el Mapa
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <div class="border-2 border-black p-8 bg-gray-50">
+        <p class="text-gray-700 font-mono text-center">
+            No hay datos de burbujas disponibles
+        </p>
+    </div>
+    {% endif %}
+</div>

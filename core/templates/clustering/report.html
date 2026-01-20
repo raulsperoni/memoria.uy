@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reporte de Investigación - Memoria.uy{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    {% if has_data %}
+    
+    <!-- Header -->
+    <div class="mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-3 uppercase tracking-wide font-mono">
+            Reporte de Investigación
+        </h1>
+        <p class="text-lg text-gray-600 font-mono">
+            Análisis de patrones de opinión en Uruguay
+        </p>
+        <div class="mt-2 text-sm text-gray-500 font-mono">
+            Última actualización: {{ cluster_run.completed_at|date:"d/m/Y H:i" }}
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    {% include "clustering/components/executive_summary.html" %}
+
+    <!-- Consensus Section -->
+    {% include "clustering/components/consensus_section.html" %}
+
+    <!-- Divisive Section -->
+    {% include "clustering/components/divisive_section.html" %}
+
+    <!-- Bridge-Builders Section -->
+    {% include "clustering/components/bridges_section.html" %}
+
+    <!-- Evolution Section -->
+    {% include "clustering/components/evolution_section.html" %}
+
+    <!-- Bubble Details Section -->
+    {% include "clustering/components/bubble_details.html" %}
+
+    <!-- Actions -->
+    <div class="mt-12 flex gap-4 pb-8">
+        <a href="{% url 'mapa' %}"
+           class="px-6 py-3 bg-black text-white font-mono uppercase text-sm tracking-wide hover:bg-gray-800 transition-colors border-2 border-black">
+            Ver Mapa de Burbujas
+        </a>
+        <a href="{% url 'timeline' %}"
+           class="px-6 py-3 bg-white text-black font-mono uppercase text-sm tracking-wide hover:bg-gray-100 transition-colors border-2 border-black">
+            Volver al Timeline
+        </a>
+    </div>
+
+    {% else %}
+    <!-- No Data State -->
+    <div class="border-2 border-black p-8 bg-white">
+        <h2 class="text-2xl font-bold text-black mb-4 uppercase font-mono">
+            Sin datos disponibles
+        </h2>
+        <p class="text-gray-800 mb-6 font-mono">
+            Se necesitan al menos 50 votantes con 3 votos cada uno para generar el reporte.
+        </p>
+        <a href="{% url 'timeline' %}"
+           class="inline-block px-6 py-3 bg-black text-white font-mono uppercase text-sm tracking-wide hover:bg-gray-800 transition-colors">
+            Ir a Votar Noticias
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Load Plotly for visualizations -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+{% endblock %}

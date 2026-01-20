@@ -105,40 +105,67 @@ frecuentes cuando el contenido (noticias/entidades) no cambia:
 - Hash basado en: top noticia IDs + entity names (ordenados)
 - Ver `get_or_create_cluster_name()` en [core/tasks.py](core/tasks.py)
 
-### Analytics page (`/clusters/stats/`)
-Página completa de estadísticas con múltiples secciones:
+### Reporte de Investigación (`/clusters/report/`)
 
-**1. Usuarios y Actividad**
-- Total de usuarios registrados
-- Nuevos usuarios (7d y 30d)
-- Usuarios activos (votaron o enviaron news en 30d)
-- Votantes únicos (incluye anónimos con session_key)
-- Gráficos: nuevos usuarios por día, noticias enviadas por día
+Reporte narrativo completo enfocado en **consenso oculto** entre burbujas. Diseñado para investigadores.
 
-**2. Actividad de Votación**
-- Total de votos, últimos 7d, últimos 30d
-- Gráfico de votos por día (últimos 30d)
-- Breakdown por opinión (buena/mala/neutral)
+**Arquitectura de análisis:**
+- `core/clustering/consensus.py`: Análisis cross-cluster, métricas de polarización
+- `core/clustering/bridges.py`: Identificación de votantes "puente"
+- `core/clustering/evolution.py`: Estabilidad temporal y drift de opiniones
 
-**3. Evolución de Burbujas** (Sankey diagram)
-- API: `/api/clustering/evolution/?runs=N` (default: 5, max: 20)
-- Compara membresías entre corridas consecutivas
-- Clasifica relaciones: continuation (>80%), split, merge, minor (<20%)
-- Selector de rango: 3, 5, 10, 15 corridas
-- Visualización interactiva con Plotly (hover, drag)
-- Datos históricos completos en `VoterClusterMembership` y `VoterClusterRun`
+**Secciones del reporte:**
 
-**4. Resumen de Clustering**
-- Número de burbujas, última actualización, tiempo de cómputo
-- Total de votantes en último clustering
+1. **Executive Summary**
+   - % de consenso cross-cluster
+   - Noticias consensuadas vs divisivas
+   - Número de bridge-builders
+   - Patrones por tipo de entidad
 
-**5. Detalle por Burbuja**
-- Tamaño, consenso promedio, centroide
-- Entidades vistas positiva/negativamente
-- Top noticias con mayor consenso
+2. **Consenso Oculto**
+   - Carousel interactivo de noticias con alto consenso
+   - Visualización de acuerdo por burbuja
+   - Top 10 noticias donde todas las burbujas coinciden
 
-Ver `ClusterStatsView` en [core/views_clustering.py](core/views_clustering.py).
-Análisis técnico de evolución en [docs/CLUSTER_EVOLUTION_ANALYSIS.md](docs/CLUSTER_EVOLUTION_ANALYSIS.md).
+3. **Lo que nos Divide**
+   - Lista de noticias polarizantes
+   - Heatmap de desacuerdo entre burbujas
+   - Timeline de polarización (últimos 6 meses)
+
+4. **Los Puentes (Bridge-Builders)**
+   - Network visualization (D3.js)
+   - Top 25 votantes que conectan múltiples burbujas
+   - Estadísticas: fuerza de conexión, votos, clusters conectados
+
+5. **Evolución Temporal**
+   - Sankey diagram mejorado
+   - Índice de estabilidad entre runs
+   - Métricas over time (polarización, consenso, silhouette)
+
+6. **Análisis por Burbuja**
+   - Consenso interno
+   - Entidades vistas positiva/negativamente
+   - Top noticias con mayor acuerdo
+
+**APIs JSON:**
+- `/api/clustering/consensus/` - Datos de consenso y división
+- `/api/clustering/bridges/` - Red de bridge-builders
+- `/api/clustering/polarization-timeline/` - Métricas temporales
+- `/api/clustering/stability/` - Índice de estabilidad
+
+**Caching:**
+- Executive summary: 1 hora
+- Bridge analysis: 6 horas
+- Evolution metrics: 24 horas
+
+Ver `ClusterReportView` en [core/views_clustering.py](core/views_clustering.py).
+Templates en [core/templates/clustering/report.html](core/templates/clustering/report.html).
+
+### Analytics page (`/clusters/stats/`) - DEPRECATED
+
+Mantenido por compatibilidad. Use `/clusters/report/` para el reporte completo.
+
+Ver análisis técnico de evolución en [docs/CLUSTER_EVOLUTION_ANALYSIS.md](docs/CLUSTER_EVOLUTION_ANALYSIS.md).
 
 ### Viralización y compartir
 Sistema de captura del mapa de burbujas para compartir en redes sociales:
@@ -189,12 +216,19 @@ docker-compose up -d --build
 | Archivo | Propósito |
 |---------|-----------|
 | `core/views.py` | Timeline, votación, filtros, signup prompt |
-| `core/views_clustering.py` | Mapa de burbujas, stats page (users/activity/clustering), evolution API |
-| `core/templates/clustering/stats.html` | Analytics: usuarios, actividad, votos, clusters, evolución |
+| `core/views_clustering.py` | Mapa de burbujas, reporte de investigación, APIs de análisis |
+| `core/templates/clustering/report.html` | Reporte narrativo completo |
+| `core/templates/clustering/components/` | Componentes modulares del reporte |
+| `core/clustering/consensus.py` | Análisis de consenso cross-cluster |
+| `core/clustering/bridges.py` | Identificación de bridge-builders |
+| `core/clustering/evolution.py` | Métricas de estabilidad temporal |
+| `core/clustering/pca.py` | PCA sparsity-aware |
+| `core/clustering/kmeans.py` | K-Means clustering |
+| `core/clustering/hierarchical.py` | Agrupación jerárquica |
+| `core/clustering/metrics.py` | Métricas de calidad |
 | `core/api_views.py` | API para extensión |
 | `core/tasks.py` | Celery tasks |
 | `core/parse.py` | LLM parsing |
 | `core/forms.py` | CustomSignupForm con alias |
 | `core/signals.py` | Vote claiming, UserProfile auto-create |
-| `core/clustering/` | Motor matemático |
 | `browser-extension/` | Chrome/Firefox extension |

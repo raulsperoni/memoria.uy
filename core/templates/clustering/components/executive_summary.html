@@ -1,0 +1,85 @@
+<!-- Executive Summary Section -->
+<div class="mb-16 border-2 border-black p-8 bg-white">
+    <h2 class="text-3xl font-bold text-black mb-6 uppercase font-mono tracking-wide">
+        Resumen Ejecutivo
+    </h2>
+    
+    <div class="space-y-6">
+        <!-- Key Insight 1: Consensus -->
+        <div class="border-l-4 border-black pl-6">
+            <div class="text-5xl font-bold text-black font-mono mb-2">
+                {{ executive_summary.consensus_pct }}%
+            </div>
+            <p class="text-lg text-gray-800 font-mono">
+                de consenso promedio entre todas las burbujas
+            </p>
+            <p class="text-sm text-gray-600 font-mono mt-2">
+                {{ executive_summary.n_consensus_news }} noticias generan acuerdo cross-cluster
+            </p>
+        </div>
+
+        <!-- Key Insight 2: Division -->
+        <div class="border-l-4 border-black pl-6">
+            <div class="text-5xl font-bold text-black font-mono mb-2">
+                {{ executive_summary.n_divisive_news }}
+            </div>
+            <p class="text-lg text-gray-800 font-mono">
+                noticias dividen claramente a la opinión pública
+            </p>
+            <p class="text-sm text-gray-600 font-mono mt-2">
+                La mayoría del contenido NO es polarizante
+            </p>
+        </div>
+
+        <!-- Key Insight 3: Bridge-Builders -->
+        <div class="border-l-4 border-black pl-6">
+            <div class="text-5xl font-bold text-black font-mono mb-2">
+                {{ executive_summary.n_bridges }}
+            </div>
+            <p class="text-lg text-gray-800 font-mono">
+                votantes actúan como "puentes" entre burbujas
+            </p>
+            <p class="text-sm text-gray-600 font-mono mt-2">
+                Promedio de {{ executive_summary.avg_bridge_votes }} votos por puente
+            </p>
+        </div>
+
+        <!-- Key Insight 4: By Topic -->
+        {% if executive_summary.entity_consensus %}
+        <div class="border-l-4 border-black pl-6">
+            <p class="text-lg text-gray-800 font-mono mb-3">
+                Patrones por temática:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for entity_type, data in executive_summary.entity_consensus.items %}
+                <div class="bg-gray-50 p-3 border border-gray-300">
+                    <div class="text-xs uppercase text-gray-600 font-mono mb-1">
+                        {{ entity_type }}
+                    </div>
+                    <div class="text-2xl font-bold text-black font-mono">
+                        {{ data.consensus|floatformat:0 }}%
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono">
+                        consenso
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Interpretation Box -->
+    <div class="mt-8 bg-gray-50 border border-gray-300 p-6">
+        <h3 class="text-sm uppercase font-bold text-black font-mono mb-3 tracking-wide">
+            ¿Qué significa esto?
+        </h3>
+        <p class="text-gray-800 font-mono text-sm leading-relaxed">
+            A pesar de las diferencias visibles, existe un <strong>consenso oculto</strong> 
+            significativo en la opinión pública uruguaya. La mayoría de las noticias 
+            generan acuerdo entre las diferentes burbujas, y solo un pequeño porcentaje 
+            de contenido es verdaderamente polarizante. Los votantes "puente" demuestran 
+            que es posible mantener patrones de opinión que conectan perspectivas diversas.
+        </p>
+    </div>
+</div>
