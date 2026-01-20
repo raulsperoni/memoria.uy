@@ -50,6 +50,8 @@ def get_or_create_cluster_name(
     Get cluster name from cache or generate via LLM.
     Returns (name, description, from_cache) tuple.
     """
+    from django.db import IntegrityError
+
     content_hash = compute_cluster_content_hash(
         noticia_ids, entities_pos, entities_neg
     )
@@ -88,31 +90,32 @@ def get_or_create_cluster_name(
     if not description:
         return None, None, False
 
-    # Store in cache
+    # Store in cache using update_or_create to handle race conditions
     expires_at = timezone.now() + timedelta(days=CLUSTER_NAME_CACHE_TTL_DAYS)
 
-    if cached:
-        # Update expired entry
-        cached.name = description.nombre[:100]
-        cached.description = description.descripcion
-        cached.noticia_ids = sorted(noticia_ids)
-        cached.entities_positive = entities_pos
-        cached.entities_negative = entities_neg
-        cached.expires_at = expires_at
-        cached.use_count = 1
-        cached.save()
-        logger.info(f"Refreshed expired cache for cluster: {cached.name}")
-    else:
-        ClusterNameCache.objects.create(
+    try:
+        cache_obj, created = ClusterNameCache.objects.update_or_create(
             content_hash=content_hash,
-            name=description.nombre[:100],
-            description=description.descripcion,
-            noticia_ids=sorted(noticia_ids),
-            entities_positive=entities_pos,
-            entities_negative=entities_neg,
-            expires_at=expires_at,
+            defaults={
+                "name": description.nombre[:100],
+                "description": description.descripcion,
+                "noticia_ids": sorted(noticia_ids),
+                "entities_positive": entities_pos,
+                "entities_negative": entities_neg,
+                "expires_at": expires_at,
+                "use_count": 1,
+            },
         )
-        logger.info(f"Created new cache entry for cluster: {description.nombre}")
+        status = "created" if created else "updated"
+        logger.info(f"Cache {status} for cluster: {cache_obj.name}")
+    except IntegrityError:
+        # Race condition: another process created it, fetch and use that one
+        cached = ClusterNameCache.objects.filter(content_hash=content_hash).first()
+        if cached:
+            logger.info(f"Cache race resolved, using: {cached.name}")
+            return cached.name, cached.description, True
+        # If still not found, just return the generated name without caching
+        logger.warning("Cache race unresolved, returning uncached name")
 
     return description.nombre[:100], description.descripcion, False
 
