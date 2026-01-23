@@ -940,10 +940,26 @@ def send_reengagement_emails(
             ]
         )
 
+        # HTML version with clickable links
+        html_lines = [
+            f"<p>Hola {display_name},</p>",
+            f"<p>Hace {days_inactive} dias que no te vemos por memoria.uy.</p>",
+            f"<p>Tenes <strong>{pending_count} noticias</strong> para votar.</p>",
+            f"<p>Las burbujas actuales son: <strong>{bubbles_line}</strong>.</p>",
+        ]
+        if user_cluster_name:
+            html_lines.append(f"<p>Tu burbuja actual es: <strong>{user_cluster_name}</strong>.</p>")
+        html_lines.extend([
+            "<p>En cual estas?</p>",
+            f'<p><a href="{site_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Entrar a votar</a></p>',
+            "<p>Gracias!</p>",
+        ])
+
         try:
             send_mail(
                 subject=subject,
                 message="\n".join(lines),
+                html_message="".join(html_lines),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 connection=connection,
@@ -976,10 +992,26 @@ def send_reengagement_emails(
             else:
                 staff_lines.append("Ninguno.")
 
+            # HTML version
+            staff_html_lines = [
+                f"<h2>Resumen de emails de reenganche enviados</h2>",
+                f"<p>Se enviaron <strong>{sent_count}</strong> emails de reenganche.</p>",
+                f"<p>Se omitieron <strong>{skipped_count}</strong> usuarios.</p>",
+                "<h3>Destinatarios:</h3>",
+            ]
+            if sent_recipients:
+                staff_html_lines.append("<ul>")
+                for email in sent_recipients:
+                    staff_html_lines.append(f"<li>{email}</li>")
+                staff_html_lines.append("</ul>")
+            else:
+                staff_html_lines.append("<p>Ninguno.</p>")
+
             try:
                 send_mail(
                     subject=staff_subject,
                     message="\n".join(staff_lines),
+                    html_message="".join(staff_html_lines),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=staff_emails,
                     connection=connection,
@@ -996,3 +1028,149 @@ def send_reengagement_emails(
         "skipped": skipped_count,
         "staff_notified": staff_notified,
     }
+
+
+@shared_task
+@task_lock(timeout=60 * 30)  # 30 min lock
+def send_daily_staff_summary():
+    """
+    Send a daily summary email to staff with:
+    - New news articles from the last 24 hours
+    - New users from the last 24 hours
+    - Count of new votes from the last 24 hours
+    
+    This task should run once per day (max).
+    """
+    now = timezone.now()
+    yesterday = now - timedelta(days=1)
+    
+    # Get new news from the last 24 hours
+    new_noticias = Noticia.objects.filter(fecha_agregado__gte=yesterday).order_by('-fecha_agregado')
+    new_noticias_count = new_noticias.count()
+    
+    # Get new users from the last 24 hours
+    User = get_user_model()
+    new_users = User.objects.filter(date_joined__gte=yesterday).order_by('-date_joined')
+    new_users_count = new_users.count()
+    
+    # Get count of new votes from the last 24 hours
+    new_votes_count = Voto.objects.filter(fecha_voto__gte=yesterday).count()
+    
+    # Get staff emails
+    staff_emails = list(
+        User.objects.filter(is_active=True, is_staff=True)
+        .exclude(email="")
+        .values_list("email", flat=True)
+    )
+    
+    if not staff_emails:
+        logger.info("No staff emails found for daily summary")
+        return {"sent": False, "reason": "no_staff_emails"}
+    
+    # Build email content
+    site_url = getattr(settings, "SITE_URL", "https://memoria.uy")
+    subject = f"Resumen diario - {now.strftime('%d/%m/%Y')}"
+    
+    lines = [
+        f"Resumen diario de memoria.uy - {now.strftime('%d/%m/%Y %H:%M')}",
+        "",
+        "=" * 50,
+        "",
+        f"📰 Noticias nuevas: {new_noticias_count}",
+    ]
+    
+    if new_noticias_count > 0:
+        lines.append("")
+        lines.append("Últimas noticias agregadas:")
+        for noticia in new_noticias[:10]:  # Show up to 10 most recent
+            title = noticia.mostrar_titulo or noticia.enlace
+            lines.append(f"  • {title}")
+            lines.append(f"    {site_url}{noticia.get_absolute_url()}")
+        if new_noticias_count > 10:
+            lines.append(f"  ... y {new_noticias_count - 10} más")
+    
+    lines.extend([
+        "",
+        f"👥 Usuarios nuevos: {new_users_count}",
+    ])
+    
+    if new_users_count > 0:
+        lines.append("")
+        lines.append("Nuevos usuarios:")
+        for user in new_users[:10]:  # Show up to 10 most recent
+            display_name = user.get_full_name().strip() or user.email
+            lines.append(f"  • {display_name} ({user.email})")
+        if new_users_count > 10:
+            lines.append(f"  ... y {new_users_count - 10} más")
+    
+    lines.extend([
+        "",
+        f"🗳️  Votos nuevos: {new_votes_count}",
+        "",
+        "=" * 50,
+        "",
+        f"Ver más en: {site_url}",
+    ])
+    
+    # HTML version with clickable links
+    html_lines = [
+        f"<h2>Resumen diario de memoria.uy - {now.strftime('%d/%m/%Y %H:%M')}</h2>",
+        "<hr>",
+        f"<h3>📰 Noticias nuevas: {new_noticias_count}</h3>",
+    ]
+    
+    if new_noticias_count > 0:
+        html_lines.append("<ul>")
+        for noticia in new_noticias[:10]:  # Show up to 10 most recent
+            title = noticia.mostrar_titulo or noticia.enlace
+            noticia_url = f"{site_url}{noticia.get_absolute_url()}"
+            html_lines.append(
+                f'<li><a href="{noticia_url}">{title}</a></li>'
+            )
+        html_lines.append("</ul>")
+        if new_noticias_count > 10:
+            html_lines.append(f"<p>... y {new_noticias_count - 10} más</p>")
+    
+    html_lines.extend([
+        f"<h3>👥 Usuarios nuevos: {new_users_count}</h3>",
+    ])
+    
+    if new_users_count > 0:
+        html_lines.append("<ul>")
+        for user in new_users[:10]:  # Show up to 10 most recent
+            display_name = user.get_full_name().strip() or user.email
+            html_lines.append(f"<li>{display_name} ({user.email})</li>")
+        html_lines.append("</ul>")
+        if new_users_count > 10:
+            html_lines.append(f"<p>... y {new_users_count - 10} más</p>")
+    
+    html_lines.extend([
+        f"<h3>🗳️ Votos nuevos: {new_votes_count}</h3>",
+        "<hr>",
+        f'<p><a href="{site_url}">Ver más en memoria.uy</a></p>',
+    ])
+    
+    # Send email to staff
+    connection = get_connection()
+    try:
+        send_mail(
+            subject=subject,
+            message="\n".join(lines),
+            html_message="".join(html_lines),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=staff_emails,
+            connection=connection,
+        )
+        logger.info(
+            f"Daily staff summary sent. Noticias={new_noticias_count}, "
+            f"Usuarios={new_users_count}, Votos={new_votes_count}"
+        )
+        return {
+            "sent": True,
+            "noticias_count": new_noticias_count,
+            "usuarios_count": new_users_count,
+            "votos_count": new_votes_count,
+        }
+    except Exception as exc:
+        logger.error(f"Failed to send daily staff summary email: {exc}")
+        return {"sent": False, "error": str(exc)}
