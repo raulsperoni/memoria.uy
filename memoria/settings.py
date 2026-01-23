@@ -193,11 +193,15 @@ LOGGING = {
     },
 }
 
-# Cache configuration for task locking and rate limiting
+# Cache configuration for task locking, rate limiting, and report snapshots
+# Using Redis for persistence and sharing across workers
+redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-snowflake",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": redis_url,
+        "KEY_PREFIX": "memoria_cache",
+        "TIMEOUT": 3600,  # Default timeout 1 hour
     }
 }
 
