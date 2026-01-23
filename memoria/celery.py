@@ -31,6 +31,13 @@ app.conf.beat_schedule = {
             'min_votes_per_voter': 3,
         },
     },
+    'send-daily-staff-summary': {
+        'task': 'core.tasks.send_daily_staff_summary',
+        'schedule': crontab(
+            hour=int(os.getenv("DAILY_SUMMARY_HOUR", "9")),
+            minute=int(os.getenv("DAILY_SUMMARY_MINUTE", "0")),
+        ),  # Run once per day at 9 AM by default
+    },
 }
 
 if os.getenv("ENABLE_REENGAGEMENT_EMAILS", "False") == "True":
