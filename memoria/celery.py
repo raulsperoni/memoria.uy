@@ -5,8 +5,8 @@ from celery.schedules import crontab
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "memoria.settings")
 
 # Use Redis as broker and result backend
-broker_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-result_backend = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+broker_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+result_backend = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 app = Celery(
     "memoria",
@@ -22,21 +22,25 @@ app.autodiscover_tasks()
 
 # Periodic task schedule
 app.conf.beat_schedule = {
-    'update-voter-clusters-daily': {
-        'task': 'core.tasks.update_voter_clusters',
-        'schedule': crontab(hour=2, minute=0),  # Run at 2 AM every day
-        'kwargs': {
-            'time_window_days': 30,
-            'min_voters': 50,
-            'min_votes_per_voter': 3,
+    "update-voter-clusters-daily": {
+        "task": "core.tasks.update_voter_clusters",
+        "schedule": crontab(hour=2, minute=0),  # Run at 2 AM every day
+        "kwargs": {
+            "time_window_days": 30,
+            "min_voters": 50,
+            "min_votes_per_voter": 3,
         },
     },
-    'send-daily-staff-summary': {
-        'task': 'core.tasks.send_daily_staff_summary',
-        'schedule': crontab(
+    "send-daily-staff-summary": {
+        "task": "core.tasks.send_daily_staff_summary",
+        "schedule": crontab(
             hour=int(os.getenv("DAILY_SUMMARY_HOUR", "9")),
             minute=int(os.getenv("DAILY_SUMMARY_MINUTE", "0")),
         ),  # Run once per day at 9 AM by default
+    },
+    "generate-cluster-report-snapshot": {
+        "task": "core.tasks.generate_cluster_report_snapshot",
+        "schedule": crontab(minute=0),  # Run every hour at minute 0
     },
 }
 
@@ -50,6 +54,8 @@ if os.getenv("ENABLE_REENGAGEMENT_EMAILS", "False") == "True":
         "kwargs": {
             "days_inactive": int(os.getenv("REENGAGEMENT_DAYS_INACTIVE", "7")),
             "max_emails": int(os.getenv("REENGAGEMENT_MAX_EMAILS", "500")),
-            "min_days_between_emails": int(os.getenv("REENGAGEMENT_MIN_DAYS_BETWEEN", "7")),
+            "min_days_between_emails": int(
+                os.getenv("REENGAGEMENT_MIN_DAYS_BETWEEN", "7")
+            ),
         },
     }
