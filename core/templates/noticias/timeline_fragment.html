@@ -100,6 +100,7 @@
                   hx-get="{% url 'timeline' %}?filter=todas"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'todas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
@@ -109,6 +110,7 @@
                   hx-get="{% url 'timeline' %}?filter=nuevas"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'nuevas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
@@ -118,6 +120,7 @@
                   hx-get="{% url 'timeline' %}?filter=buena_mi"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'buenas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
@@ -127,6 +130,7 @@
                   hx-get="{% url 'timeline' %}?filter=mala_mi"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'malas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
@@ -143,6 +147,7 @@
                   x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mi'"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="perspective === 'mi' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-2 transition-colors text-xs">
@@ -153,6 +158,7 @@
                   hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="perspective === 'burbuja' ? 'bg-blue-600 text-white' : 'hover:bg-blue-600 hover:text-white'"
                   class="border-2 border-blue-600 px-3 py-2 transition-colors text-xs {% if not has_cluster %}opacity-50 cursor-not-allowed{% endif %}"
@@ -164,6 +170,7 @@
                   x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mayoria'"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="perspective === 'mayoria' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-2 transition-colors text-xs">
@@ -184,8 +191,17 @@
   </div>
 
   <!-- Timeline Items -->
-  <div id="timeline-items">
+  <div id="timeline-items" class="relative" hx-indicator="#timeline-skeleton-container">
     {% include "noticias/timeline_items.html" %}
+    
+    <!-- Skeleton screens container (shown during loading) -->
+    <div id="timeline-skeleton-container" class="htmx-indicator absolute inset-0 pointer-events-none bg-white bg-opacity-95">
+      <div class="max-w-3xl mx-auto">
+        {% for i in "123" %}
+        {% include "noticias/timeline_skeleton.html" %}
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -275,6 +291,29 @@
     );
     background-size: 1000px 100%;
     animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+  }
+
+  /* Show skeleton during loading */
+  #timeline-skeleton-container {
+    display: none;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  /* Show skeleton when HTMX is requesting */
+  .htmx-request #timeline-skeleton-container,
+  #timeline-items.htmx-request #timeline-skeleton-container {
+    display: block;
+  }
+
+  /* Ensure skeleton doesn't block interactions */
+  #timeline-skeleton-container {
+    pointer-events: none;
+  }
+  
+  #timeline-skeleton-container * {
+    pointer-events: none;
   }
 </style>
 
@@ -717,4 +756,149 @@
   
   // Initial vote progress update
   setTimeout(updateVoteProgress, 1000);
+
+  // Intelligent preloading for infinite scroll
+  let preloadObserver = null;
+  let preloadCache = new Map();
+  let isPreloading = false;
+
+  function setupPreloading() {
+    const loadMoreTrigger = document.getElementById('load-more-trigger');
+    if (!loadMoreTrigger || isPreloading) return;
+
+    // Create a preload trigger element that appears earlier (at 80% of scroll to trigger)
+    const preloadElement = document.createElement('div');
+    preloadElement.id = 'preload-trigger';
+    preloadElement.className = 'h-1 w-full';
+    preloadElement.style.position = 'absolute';
+    preloadElement.style.top = '80%';
+    preloadElement.style.pointerEvents = 'none';
+    preloadElement.style.visibility = 'hidden';
+    
+    const timelineItems = document.getElementById('timeline-items');
+    if (timelineItems && loadMoreTrigger.parentElement) {
+      loadMoreTrigger.parentElement.style.position = 'relative';
+      loadMoreTrigger.parentElement.insertBefore(preloadElement, loadMoreTrigger);
+    }
+
+    // Setup intersection observer for preloading
+    preloadObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && loadMoreTrigger && !isPreloading) {
+          const nextPage = loadMoreTrigger.getAttribute('data-next-page');
+          const currentFilter = loadMoreTrigger.getAttribute('data-current-filter');
+          const entityFilter = loadMoreTrigger.getAttribute('data-entity-filter');
+          
+          if (nextPage) {
+            const cacheKey = `${nextPage}-${currentFilter}-${entityFilter}`;
+            
+            // Check if already cached
+            if (preloadCache.has(cacheKey)) {
+              return;
+            }
+            
+            isPreloading = true;
+            
+            // Preload next page in background
+            const url = '{% url "timeline" %}?page=' + nextPage;
+            const params = [];
+            if (currentFilter) params.push('filter=' + currentFilter);
+            if (entityFilter) params.push('entidad=' + entityFilter);
+            const fullUrl = url + (params.length ? '&' + params.join('&') : '');
+            
+            // Prefetch the URL (browser will cache it)
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = fullUrl;
+            document.head.appendChild(link);
+            
+            // Also fetch and cache the HTML content
+            fetch(fullUrl, {
+              headers: {
+                'HX-Request': 'true',
+                'HX-Target': 'timeline-items'
+              }
+            })
+            .then(response => {
+              if (response.ok) {
+                return response.text();
+              }
+              throw new Error('Preload failed');
+            })
+            .then(html => {
+              // Cache the preloaded content
+              preloadCache.set(cacheKey, html);
+              isPreloading = false;
+              
+              // Cleanup prefetch link
+              link.remove();
+            })
+            .catch(error => {
+              console.error('[Memoria Web] Preload error:', error);
+              isPreloading = false;
+              link.remove();
+            });
+          }
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '300px' // Start preloading 300px before reaching trigger
+    });
+
+    if (preloadElement.parentElement) {
+      preloadObserver.observe(preloadElement);
+    }
+  }
+
+  // Use preloaded content when actual trigger is reached (if available)
+  document.body.addEventListener('htmx:beforeRequest', function(event) {
+    const trigger = event.detail.elt;
+    if (trigger && trigger.id === 'load-more-trigger') {
+      const nextPage = trigger.getAttribute('data-next-page');
+      const currentFilter = trigger.getAttribute('data-current-filter');
+      const entityFilter = trigger.getAttribute('data-entity-filter');
+      const cacheKey = `${nextPage}-${currentFilter}-${entityFilter}`;
+      
+      if (preloadCache.has(cacheKey)) {
+        const preloadedContent = preloadCache.get(cacheKey);
+        preloadCache.delete(cacheKey); // Use once
+        
+        // Let HTMX handle the request normally, but it should be faster due to browser cache
+        // The prefetch link we added should help with this
+      }
+    }
+  });
+
+  // Setup preloading when page loads or after new items are added
+  function initPreloading() {
+    setTimeout(() => {
+      setupPreloading();
+    }, 500);
+  }
+
+  // Initialize on page load
+  initPreloading();
+
+  // Re-initialize after HTMX swaps
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    const target = event.detail.target;
+    if (target && (target.id === 'load-more-trigger' || target.closest('#load-more-trigger'))) {
+      // Cleanup old observer
+      if (preloadObserver) {
+        preloadObserver.disconnect();
+        preloadObserver = null;
+      }
+      const oldPreloadTrigger = document.getElementById('preload-trigger');
+      if (oldPreloadTrigger) {
+        oldPreloadTrigger.remove();
+      }
+      isPreloading = false;
+      
+      // Setup new preloading for next page
+      setTimeout(() => {
+        setupPreloading();
+      }, 300);
+    }
+  });
 </script>

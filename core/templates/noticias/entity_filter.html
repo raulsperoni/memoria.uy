@@ -17,7 +17,8 @@
                   clearPrimaryFilter();
                   htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_a&entidad=' + entity, {
                     target: '#timeline-items',
-                    swap: 'innerHTML'
+                    swap: 'innerHTML',
+                    indicator: '#timeline-skeleton-container'
                   });
                   history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_a&entidad=' + entity);
                 }
@@ -33,7 +34,8 @@
                   clearPrimaryFilter();
                   htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_positiva&entidad=' + entity, {
                     target: '#timeline-items',
-                    swap: 'innerHTML'
+                    swap: 'innerHTML',
+                    indicator: '#timeline-skeleton-container'
                   });
                   history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_positiva&entidad=' + entity);
                 }
@@ -49,7 +51,8 @@
                   clearPrimaryFilter();
                   htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_negativa&entidad=' + entity, {
                     target: '#timeline-items',
-                    swap: 'innerHTML'
+                    swap: 'innerHTML',
+                    indicator: '#timeline-skeleton-container'
                   });
                   history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_negativa&entidad=' + entity);
                 }
