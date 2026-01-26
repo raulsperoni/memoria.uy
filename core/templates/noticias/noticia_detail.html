@@ -237,17 +237,56 @@
   function shareToWhatsApp() {
     const title = "{{ noticia.mostrar_titulo|escapejs }}";
     const url = window.location.href;
+    const description = "{{ noticia.meta_descripcion|default:""|escapejs }}";
+    const shortDescription = description ? description.substring(0, 120).trim() : '';
+
+    // Compose viral message optimized for WhatsApp
+    let message = `📰 *${title}*\n\n`;
+    
+    if (shortDescription) {
+      message += `${shortDescription}\n\n`;
+    }
 
     {% if majority_opinion == "buena" %}
-    const message = `*${title}*\n\nLa mayoría dice que es una buena noticia… ¿y vos qué pensás?\n\n${url}`;
+    message += `La mayoría dice que es una *buena noticia*… ¿y vos qué pensás?\n\n`;
     {% elif majority_opinion == "mala" %}
-    const message = `*${title}*\n\nLa mayoría dice que es una mala noticia… ¿y vos qué pensás?\n\n${url}`;
+    message += `La mayoría dice que es una *mala noticia*… ¿y vos qué pensás?\n\n`;
     {% else %}
-    const message = `*${title}*\n\nEsta noticia está generando opiniones divididas en memoria.uy. ¿Vos cómo la votarías?\n\n${url}`;
+    message += `Esta noticia está generando opiniones divididas. ¿Vos cómo la votarías?\n\n`;
     {% endif %}
+    
+    message += `Votala en memoria.uy y descubrí cómo la están votando otras burbujas:\n\n${url}`;
 
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Try Web Share API first (mobile native - opens WhatsApp directly)
+    if (navigator.share && isMobile) {
+      const shareData = {
+        text: message
+      };
+      
+      // Check if we can share with URL separately
+      if (navigator.canShare && navigator.canShare({ text: message, url: url })) {
+        shareData.url = url;
+      }
+      
+      navigator.share(shareData)
+      .then(() => {
+        console.log('[Memoria Web] Shared successfully via Web Share API');
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          console.log('[Memoria Web] Web Share API failed, falling back to WhatsApp web:', error);
+          // Fallback to WhatsApp web
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+        }
+      });
+    } else {
+      // Desktop or no Web Share API: use WhatsApp web
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
   }
 
   // Periodic bubble info update (every 30 seconds)

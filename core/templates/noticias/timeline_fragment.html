@@ -44,12 +44,22 @@
 
   <!-- Hero / Value Prop -->
   <div class="border-0 border-black bg-white p-4 mb-4">
-    <h2 class="text-lg md:text-xl font-bold mb-2">
-      Votá noticias. Descubrí patrones. Salí de tu burbuja.
-    </h2>
-    <p class="text-xs md:text-sm text-gray-700">
-      Votá anónimamente y explorá cómo votan otras burbujas. Sin registro. Sin seguimiento.
-    </p>
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div class="flex-1 min-w-0">
+        <h2 class="text-lg md:text-xl font-bold mb-2">
+          Votá noticias. Descubrí patrones. Salí de tu burbuja.
+        </h2>
+        <p class="text-xs md:text-sm text-gray-700">
+          Votá anónimamente y explorá cómo votan otras burbujas. Sin registro. Sin seguimiento.
+        </p>
+      </div>
+      <button onclick="shareTimeline()"
+              class="hidden md:flex flex-shrink-0 border-2 border-black px-4 py-2.5 hover:bg-black hover:text-white transition-all text-xs mono font-bold items-center gap-2"
+              title="Compartir timeline en WhatsApp">
+        <span class="text-base">💬</span>
+        <span>compartir</span>
+      </button>
+    </div>
   </div>
 
   <!-- Filter bar -->
@@ -96,37 +106,41 @@
       <div>
         <h4 class="text-[10px] text-gray-600 mb-2">// filtro principal</h4>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <button @click="primaryFilter = 'todas'; clearEntityFilter()"
+          <button @click="primaryFilter = 'todas'; clearEntityFilter(); trackEvent('filter-change', {filter: 'todas'});"
                   hx-get="{% url 'timeline' %}?filter=todas"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'todas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
             todas las noticias
           </button>
-          <button @click="primaryFilter = 'nuevas'; clearEntityFilter()"
+          <button @click="primaryFilter = 'nuevas'; clearEntityFilter(); trackEvent('filter-change', {filter: 'nuevas'});"
                   hx-get="{% url 'timeline' %}?filter=nuevas"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'nuevas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
             noticias nuevas
           </button>
-          <button @click="primaryFilter = 'buenas'; perspective = 'mi'; clearEntityFilter()"
+          <button @click="primaryFilter = 'buenas'; perspective = 'mi'; clearEntityFilter(); trackEvent('filter-change', {filter: 'buena_mi'});"
                   hx-get="{% url 'timeline' %}?filter=buena_mi"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'buenas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
             😊 buenas noticias
           </button>
-          <button @click="primaryFilter = 'malas'; perspective = 'mi'; clearEntityFilter()"
+          <button @click="primaryFilter = 'malas'; perspective = 'mi'; clearEntityFilter(); trackEvent('filter-change', {filter: 'mala_mi'});"
                   hx-get="{% url 'timeline' %}?filter=mala_mi"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="primaryFilter === 'malas' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-1.5 transition-colors text-xs">
@@ -143,6 +157,7 @@
                   x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mi'"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="perspective === 'mi' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-2 transition-colors text-xs">
@@ -153,6 +168,7 @@
                   hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="perspective === 'burbuja' ? 'bg-blue-600 text-white' : 'hover:bg-blue-600 hover:text-white'"
                   class="border-2 border-blue-600 px-3 py-2 transition-colors text-xs {% if not has_cluster %}opacity-50 cursor-not-allowed{% endif %}"
@@ -164,6 +180,7 @@
                   x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mayoria'"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
                   :class="perspective === 'mayoria' ? 'bg-black text-white' : 'hover:bg-black hover:text-white'"
                   class="border-2 border-black px-3 py-2 transition-colors text-xs">
@@ -184,9 +201,26 @@
   </div>
 
   <!-- Timeline Items -->
-  <div id="timeline-items">
+  <div id="timeline-items" class="relative" hx-indicator="#timeline-skeleton-container">
     {% include "noticias/timeline_items.html" %}
+    
+    <!-- Skeleton screens container (shown during loading) -->
+    <div id="timeline-skeleton-container" class="htmx-indicator absolute inset-0 pointer-events-none bg-white bg-opacity-95">
+      <div class="max-w-3xl mx-auto">
+        {% for i in "123" %}
+        {% include "noticias/timeline_skeleton.html" %}
+        {% endfor %}
+      </div>
+    </div>
   </div>
+
+  <!-- Floating share button (mobile only) -->
+  <button onclick="shareTimeline()"
+          class="md:hidden fixed bottom-6 right-6 z-50 bg-green-600 text-white rounded-full w-16 h-16 shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:bg-green-700 active:bg-green-800 transition-all flex items-center justify-center text-3xl"
+          title="Compartir en WhatsApp"
+          aria-label="Compartir timeline">
+    💬
+  </button>
 </div>
 
 <!-- Styles -->
@@ -235,6 +269,102 @@
       transform: translateY(0);
     }
   }
+
+  /* Vote confirmation animation */
+  @keyframes voteConfirm {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .vote-checkmark {
+    animation: voteConfirm 0.3s ease-out;
+  }
+
+  /* Skeleton loading animation */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #f0f0f0 0px,
+      #e0e0e0 40px,
+      #f0f0f0 80px
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+  }
+
+  /* Show skeleton during loading */
+  #timeline-skeleton-container {
+    display: none;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  /* Show skeleton when HTMX is requesting */
+  .htmx-request #timeline-skeleton-container,
+  #timeline-items.htmx-request #timeline-skeleton-container {
+    display: block;
+  }
+
+  /* Ensure skeleton doesn't block interactions */
+  #timeline-skeleton-container {
+    pointer-events: none;
+  }
+  
+  #timeline-skeleton-container * {
+    pointer-events: none;
+  }
+
+  /* Floating share button animation */
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  button[onclick="shareTimeline()"].md\:hidden {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  button[onclick="shareTimeline()"].md\:hidden:active {
+    animation: none;
+    transform: scale(0.92);
+  }
+
+  /* Ensure button doesn't overlap with content on very small screens */
+  @media (max-width: 640px) {
+    button[onclick="shareTimeline()"].md\:hidden {
+      bottom: 1rem;
+      right: 1rem;
+      width: 3.5rem;
+      height: 3.5rem;
+      font-size: 1.5rem;
+    }
+  }
 </style>
 
 <!-- JavaScript -->
@@ -246,12 +376,22 @@
 
   if (extensionSessionId) {
     console.log('[Memoria Web] ✓ Found extension session:', extensionSessionId);
+    
+    // Track extension usage
+    trackEvent('extension-detected', {
+      has_session: true
+    });
 
     document.body.addEventListener('htmx:configRequest', function(event) {
       event.detail.headers['X-Extension-Session'] = extensionSessionId;
     });
   } else {
     console.log('[Memoria Web] No extension session found, using Django session');
+    
+    // Track that extension is not being used
+    trackEvent('extension-detected', {
+      has_session: false
+    });
   }
 
   // Notification system
@@ -393,6 +533,234 @@
     }
   });
 
+  // Optimistic UI for voting - immediate feedback
+  document.body.addEventListener('click', function(event) {
+    const button = event.target.closest('.vote-button');
+    if (button && button.type === 'submit') {
+      const form = button.closest('.vote-form');
+      if (form) {
+        const opinion = button.getAttribute('data-opinion');
+        const noticiaId = form.getAttribute('data-noticia-id');
+        const currentFilter = '{{ current_filter|default:"" }}';
+        
+        // Track vote attempt
+        trackEvent('vote-attempt', {
+          opinion: opinion,
+          noticia_id: noticiaId,
+          filter: currentFilter,
+          method: 'click'
+        });
+        
+        // Store original state for potential revert
+        if (!form.hasAttribute('data-original-state')) {
+          form.setAttribute('data-original-state', JSON.stringify({
+            buttons: Array.from(form.querySelectorAll('.vote-button')).map(btn => ({
+              opinion: btn.getAttribute('data-opinion'),
+              classes: btn.className
+            }))
+          }));
+        }
+        
+        // Update buttons immediately (optimistic UI)
+        form.querySelectorAll('.vote-button').forEach(btn => {
+          const btnOpinion = btn.getAttribute('data-opinion');
+          const emoji = btn.querySelector('.vote-emoji');
+          const checkmark = btn.querySelector('.vote-checkmark');
+          
+          // Reset all buttons
+          btn.className = btn.className
+            .replace(/bg-(green|red|gray)-\d+|text-white|border-(green|red|gray)-\d+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim() + ' border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-all duration-200 bg-white';
+          
+          checkmark.classList.add('hidden');
+          
+          // Highlight selected button
+          if (btnOpinion === opinion) {
+            if (opinion === 'buena') {
+              btn.className += ' bg-green-600 text-white border-green-600';
+            } else if (opinion === 'mala') {
+              btn.className += ' bg-red-600 text-white border-red-600';
+            } else {
+              btn.className += ' bg-gray-500 text-white border-gray-500';
+            }
+            
+            // Show checkmark briefly
+            emoji.style.opacity = '0.7';
+            checkmark.classList.remove('hidden');
+            setTimeout(() => {
+              checkmark.classList.add('hidden');
+              emoji.style.opacity = '1';
+            }, 800);
+          }
+        });
+      }
+    }
+  }, true); // Use capture phase to run before HTMX
+
+  // Revert on error
+  document.body.addEventListener('htmx:responseError', function(event) {
+    const form = event.detail.elt;
+    if (form && form.classList.contains('vote-form')) {
+      const noticiaId = form.getAttribute('data-noticia-id');
+      const opinion = form.querySelector('.vote-button[class*="bg-"]')?.getAttribute('data-opinion');
+      
+      // Track vote error
+      trackEvent('vote-error', {
+        noticia_id: noticiaId,
+        opinion: opinion,
+        error: event.detail.xhr?.status || 'unknown'
+      });
+      
+      const originalState = form.getAttribute('data-original-state');
+      if (originalState) {
+        try {
+          const state = JSON.parse(originalState);
+          const buttons = form.querySelectorAll('.vote-button');
+          buttons.forEach((btn, idx) => {
+            if (state.buttons[idx]) {
+              btn.className = state.buttons[idx].classes;
+            }
+          });
+        } catch (e) {
+          console.error('[Memoria Web] Error reverting vote state:', e);
+        }
+      }
+    }
+  });
+
+  // Swipe gestures for mobile voting (experimental)
+  let touchStartX = 0;
+  let touchEndX = 0;
+  let touchStartY = 0;
+  let touchEndY = 0;
+  const SWIPE_THRESHOLD = 50; // minimum distance for swipe
+  const SWIPE_MAX_VERTICAL = 30; // max vertical movement to consider horizontal swipe
+
+  document.addEventListener('touchstart', function(e) {
+    const noticiaCard = e.target.closest('[id^="noticia-"]');
+    if (noticiaCard && window.innerWidth < 768) { // Only on mobile
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    const noticiaCard = e.target.closest('[id^="noticia-"]');
+    if (!noticiaCard || window.innerWidth >= 768) return;
+    
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = Math.abs(touchEndY - touchStartY);
+    
+    // Only trigger if horizontal swipe and minimal vertical movement
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD && deltaY < SWIPE_MAX_VERTICAL) {
+      const form = noticiaCard.querySelector('.vote-form');
+      if (form) {
+        let button;
+        let opinion;
+        if (deltaX > 0) {
+          // Swipe right = buena
+          button = form.querySelector('button[data-opinion="buena"]');
+          opinion = 'buena';
+        } else {
+          // Swipe left = mala
+          button = form.querySelector('button[data-opinion="mala"]');
+          opinion = 'mala';
+        }
+        
+        if (button) {
+          const noticiaId = form.getAttribute('data-noticia-id');
+          
+          // Track swipe gesture
+          trackEvent('vote-swipe', {
+            opinion: opinion,
+            noticia_id: noticiaId,
+            direction: deltaX > 0 ? 'right' : 'left',
+            distance: Math.abs(deltaX)
+          });
+          
+          button.click();
+          // Visual feedback
+          noticiaCard.style.transform = 'translateX(' + (deltaX > 0 ? '10px' : '-10px') + ')';
+          setTimeout(() => {
+            noticiaCard.style.transform = '';
+          }, 200);
+        }
+      }
+    }
+  }, { passive: true });
+
+  // Update vote progress in bubble badge
+  function updateVoteProgress() {
+    // Get total votes from timeline container
+    const timelineContainer = document.getElementById('timeline-container');
+    const totalVotes = parseInt(timelineContainer?.getAttribute('data-total-votes') || '0');
+    
+    // Update mobile ticker with vote count
+    const mobileTickerInfo = document.getElementById('mobile-ticker-info');
+    if (mobileTickerInfo) {
+      const currentText = mobileTickerInfo.getAttribute('data-total-votes') || '0';
+      const newTotalVotes = totalVotes > 0 ? totalVotes : parseInt(currentText);
+      mobileTickerInfo.setAttribute('data-total-votes', newTotalVotes);
+      
+      // Update text if cluster info exists
+      if (mobileTickerInfo.textContent.includes('#')) {
+        const parts = mobileTickerInfo.textContent.split(' | ');
+        const hasVotos = parts.some(p => p.includes('votos'));
+        if (!hasVotos && newTotalVotes > 0) {
+          mobileTickerInfo.textContent = mobileTickerInfo.textContent.replace(
+            /(\d+\.\d+)$/,
+            '$1 | ' + newTotalVotes + ' votos'
+          );
+        } else if (hasVotos) {
+          mobileTickerInfo.textContent = mobileTickerInfo.textContent.replace(
+            /\d+ votos/,
+            newTotalVotes + ' votos'
+          );
+        }
+      }
+    }
+    
+    // Update desktop badge expanded state
+    const voteCountBadge = document.getElementById('badge-vote-count');
+    if (voteCountBadge) {
+      voteCountBadge.textContent = totalVotes > 0 ? totalVotes : voteCountBadge.getAttribute('data-total-votes') || '0';
+      voteCountBadge.setAttribute('data-total-votes', totalVotes);
+    }
+  }
+
+  // Update vote progress after vote
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    const target = event.detail.target;
+    if (target && (target.classList.contains('vote-form') || target.id?.startsWith('noticia-') || target.id?.startsWith('vote-area-'))) {
+      // Track successful vote
+      const form = target.closest('.vote-form') || document.querySelector('.vote-form');
+      if (form) {
+        const noticiaId = form.getAttribute('data-noticia-id');
+        const opinion = form.querySelector('.vote-button[class*="bg-"]')?.getAttribute('data-opinion');
+        const currentFilter = '{{ current_filter|default:"" }}';
+        
+        trackEvent('vote-success', {
+          opinion: opinion,
+          noticia_id: noticiaId,
+          filter: currentFilter,
+          total_votes: parseInt(document.getElementById('timeline-container')?.getAttribute('data-total-votes') || '0') + 1
+        });
+      }
+      
+      // Update timeline container data attribute if available
+      const timelineContainer = document.getElementById('timeline-container');
+      if (timelineContainer) {
+        const currentVotes = parseInt(timelineContainer.getAttribute('data-total-votes') || '0');
+        timelineContainer.setAttribute('data-total-votes', currentVotes + 1);
+      }
+      setTimeout(updateVoteProgress, 300);
+    }
+  });
+
   // Periodic bubble info update (every 30 seconds)
   var hasClusterInitially = {% if has_cluster %}true{% else %}false{% endif %};
 
@@ -478,6 +846,9 @@
           if (typeof applyBubbleColors === 'function') {
             applyBubbleColors(data.cluster_id);
           }
+          
+          // Update vote progress
+          updateVoteProgress();
         }
       })
       .catch(error => {
@@ -490,4 +861,280 @@
   if (!hasClusterInitially) {
     setTimeout(updateBubbleInfo, 2000);
   }
+  
+  // Initial vote progress update
+  setTimeout(updateVoteProgress, 1000);
+
+  // Share functionality - optimized for WhatsApp
+  function shareTimeline() {
+    const filterDescription = document.getElementById('active-filter-text')?.textContent?.replace('> ', '') || 'noticias nuevas';
+    
+    // Get filter params from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const filter = urlParams.get('filter') || '';
+    const entidad = urlParams.get('entidad') || '';
+    
+    // Build share URL with current filters
+    let shareUrl = window.location.origin + window.location.pathname;
+    if (filter || entidad) {
+      const params = [];
+      if (filter) params.push('filter=' + filter);
+      if (entidad) params.push('entidad=' + entidad);
+      shareUrl += '?' + params.join('&');
+    }
+    
+    // Track share event
+    trackEvent('share-timeline', {
+      filter: filter || 'none',
+      entidad: entidad || 'none',
+      url: shareUrl,
+      method: 'whatsapp'
+    });
+    
+    // Compose viral message for WhatsApp (optimized for engagement)
+    let message = `🗞️ *memoria.uy*\n\nVotá noticias uruguayas y descubrí en qué burbuja estás.\n\n`;
+    
+    // Add context about what they're viewing with personalized messages
+    if (filter || entidad) {
+      if (filter === 'buena_mi') {
+        message += `Estoy viendo las *buenas noticias* que voté. ¿Coincidimos? 🤔\n\n`;
+      } else if (filter === 'mala_mi') {
+        message += `Estoy viendo las *malas noticias* que voté. ¿Pensás igual? 🤔\n\n`;
+      } else if (filter === 'cluster_consenso_buena') {
+        message += `Estoy viendo las noticias que *mi burbuja* considera buenas. ¿Estás en la misma? 🫧\n\n`;
+      } else if (filter === 'buena_mayoria') {
+        message += `Estoy viendo noticias que *la mayoría* considera buenas. ¿Vos también? 📊\n\n`;
+      } else if (filter === 'mala_mayoria') {
+        message += `Estoy viendo noticias que *la mayoría* considera malas. ¿Coincidís? 📊\n\n`;
+      } else if (filter.startsWith('mencionan_')) {
+        message += `Estoy viendo: *${filterDescription}*\n\n`;
+      } else {
+        message += `Estoy viendo: *${filterDescription}*\n\n`;
+      }
+    } else {
+      message += `Estoy viendo *noticias nuevas* para votar.\n\n`;
+    }
+    
+    message += `${shareUrl}\n\n`;
+    message += `¿Qué pensás de estas noticias? Votalas y descubrí si estás en la misma burbuja que yo 🫧`;
+    
+    shareToWhatsApp(message, shareUrl);
+  }
+
+  function shareNoticia(slug, title, description, detailUrl) {
+    const shareUrl = window.location.origin + detailUrl;
+    const shortDescription = description ? description.substring(0, 120).trim() : '';
+    
+    // Track share event
+    trackEvent('share-noticia', {
+      slug: slug,
+      url: shareUrl,
+      method: 'whatsapp'
+    });
+    
+    // Compose viral message optimized for WhatsApp
+    let message = `📰 *${title}*\n\n`;
+    
+    if (shortDescription) {
+      message += `${shortDescription}\n\n`;
+    }
+    
+    message += `¿Qué pensás de esta noticia?\n\n`;
+    message += `Votala en memoria.uy y descubrí cómo la están votando otras burbujas:\n\n`;
+    message += `${shareUrl}`;
+    
+    shareToWhatsApp(message, shareUrl);
+  }
+
+  function shareToWhatsApp(message, url) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Combine message and URL for Web Share API
+    const fullMessage = message.includes(url) ? message : message + '\n\n' + url;
+    
+    // Try Web Share API first (mobile native - opens WhatsApp directly on mobile)
+    if (navigator.share && isMobile) {
+      const shareData = {
+        text: fullMessage
+      };
+      
+      // Check if we can share (some browsers require url separately)
+      if (navigator.canShare && navigator.canShare({ text: fullMessage, url: url })) {
+        shareData.url = url;
+      }
+      
+      navigator.share(shareData)
+      .then(() => {
+        console.log('[Memoria Web] Shared successfully via Web Share API');
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          console.log('[Memoria Web] Web Share API failed, falling back to WhatsApp web:', error);
+          // Fallback to WhatsApp web
+          fallbackToWhatsAppWeb(fullMessage);
+        }
+      });
+    } else {
+      // Desktop or no Web Share API: use WhatsApp web
+      fallbackToWhatsAppWeb(fullMessage);
+    }
+  }
+
+  function fallbackToWhatsAppWeb(message) {
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  // Intelligent preloading for infinite scroll
+  let preloadObserver = null;
+  let preloadCache = new Map();
+  let isPreloading = false;
+
+  function setupPreloading() {
+    const loadMoreTrigger = document.getElementById('load-more-trigger');
+    if (!loadMoreTrigger || isPreloading) return;
+
+    // Create a preload trigger element that appears earlier (at 80% of scroll to trigger)
+    const preloadElement = document.createElement('div');
+    preloadElement.id = 'preload-trigger';
+    preloadElement.className = 'h-1 w-full';
+    preloadElement.style.position = 'absolute';
+    preloadElement.style.top = '80%';
+    preloadElement.style.pointerEvents = 'none';
+    preloadElement.style.visibility = 'hidden';
+    
+    const timelineItems = document.getElementById('timeline-items');
+    if (timelineItems && loadMoreTrigger.parentElement) {
+      loadMoreTrigger.parentElement.style.position = 'relative';
+      loadMoreTrigger.parentElement.insertBefore(preloadElement, loadMoreTrigger);
+    }
+
+    // Setup intersection observer for preloading
+    preloadObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && loadMoreTrigger && !isPreloading) {
+          const nextPage = loadMoreTrigger.getAttribute('data-next-page');
+          const currentFilter = loadMoreTrigger.getAttribute('data-current-filter');
+          const entityFilter = loadMoreTrigger.getAttribute('data-entity-filter');
+          
+          if (nextPage) {
+            const cacheKey = `${nextPage}-${currentFilter}-${entityFilter}`;
+            
+            // Check if already cached
+            if (preloadCache.has(cacheKey)) {
+              return;
+            }
+            
+            isPreloading = true;
+            
+            // Preload next page in background
+            const url = '{% url "timeline" %}?page=' + nextPage;
+            const params = [];
+            if (currentFilter) params.push('filter=' + currentFilter);
+            if (entityFilter) params.push('entidad=' + entityFilter);
+            const fullUrl = url + (params.length ? '&' + params.join('&') : '');
+            
+            // Prefetch the URL (browser will cache it)
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = fullUrl;
+            document.head.appendChild(link);
+            
+            // Also fetch and cache the HTML content
+            fetch(fullUrl, {
+              headers: {
+                'HX-Request': 'true',
+                'HX-Target': 'timeline-items'
+              }
+            })
+            .then(response => {
+              if (response.ok) {
+                return response.text();
+              }
+              throw new Error('Preload failed');
+            })
+            .then(html => {
+              // Cache the preloaded content
+              preloadCache.set(cacheKey, html);
+              isPreloading = false;
+              
+              // Cleanup prefetch link
+              link.remove();
+            })
+            .catch(error => {
+              console.error('[Memoria Web] Preload error:', error);
+              isPreloading = false;
+              link.remove();
+            });
+          }
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '300px' // Start preloading 300px before reaching trigger
+    });
+
+    if (preloadElement.parentElement) {
+      preloadObserver.observe(preloadElement);
+    }
+  }
+
+  // Use preloaded content when actual trigger is reached (if available)
+  document.body.addEventListener('htmx:beforeRequest', function(event) {
+    const trigger = event.detail.elt;
+    if (trigger && trigger.id === 'load-more-trigger') {
+      const nextPage = trigger.getAttribute('data-next-page');
+      const currentFilter = trigger.getAttribute('data-current-filter');
+      const entityFilter = trigger.getAttribute('data-entity-filter');
+      const cacheKey = `${nextPage}-${currentFilter}-${entityFilter}`;
+      
+      if (preloadCache.has(cacheKey)) {
+        const preloadedContent = preloadCache.get(cacheKey);
+        preloadCache.delete(cacheKey); // Use once
+        
+        // Let HTMX handle the request normally, but it should be faster due to browser cache
+        // The prefetch link we added should help with this
+      }
+    }
+  });
+
+  // Setup preloading when page loads or after new items are added
+  function initPreloading() {
+    setTimeout(() => {
+      setupPreloading();
+    }, 500);
+  }
+
+  // Initialize on page load
+  initPreloading();
+
+  // Re-initialize after HTMX swaps
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    const target = event.detail.target;
+    if (target && (target.id === 'load-more-trigger' || target.closest('#load-more-trigger'))) {
+      // Track infinite scroll page load
+      const urlParams = new URLSearchParams(window.location.search);
+      trackEvent('infinite-scroll', {
+        page: urlParams.get('page') || '2',
+        filter: urlParams.get('filter') || 'none',
+        entidad: urlParams.get('entidad') || 'none'
+      });
+      
+      // Cleanup old observer
+      if (preloadObserver) {
+        preloadObserver.disconnect();
+        preloadObserver = null;
+      }
+      const oldPreloadTrigger = document.getElementById('preload-trigger');
+      if (oldPreloadTrigger) {
+        oldPreloadTrigger.remove();
+      }
+      isPreloading = false;
+      
+      // Setup new preloading for next page
+      setTimeout(() => {
+        setupPreloading();
+      }, 300);
+    }
+  });
 </script>

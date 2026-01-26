@@ -13,8 +13,9 @@
        class="mobile-ticker-link flex items-center gap-2 flex-1 min-w-0 px-4 py-2 transition-colors">
       <span class="text-xs font-bold whitespace-nowrap drop-shadow">TU BURBUJA</span>
       <span id="mobile-ticker-info"
-            class="text-xs whitespace-nowrap overflow-hidden text-ellipsis drop-shadow">
-        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %} | {{ my_cluster.size|default:"0" }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>
+            class="text-xs whitespace-nowrap overflow-hidden text-ellipsis drop-shadow"
+            data-total-votes="{{ total_votes_count|default:0 }}">
+        {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %} | {{ my_cluster.size|default:"0" }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>{% if total_votes_count > 0 %} | {{ total_votes_count }} votos{% endif %}
       </span>
     </a>
     <button @click="collapsed = !collapsed"
@@ -90,6 +91,12 @@
               class="font-bold text-white"
               data-consensus="{{ my_cluster.consensus|default:'0' }}">
           {% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:2 }}{% else %}0.00{% endif %}
+        </span>
+      </div>
+      <div id="badge-vote-progress" class="flex justify-between mt-2 pt-2 border-t border-white/30">
+        <span class="text-white/70">TUS VOTOS:</span>
+        <span id="badge-vote-count" class="font-bold text-white" data-total-votes="{{ total_votes_count|default:0 }}">
+          {{ total_votes_count|default:0 }}
         </span>
       </div>
     </div>

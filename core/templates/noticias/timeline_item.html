@@ -14,6 +14,7 @@
     <div class="border-b border-gray-200">
       <img src="{{ noticia.mostrar_imagen }}"
            alt="{{ noticia.mostrar_titulo }}"
+           loading="lazy"
            class="w-full object-cover h-48 md:h-64">
     </div>
   {% endif %}
@@ -23,38 +24,47 @@
     <form hx-post="{% url 'vote' noticia.pk %}"
           {% if current_filter == 'nuevas' or not current_filter %}
           hx-target="#noticia-{{ noticia.pk }}"
-          hx-swap="outerHTML swap:1s"
+          hx-swap="outerHTML swap:300ms"
           {% else %}
           hx-target="#vote-area-{{ noticia.pk }}"
           hx-swap="outerHTML"
           {% endif %}
-          class="grid grid-cols-3 gap-2">
+          hx-trigger="submit"
+          data-noticia-id="{{ noticia.pk }}"
+          data-current-vote="{{ noticia.user_vote|default:'' }}"
+          class="vote-form grid grid-cols-3 gap-2">
       {% csrf_token %}
       <input type="hidden" name="on_nuevas_filter"
              value="{% if current_filter == 'nuevas' or not current_filter %}true{% else %}false{% endif %}">
 
       <button type="submit" name="opinion" value="buena"
-              class="border-2 border-black px-3 py-2
-              hover:bg-black hover:text-white transition-all
+              data-opinion="buena"
+              class="vote-button border-2 border-black px-3 py-2
+              hover:bg-black hover:text-white transition-all duration-200
               {% if noticia.user_vote == 'buena' %}bg-green-600 text-white border-green-600{% else %}bg-white{% endif %}">
-        <span class="text-lg">😊</span>
+        <span class="vote-emoji text-lg">😊</span>
         <span class="block text-[10px] font-bold mt-1">Buena</span>
+        <span class="vote-checkmark hidden text-green-600 font-bold">✓</span>
       </button>
 
       <button type="submit" name="opinion" value="neutral"
-              class="border-2 border-black px-3 py-2
-              hover:bg-black hover:text-white transition-all
+              data-opinion="neutral"
+              class="vote-button border-2 border-black px-3 py-2
+              hover:bg-black hover:text-white transition-all duration-200
               {% if noticia.user_vote == 'neutral' %}bg-gray-500 text-white border-gray-500{% else %}bg-white{% endif %}">
-        <span class="text-lg">😐</span>
+        <span class="vote-emoji text-lg">😐</span>
         <span class="block text-[10px] font-bold mt-1">Neutral</span>
+        <span class="vote-checkmark hidden text-gray-600 font-bold">✓</span>
       </button>
 
       <button type="submit" name="opinion" value="mala"
-              class="border-2 border-black px-3 py-2
-              hover:bg-black hover:text-white transition-all
+              data-opinion="mala"
+              class="vote-button border-2 border-black px-3 py-2
+              hover:bg-black hover:text-white transition-all duration-200
               {% if noticia.user_vote == 'mala' %}bg-red-600 text-white border-red-600{% else %}bg-white{% endif %}">
-        <span class="text-lg">😞</span>
+        <span class="vote-emoji text-lg">😞</span>
         <span class="block text-[10px] font-bold mt-1">Mala</span>
+        <span class="vote-checkmark hidden text-red-600 font-bold">✓</span>
       </button>
     </form>
   </div>
@@ -65,9 +75,12 @@
       <a href="{{ noticia.enlace }}" target="_blank" class="hover:text-black hover:underline">
         leer original
       </a>
-      <a href="{% url 'noticia-detail' noticia.slug %}" class="hover:text-black hover:underline">
-        compartir
-      </a>
+      <button onclick="shareNoticia('{{ noticia.slug }}', '{{ noticia.mostrar_titulo|escapejs }}', '{{ noticia.meta_descripcion|default:""|escapejs }}', '{% url "noticia-detail" noticia.slug %}')"
+              class="hover:text-black hover:underline flex items-center gap-1 cursor-pointer"
+              title="Compartir en WhatsApp">
+        <span class="text-xs">💬</span>
+        <span>compartir</span>
+      </button>
       {% if noticia.mostrar_fecha %}
         <span class="text-gray-400">{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}

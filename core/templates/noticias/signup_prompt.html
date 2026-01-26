@@ -5,8 +5,9 @@
      class="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-md z-50
             bg-white border-4 border-black p-4 
             shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]
-            animate-[slideUp_0.4s_ease-out]">
-  <button onclick="this.closest('#signup-prompt-banner').remove()" 
+            animate-[slideUp_0.4s_ease-out]"
+     data-total-votes="{{ total_votes }}">
+  <button onclick="this.closest('#signup-prompt-banner').remove(); trackEvent('signup-prompt-dismiss', {total_votes: {{ total_votes }}, action: 'close'});" 
           class="absolute top-2 right-2 text-xl hover:text-gray-600 transition"
           aria-label="Cerrar">
     ✕
@@ -40,16 +41,30 @@
   
   <div class="flex flex-col sm:flex-row gap-2">
     <a href="{% url 'account_signup' %}?next={% url 'timeline' %}" 
+       onclick="trackEvent('signup-prompt-click', {total_votes: {{ total_votes }}, action: 'signup'});"
        class="flex-1 text-center bg-black text-white px-4 py-2.5 text-sm mono font-bold
               border-2 border-black hover:bg-white hover:text-black transition-all">
       Crear cuenta gratis
     </a>
-    <button onclick="this.closest('#signup-prompt-banner').remove()" 
+    <button onclick="this.closest('#signup-prompt-banner').remove(); trackEvent('signup-prompt-dismiss', {total_votes: {{ total_votes }}, action: 'continue'});" 
             class="text-xs mono text-gray-600 hover:text-black underline">
       Seguir sin cuenta
     </button>
   </div>
 </div>
+
+<script>
+  // Track signup prompt shown
+  document.addEventListener('DOMContentLoaded', function() {
+    const prompt = document.getElementById('signup-prompt-banner');
+    if (prompt) {
+      const totalVotes = prompt.getAttribute('data-total-votes');
+      trackEvent('signup-prompt-shown', {
+        total_votes: parseInt(totalVotes) || 0
+      });
+    }
+  });
+</script>
 
 <style>
 @keyframes slideUp {

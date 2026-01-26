@@ -94,6 +94,42 @@
   </style>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="db76d1bd-b4b1-4615-9b35-7b95b58f942a"></script>
 
+  <!-- Umami event tracking helper -->
+  <script>
+    // Helper function for tracking custom events with Umami
+    function trackEvent(eventName, eventData) {
+      if (typeof umami !== 'undefined') {
+        umami.track(eventName, eventData);
+      } else {
+        // Fallback: log to console in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.log('[Umami Event]', eventName, eventData);
+        }
+      }
+    }
+
+    // Track page views with additional context
+    document.addEventListener('DOMContentLoaded', function() {
+      const path = window.location.pathname;
+      const search = window.location.search;
+      
+      // Track page view with filter context
+      if (path === '/' && search) {
+        const params = new URLSearchParams(search);
+        const filter = params.get('filter');
+        const entidad = params.get('entidad');
+        
+        if (filter || entidad) {
+          trackEvent('timeline-filter-view', {
+            filter: filter || 'none',
+            entidad: entidad || 'none',
+            url: path + search
+          });
+        }
+      }
+    });
+  </script>
+
   {% block extra_head %}{% endblock %}
 </head>
 
