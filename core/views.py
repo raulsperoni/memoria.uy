@@ -486,11 +486,13 @@ class NewsTimelineView(ListView):
         # Add filter description to context
         context["filter_description"] = self.get_filter_description()
         
+        # Get total votes for this voter (for signup prompt and progress display)
+        total_votes = Voto.objects.filter(**lookup_data).count()
+        context["total_votes_count"] = total_votes
+        
         # Check if should show signup prompt (for empty state)
         if not self.request.user.is_authenticated:
-            total_votes = Voto.objects.filter(**lookup_data).count()
             context["should_show_signup_prompt"] = total_votes >= 3
-            context["total_votes_count"] = total_votes
         else:
             context["should_show_signup_prompt"] = False
 

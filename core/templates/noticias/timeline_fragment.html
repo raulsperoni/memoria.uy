@@ -235,6 +235,47 @@
       transform: translateY(0);
     }
   }
+
+  /* Vote confirmation animation */
+  @keyframes voteConfirm {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .vote-checkmark {
+    animation: voteConfirm 0.3s ease-out;
+  }
+
+  /* Skeleton loading animation */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #f0f0f0 0px,
+      #e0e0e0 40px,
+      #f0f0f0 80px
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 1.5s infinite;
+  }
 </style>
 
 <!-- JavaScript -->
@@ -393,6 +434,186 @@
     }
   });
 
+  // Optimistic UI for voting - immediate feedback
+  document.body.addEventListener('click', function(event) {
+    const button = event.target.closest('.vote-button');
+    if (button && button.type === 'submit') {
+      const form = button.closest('.vote-form');
+      if (form) {
+        const opinion = button.getAttribute('data-opinion');
+        
+        // Store original state for potential revert
+        if (!form.hasAttribute('data-original-state')) {
+          form.setAttribute('data-original-state', JSON.stringify({
+            buttons: Array.from(form.querySelectorAll('.vote-button')).map(btn => ({
+              opinion: btn.getAttribute('data-opinion'),
+              classes: btn.className
+            }))
+          }));
+        }
+        
+        // Update buttons immediately (optimistic UI)
+        form.querySelectorAll('.vote-button').forEach(btn => {
+          const btnOpinion = btn.getAttribute('data-opinion');
+          const emoji = btn.querySelector('.vote-emoji');
+          const checkmark = btn.querySelector('.vote-checkmark');
+          
+          // Reset all buttons
+          btn.className = btn.className
+            .replace(/bg-(green|red|gray)-\d+|text-white|border-(green|red|gray)-\d+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim() + ' border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-all duration-200 bg-white';
+          
+          checkmark.classList.add('hidden');
+          
+          // Highlight selected button
+          if (btnOpinion === opinion) {
+            if (opinion === 'buena') {
+              btn.className += ' bg-green-600 text-white border-green-600';
+            } else if (opinion === 'mala') {
+              btn.className += ' bg-red-600 text-white border-red-600';
+            } else {
+              btn.className += ' bg-gray-500 text-white border-gray-500';
+            }
+            
+            // Show checkmark briefly
+            emoji.style.opacity = '0.7';
+            checkmark.classList.remove('hidden');
+            setTimeout(() => {
+              checkmark.classList.add('hidden');
+              emoji.style.opacity = '1';
+            }, 800);
+          }
+        });
+      }
+    }
+  }, true); // Use capture phase to run before HTMX
+
+  // Revert on error
+  document.body.addEventListener('htmx:responseError', function(event) {
+    const form = event.detail.elt;
+    if (form && form.classList.contains('vote-form')) {
+      const originalState = form.getAttribute('data-original-state');
+      if (originalState) {
+        try {
+          const state = JSON.parse(originalState);
+          const buttons = form.querySelectorAll('.vote-button');
+          buttons.forEach((btn, idx) => {
+            if (state.buttons[idx]) {
+              btn.className = state.buttons[idx].classes;
+            }
+          });
+        } catch (e) {
+          console.error('[Memoria Web] Error reverting vote state:', e);
+        }
+      }
+    }
+  });
+
+  // Swipe gestures for mobile voting (experimental)
+  let touchStartX = 0;
+  let touchEndX = 0;
+  let touchStartY = 0;
+  let touchEndY = 0;
+  const SWIPE_THRESHOLD = 50; // minimum distance for swipe
+  const SWIPE_MAX_VERTICAL = 30; // max vertical movement to consider horizontal swipe
+
+  document.addEventListener('touchstart', function(e) {
+    const noticiaCard = e.target.closest('[id^="noticia-"]');
+    if (noticiaCard && window.innerWidth < 768) { // Only on mobile
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    const noticiaCard = e.target.closest('[id^="noticia-"]');
+    if (!noticiaCard || window.innerWidth >= 768) return;
+    
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = Math.abs(touchEndY - touchStartY);
+    
+    // Only trigger if horizontal swipe and minimal vertical movement
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD && deltaY < SWIPE_MAX_VERTICAL) {
+      const form = noticiaCard.querySelector('.vote-form');
+      if (form) {
+        let button;
+        if (deltaX > 0) {
+          // Swipe right = buena
+          button = form.querySelector('button[data-opinion="buena"]');
+        } else {
+          // Swipe left = mala
+          button = form.querySelector('button[data-opinion="mala"]');
+        }
+        
+        if (button) {
+          button.click();
+          // Visual feedback
+          noticiaCard.style.transform = 'translateX(' + (deltaX > 0 ? '10px' : '-10px') + ')';
+          setTimeout(() => {
+            noticiaCard.style.transform = '';
+          }, 200);
+        }
+      }
+    }
+  }, { passive: true });
+
+  // Update vote progress in bubble badge
+  function updateVoteProgress() {
+    // Get total votes from timeline container
+    const timelineContainer = document.getElementById('timeline-container');
+    const totalVotes = parseInt(timelineContainer?.getAttribute('data-total-votes') || '0');
+    
+    // Update mobile ticker with vote count
+    const mobileTickerInfo = document.getElementById('mobile-ticker-info');
+    if (mobileTickerInfo) {
+      const currentText = mobileTickerInfo.getAttribute('data-total-votes') || '0';
+      const newTotalVotes = totalVotes > 0 ? totalVotes : parseInt(currentText);
+      mobileTickerInfo.setAttribute('data-total-votes', newTotalVotes);
+      
+      // Update text if cluster info exists
+      if (mobileTickerInfo.textContent.includes('#')) {
+        const parts = mobileTickerInfo.textContent.split(' | ');
+        const hasVotos = parts.some(p => p.includes('votos'));
+        if (!hasVotos && newTotalVotes > 0) {
+          mobileTickerInfo.textContent = mobileTickerInfo.textContent.replace(
+            /(\d+\.\d+)$/,
+            '$1 | ' + newTotalVotes + ' votos'
+          );
+        } else if (hasVotos) {
+          mobileTickerInfo.textContent = mobileTickerInfo.textContent.replace(
+            /\d+ votos/,
+            newTotalVotes + ' votos'
+          );
+        }
+      }
+    }
+    
+    // Update desktop badge expanded state
+    const voteCountBadge = document.getElementById('badge-vote-count');
+    if (voteCountBadge) {
+      voteCountBadge.textContent = totalVotes > 0 ? totalVotes : voteCountBadge.getAttribute('data-total-votes') || '0';
+      voteCountBadge.setAttribute('data-total-votes', totalVotes);
+    }
+  }
+
+  // Update vote progress after vote
+  document.body.addEventListener('htmx:afterSwap', function(event) {
+    const target = event.detail.target;
+    if (target && (target.classList.contains('vote-form') || target.id?.startsWith('noticia-') || target.id?.startsWith('vote-area-'))) {
+      // Update timeline container data attribute if available
+      const timelineContainer = document.getElementById('timeline-container');
+      if (timelineContainer) {
+        const currentVotes = parseInt(timelineContainer.getAttribute('data-total-votes') || '0');
+        timelineContainer.setAttribute('data-total-votes', currentVotes + 1);
+      }
+      setTimeout(updateVoteProgress, 300);
+    }
+  });
+
   // Periodic bubble info update (every 30 seconds)
   var hasClusterInitially = {% if has_cluster %}true{% else %}false{% endif %};
 
@@ -478,6 +699,9 @@
           if (typeof applyBubbleColors === 'function') {
             applyBubbleColors(data.cluster_id);
           }
+          
+          // Update vote progress
+          updateVoteProgress();
         }
       })
       .catch(error => {
@@ -490,4 +714,7 @@
   if (!hasClusterInitially) {
     setTimeout(updateBubbleInfo, 2000);
   }
+  
+  // Initial vote progress update
+  setTimeout(updateVoteProgress, 1000);
 </script>

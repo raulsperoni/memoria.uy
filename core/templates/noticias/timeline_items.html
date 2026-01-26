@@ -30,9 +30,10 @@
 {% if page_obj.has_next %}
   <div id="load-more-trigger" class="text-center py-8 mono text-xs text-gray-600"
     hx-get="{% url 'timeline' %}?page={{ page_obj.next_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if request.GET.entidad %}&entidad={{ request.GET.entidad }}{% endif %}"
-    hx-trigger="{% if not noticias %}load{% else %}intersect once threshold:0.1{% endif %}"
-    hx-swap="outerHTML">
-    <div class="border-2 border-black bg-white p-4">
+    hx-trigger="{% if not noticias %}load{% else %}intersect once threshold:0.2 delay:100ms{% endif %}"
+    hx-swap="outerHTML"
+    hx-indicator="#load-more-spinner">
+    <div id="load-more-spinner" class="htmx-indicator border-2 border-black bg-white p-4">
       <div class="border-4 border-black border-t-transparent h-8 w-8 rounded-full animate-spin mx-auto"></div>
     </div>
   </div>
