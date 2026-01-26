@@ -75,9 +75,12 @@
       <a href="{{ noticia.enlace }}" target="_blank" class="hover:text-black hover:underline">
         leer original
       </a>
-      <a href="{% url 'noticia-detail' noticia.slug %}" class="hover:text-black hover:underline">
-        compartir
-      </a>
+      <button onclick="shareNoticia('{{ noticia.slug }}', '{{ noticia.mostrar_titulo|escapejs }}', '{{ noticia.meta_descripcion|default:""|escapejs }}', '{% url "noticia-detail" noticia.slug %}')"
+              class="hover:text-black hover:underline flex items-center gap-1 cursor-pointer"
+              title="Compartir en WhatsApp">
+        <span class="text-xs">💬</span>
+        <span>compartir</span>
+      </button>
       {% if noticia.mostrar_fecha %}
         <span class="text-gray-400">{{ noticia.mostrar_fecha|date:"d/m/Y" }}</span>
       {% endif %}
