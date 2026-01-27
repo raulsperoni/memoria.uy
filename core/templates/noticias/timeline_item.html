@@ -9,13 +9,20 @@
     </div>
   </div>
 
-  <!-- Image (if exists) -->
+  <!-- Image with Title Overlay (if exists) -->
   {% if noticia.mostrar_imagen %}
-    <div class="border-b border-gray-200">
+    <div id="image-container-{{ noticia.pk }}" class="border-b border-gray-200 relative">
       <img src="{{ noticia.mostrar_imagen }}"
            alt="{{ noticia.mostrar_titulo }}"
            loading="lazy"
-           class="w-full object-cover h-48 md:h-64">
+           class="w-full object-cover h-56 md:h-72"
+           onerror="handleImageError({{ noticia.pk }})">
+      <!-- Title Overlay -->
+      <div id="title-overlay-{{ noticia.pk }}" class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent flex items-end">
+        <h3 class="text-base md:text-lg font-bold text-white leading-tight p-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+          {{ noticia.mostrar_titulo }}
+        </h3>
+      </div>
     </div>
   {% endif %}
 
@@ -78,7 +85,7 @@
       <button onclick="shareNoticia('{{ noticia.slug }}', '{{ noticia.mostrar_titulo|escapejs }}', '{{ noticia.meta_descripcion|default:""|escapejs }}', '{% url "noticia-detail" noticia.slug %}')"
               class="hover:text-black hover:underline flex items-center gap-1 cursor-pointer"
               title="Compartir en WhatsApp">
-        <span class="text-xs">💬</span>
+        {% include "noticias/_share_icons.html" with icon="whatsapp" class="w-3 h-3" %}
         <span>compartir</span>
       </button>
       {% if noticia.mostrar_fecha %}
@@ -147,8 +154,11 @@
 
   <!-- Content -->
   <div class="p-4">
-    <!-- Title -->
-    <h3 class="text-base md:text-lg font-bold mb-2 leading-tight">{{ noticia.mostrar_titulo }}</h3>
+    <!-- Title (shown if no image, or if image fails to load) -->
+    <h3 id="title-fallback-{{ noticia.pk }}" 
+        class="text-base md:text-lg font-bold mb-2 leading-tight {% if noticia.mostrar_imagen %}hidden{% endif %}">
+      {{ noticia.mostrar_titulo }}
+    </h3>
 
     <!-- Description -->
     {% if noticia.meta_descripcion %}

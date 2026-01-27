@@ -10,6 +10,7 @@ from django.views.generic import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
 from django_ratelimit.decorators import ratelimit
@@ -25,7 +26,7 @@ import validators
 from urllib.parse import urlparse
 
 
-from core.forms import NoticiaForm
+from core.forms import NoticiaForm, ProfileEditForm
 from django.urls import reverse_lazy
 from django.db.models import Count, Q, F
 import logging
@@ -1073,4 +1074,36 @@ class NoticiaDetailView(DetailView):
         else:
             context["has_cluster"] = False
 
+        return context
+
+
+class ProfileEditView(LoginRequiredMixin, FormView):
+    """View for editing user profile (alias and preferences)."""
+    
+    template_name = "account/profile.html"
+    form_class = ProfileEditForm
+    success_url = reverse_lazy("profile")
+    
+    def get_object(self):
+        """Get or create user profile."""
+        from core.models import UserProfile
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
+    
+    def get_form_kwargs(self):
+        """Pass the profile instance to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['instance'] = self.get_object()
+        return kwargs
+    
+    def form_valid(self, form):
+        """Save the profile."""
+        form.save()
+        messages.success(self.request, "Perfil actualizado correctamente.")
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        """Add profile to context."""
+        context = super().get_context_data(**kwargs)
+        context['profile'] = self.get_object()
         return context

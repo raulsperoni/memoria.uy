@@ -32,6 +32,7 @@ from core.views import (
     PrivacidadView,
     BienvenidaView,
     NoticiaDetailView,
+    ProfileEditView,
 )
 from core.api_views import (
     SubmitFromExtensionView,
@@ -189,6 +190,7 @@ urlpatterns = [
         name="cluster-report",
     ),
     path("accounts/", include("allauth.urls")),
+    path("accounts/profile/", ProfileEditView.as_view(), name="profile"),
     path("__reload__/", include("django_browser_reload.urls")),
     path("health/", health_check, name="health_check"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
