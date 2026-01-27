@@ -74,3 +74,40 @@ class CustomSignupForm(SignupForm):
         profile.save()
         
         return user
+
+
+class ProfileEditForm(forms.ModelForm):
+    """
+    Form for editing user profile (alias and preferences).
+    """
+    class Meta:
+        from core.models import UserProfile
+        model = UserProfile
+        fields = ['alias', 'show_alias_on_map', 'weekly_email_enabled']
+        labels = {
+            'alias': 'Alias (opcional)',
+            'show_alias_on_map': 'Mostrar mi alias en el mapa de opiniones',
+            'weekly_email_enabled': 'Recibir email semanal con nuevas noticias',
+        }
+        help_texts = {
+            'alias': 'Nombre que aparecerá en el mapa de opiniones',
+        }
+        widgets = {
+            'alias': forms.TextInput(
+                attrs={
+                    "class": "w-full px-4 py-3 border-2 border-black mono text-sm focus:outline-none focus:ring-2 focus:ring-black",
+                    "placeholder": "ej: JuanUY, MariaM, etc.",
+                    "maxlength": "30",
+                }
+            ),
+            'show_alias_on_map': forms.CheckboxInput(
+                attrs={
+                    "class": "w-4 h-4 border-2 border-black focus:ring-2 focus:ring-black",
+                }
+            ),
+            'weekly_email_enabled': forms.CheckboxInput(
+                attrs={
+                    "class": "w-4 h-4 border-2 border-black focus:ring-2 focus:ring-black",
+                }
+            ),
+        }

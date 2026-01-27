@@ -3,7 +3,7 @@
 
 <!-- Mobile Ticker (sticky below header) -->
 <div id="bubble-ticker-mobile"
-     class="md:hidden sticky top-0 z-40 border-b-2 border-black text-white mono {% if not has_cluster %}hidden{% endif %}"
+     class="md:hidden sticky top-16 z-40 border-b-2 border-black text-white mono {% if not has_cluster %}hidden{% endif %}"
      data-cluster-id="{{ my_cluster.id|default:'0' }}"
      x-data="{ collapsed: false }"
      x-show="!collapsed"
@@ -18,10 +18,6 @@
         {% if my_cluster.llm_name %}{{ my_cluster.llm_name }} | {% endif %}#{% if my_cluster.id is not None %}{{ my_cluster.id }}{% else %}?{% endif %} | {{ my_cluster.size|default:"0" }}v | <span data-consensus="{{ my_cluster.consensus|default:'0' }}">{% if my_cluster.consensus is not None %}{{ my_cluster.consensus|js_float:1 }}{% else %}0.0{% endif %}</span>{% if total_votes_count > 0 %} | {{ total_votes_count }} votos{% endif %}
       </span>
     </a>
-    <button @click="collapsed = !collapsed"
-            class="mobile-ticker-close px-4 py-2 border-l border-white/30 text-[10px] transition-colors flex-shrink-0 drop-shadow">
-      [x]
-    </button>
   </div>
 </div>
 

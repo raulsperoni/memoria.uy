@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.contrib.auth import get_user_model
-from core.models import VoterClusterRun, Voto, Noticia
+from core.models import VoterClusterRun, Voto, Noticia, UserProfile
 from core.views import get_voter_identifier
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -441,6 +441,21 @@ def cluster_data_json(request):
                 "distance": member.distance_to_centroid,
             }
 
+    # Pre-fetch user profiles for alias display (only for user-type voters)
+    user_profiles = {}
+    user_ids = [
+        int(proj.voter_id)
+        for proj in run.projections.filter(voter_type="user")
+    ]
+    if user_ids:
+        profiles = UserProfile.objects.filter(
+            user_id__in=user_ids,
+            show_alias_on_map=True
+        ).select_related('user')
+        for profile in profiles:
+            if profile.alias:
+                user_profiles[profile.user_id] = profile.alias
+
     # Get projections
     for proj in run.projections.all():
         key = f"{proj.voter_type}:{proj.voter_id}"
@@ -450,18 +465,31 @@ def cluster_data_json(request):
             proj.voter_type == current_voter_type and proj.voter_id == current_voter_id
         )
 
-        projections.append(
-            {
-                "x": proj.projection_x,
-                "y": proj.projection_y,
-                "voter_type": proj.voter_type,
-                "voter_id": proj.voter_id,
-                "n_votes": proj.n_votes_cast,
-                "cluster_id": cluster_info.get("cluster_id"),
-                "cluster_size": cluster_info.get("cluster_size"),
-                "is_current_voter": is_current,
-            }
-        )
+        # Get alias if available
+        alias = None
+        if proj.voter_type == "user":
+            try:
+                user_id = int(proj.voter_id)
+                alias = user_profiles.get(user_id)
+            except (ValueError, TypeError):
+                pass
+
+        projection_data = {
+            "x": proj.projection_x,
+            "y": proj.projection_y,
+            "voter_type": proj.voter_type,
+            "voter_id": proj.voter_id,
+            "n_votes": proj.n_votes_cast,
+            "cluster_id": cluster_info.get("cluster_id"),
+            "cluster_size": cluster_info.get("cluster_size"),
+            "is_current_voter": is_current,
+        }
+        
+        # Add alias only if available
+        if alias:
+            projection_data["alias"] = alias
+
+        projections.append(projection_data)
 
     # Get cluster centroids (use group clusters)
     centroids = []

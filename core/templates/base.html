@@ -150,11 +150,8 @@
                 <span class="cursor">memoria.uy</span>
               </a>
             </h1>
-            <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono md:block hidden" >
-              // Salí de tu burbuja. Votá noticias. Descubrí patrones.
-            </p>
-            <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono md:hidden block" >
-              // Salí de tu burbuja.
+            <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono">
+              // Votá noticias. Salí de tu burbuja.
             </p>
           </div>
         </div>
@@ -165,6 +162,10 @@
             <span class="hidden md:inline mono text-gray-600">
               > usuario: <span class="text-black font-semibold">{{ user.username }}</span>
             </span>
+            <a href="{% url 'profile' %}"
+               class="border border-black px-3 py-1 hover:bg-black hover:text-white transition-colors mono">
+              perfil
+            </a>
             {% if user.is_staff %}
               <a href="{% url 'admin:index' %}"
                  class="border border-black px-2 py-1 hover:bg-black hover:text-white transition-colors mono text-xs">
