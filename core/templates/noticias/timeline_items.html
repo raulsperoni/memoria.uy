@@ -11,7 +11,7 @@
   <div class="border-2 border-black bg-white p-8 text-center mono mb-4">
     <p class="text-gray-600 mb-2">[ votaste todas las noticias ]</p>
     <p class="text-xs text-gray-500 mb-4">¡Bien hecho! Volvé más tarde para ver nuevas noticias.</p>
-    <a href="?filter=todas" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white inline-block">ver todas las noticias</a>
+    <a href="?feed=avanzado&filter=todas" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white inline-block">ver todas las noticias</a>
   </div>
   
   {# Show signup prompt if anonymous user with 3+ votes #}
@@ -31,9 +31,10 @@
   <div id="load-more-trigger" 
        class="text-center py-8 mono text-xs text-gray-600"
        data-next-page="{{ page_obj.next_page_number }}"
+       data-feed="{{ feed_mode|default:'' }}"
        data-current-filter="{{ current_filter|default:'' }}"
        data-entity-filter="{{ request.GET.entidad|default:'' }}"
-       hx-get="{% url 'timeline' %}?page={{ page_obj.next_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if request.GET.entidad %}&entidad={{ request.GET.entidad }}{% endif %}"
+       hx-get="{% url 'timeline' %}?page={{ page_obj.next_page_number }}{% if feed_mode %}&feed={{ feed_mode }}{% endif %}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if request.GET.entidad %}&entidad={{ request.GET.entidad }}{% endif %}"
        hx-trigger="{% if not noticias %}load{% else %}intersect once threshold:0.2 delay:100ms{% endif %}"
        hx-swap="outerHTML"
        hx-indicator="#load-more-spinner">

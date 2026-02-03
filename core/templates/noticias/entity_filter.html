@@ -14,13 +14,13 @@
     <div class="flex flex-wrap gap-1.5">
       <button @click="
                 if (entity) {
-                  clearPrimaryFilter();
-                  htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_a&entidad=' + entity, {
+                  if (typeof clearPrimaryFilter === 'function') clearPrimaryFilter();
+                  htmx.ajax('GET', '{% url 'timeline' %}?{% if feed_param %}feed=avanzado&{% endif %}filter=mencionan_a&entidad=' + entity, {
                     target: '#timeline-items',
                     swap: 'innerHTML',
                     indicator: '#timeline-skeleton-container'
                   });
-                  history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_a&entidad=' + entity);
+                  history.pushState(null, '', '{% url 'timeline' %}?{% if feed_param %}feed=avanzado&{% endif %}filter=mencionan_a&entidad=' + entity);
                 }
               "
               :disabled="entity === ''"
@@ -30,13 +30,13 @@
       </button>
       <button @click="
                 if (entity) {
-                  clearPrimaryFilter();
-                  htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_positiva&entidad=' + entity, {
+                  if (typeof clearPrimaryFilter === 'function') clearPrimaryFilter();
+                  htmx.ajax('GET', '{% url 'timeline' %}?{% if feed_param %}feed=avanzado&{% endif %}filter=mencionan_positiva&entidad=' + entity, {
                     target: '#timeline-items',
                     swap: 'innerHTML',
                     indicator: '#timeline-skeleton-container'
                   });
-                  history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_positiva&entidad=' + entity);
+                  history.pushState(null, '', '{% url 'timeline' %}?{% if feed_param %}feed=avanzado&{% endif %}filter=mencionan_positiva&entidad=' + entity);
                 }
               "
               :disabled="entity === ''"
@@ -46,13 +46,13 @@
       </button>
       <button @click="
                 if (entity) {
-                  clearPrimaryFilter();
-                  htmx.ajax('GET', '{% url 'timeline' %}?filter=mencionan_negativa&entidad=' + entity, {
+                  if (typeof clearPrimaryFilter === 'function') clearPrimaryFilter();
+                  htmx.ajax('GET', '{% url 'timeline' %}?{% if feed_param %}feed=avanzado&{% endif %}filter=mencionan_negativa&entidad=' + entity, {
                     target: '#timeline-items',
                     swap: 'innerHTML',
                     indicator: '#timeline-skeleton-container'
                   });
-                  history.pushState(null, '', '{% url 'timeline' %}?filter=mencionan_negativa&entidad=' + entity);
+                  history.pushState(null, '', '{% url 'timeline' %}?{% if feed_param %}feed=avanzado&{% endif %}filter=mencionan_negativa&entidad=' + entity);
                 }
               "
               :disabled="entity === ''"

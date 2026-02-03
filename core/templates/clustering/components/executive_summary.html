@@ -57,7 +57,7 @@
                         {{ entity_type }}
                     </div>
                     <div class="text-2xl font-bold text-black font-mono">
-                        {{ data.consensus|floatformat:0 }}%
+                        {% widthratio data.consensus 1 100 %}%
                     </div>
                     <div class="text-xs text-gray-500 font-mono">
                         consenso

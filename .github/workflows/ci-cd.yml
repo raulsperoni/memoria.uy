@@ -40,6 +40,7 @@ jobs:
       env:
         SECRET_KEY: github_actions_test_key
         DEBUG: 'True'
+        REDIS_URL: redis://localhost:6379/0
         CELERY_BROKER_URL: redis://localhost:6379/0
         CELERY_RESULT_BACKEND: redis://localhost:6379/0
 

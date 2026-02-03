@@ -28,8 +28,19 @@ from urllib.parse import urlparse
 
 from core.forms import NoticiaForm, ProfileEditForm
 from django.urls import reverse_lazy
-from django.db.models import Count, Q, F
+from django.db.models import Count, Q, F, Case, When
 import logging
+
+from core.feeds import (
+    FEED_AVANZADO,
+    FEED_CONFORT,
+    FEED_PUENTE,
+    FEED_RECIENTES,
+    DEFAULT_FEED,
+    filter_recientes,
+    get_confort_noticia_ids,
+    get_puente_ordered_noticia_ids,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -219,11 +230,74 @@ class NewsTimelineView(ListView):
 
         return super().get(request, *args, **kwargs)
 
+    def get_feed_mode(self):
+        """Current feed: recientes, confort, puente, or avanzado. Default recientes."""
+        feed = (self.request.GET.get("feed") or "").strip().lower()
+        if feed in (FEED_RECIENTES, FEED_CONFORT, FEED_PUENTE, FEED_AVANZADO):
+            return feed
+        return DEFAULT_FEED
+
+    def get_feed_algorithm_description(self):
+        """
+        Human-readable explanation of how the current feed is built.
+        Used for algorithmic transparency (full control and clarity).
+        """
+        feed = self.get_feed_mode()
+        if feed == FEED_RECIENTES:
+            return (
+                "Noticias que aún no votaste, ordenadas por fecha de publicación. "
+                "Sin personalización: solo lo más reciente."
+            )
+        if feed == FEED_CONFORT:
+            return (
+                "Noticias que encajan con tu perfil: (1) las que tu burbuja valora como buenas (consenso ≥60%), "
+                "(2) las que otras personas de tu burbuja marcaron como buenas («quienes votan como vos también liked these»), "
+                "y (3) noticias sobre entidades con las que te involucraste positivamente. Si no tenés burbuja asignada, se muestra el feed reciente."
+            )
+        if feed == FEED_PUENTE:
+            return (
+                "Noticias donde varias burbujas coinciden (consenso entre clusters ≥70%). "
+                "Reduce la burbuja de filtro: ves dónde hay acuerdo entre perspectivas distintas."
+            )
+        # avanzado: describe the specific filter
+        filter_param = self.request.GET.get("filter") or "nuevas"
+        if filter_param == "nuevas":
+            return "Noticias que aún no votaste, ordenadas por fecha."
+        if filter_param == "todas":
+            return "Todas las noticias, ordenadas por fecha de agregado."
+        if filter_param in ("buena_mi", "mala_mi"):
+            return (
+                "Noticias que vos votaste como buena o mala, según tu sesión o cuenta."
+            )
+        if filter_param in ("buena_mayoria", "mala_mayoria"):
+            return (
+                "Noticias donde la mayoría de los votos son buena o mala (más del 50%)."
+            )
+        if filter_param == "cluster_consenso_buena":
+            return (
+                "Noticias que en tu burbuja tienen consenso ≥70% como buena noticia."
+            )
+        if filter_param == "otras_burbujas":
+            return (
+                "Noticias donde tu voto difiere de la mayoría de tu burbuja."
+            )
+        if filter_param.startswith("mencionan_"):
+            return "Noticias que mencionan a la entidad elegida (todas, positivas o negativas)."
+        return "Filtro aplicado según criterios de búsqueda."
+
     def get_filter_description(self):
         """
         Maps the applied filters to natural language descriptions.
         Returns a string describing the current filter in natural language.
         """
+        feed = self.get_feed_mode()
+        if feed == FEED_RECIENTES:
+            return "recientes: lo que aún no votaste"
+        if feed == FEED_CONFORT:
+            return "confort: lo que encaja con tu burbuja y tus entidades"
+        if feed == FEED_PUENTE:
+            return "puente: donde las burbujas coinciden"
+        # avanzado: use existing filter descriptions
         filter_param = self.request.GET.get("filter")
         entidad_id = self.request.GET.get("entidad")
 
@@ -275,8 +349,38 @@ class NewsTimelineView(ListView):
 
         # Get voter identifier (handles extension session priority)
         voter_data, lookup_data = get_voter_identifier(self.request)
+        feed = self.get_feed_mode()
+        logger.info(f"[Timeline Debug] Feed: {feed}")
 
-        # Get parameters from different possible sources
+        # --- Recientes: unvoted news, chronological (no personalization) ---
+        if feed == FEED_RECIENTES:
+            user = self.request.user if self.request.user.is_authenticated else None
+            session_key = lookup_data.get("session_key") if not user else None
+            return filter_recientes(queryset, user=user, session_key=session_key)
+
+        # --- Confort (afín): aligns with user (cluster + peers + entities) ---
+        if feed == FEED_CONFORT:
+            user = self.request.user if self.request.user.is_authenticated else None
+            session_key = lookup_data.get("session_key") if not user else None
+            queryset = filter_recientes(queryset, user=user, session_key=session_key)
+            voter_type = "user" if user else "session"
+            voter_id = str(user.id) if user else (session_key or "")
+            comfort_ids = get_confort_noticia_ids(voter_type, voter_id, lookup_data)
+            if comfort_ids is None or not comfort_ids:
+                return queryset  # recientes-style fallback
+            return queryset.filter(id__in=comfort_ids)
+
+        # --- Puente: cross-cluster consensus (break the bubble) ---
+        if feed == FEED_PUENTE:
+            ordered_ids = get_puente_ordered_noticia_ids(lookup_data)
+            if not ordered_ids:
+                return queryset.none()
+            ordering = Case(
+                *[When(id=x, then=i) for i, x in enumerate(ordered_ids)]
+            )
+            return queryset.filter(id__in=ordered_ids).order_by(ordering)
+
+        # --- Avanzado: full filter control (existing logic) ---
         filter_param = self.request.GET.get("filter", "")
         entidad_id = self.request.GET.get("entidad", "")
         logger.info(f"[Timeline Debug] Filter: {filter_param}")
@@ -296,7 +400,6 @@ class NewsTimelineView(ListView):
             entidad_id = self.request.resolver_match.kwargs.get("entidad", "")
 
         # Default filter: show news user hasn't voted on (nuevas)
-
         if not filter_param or filter_param == "nuevas":
             logger.info(f"[Timeline Debug] Filtering with: {lookup_data}")
             if self.request.user.is_authenticated:
@@ -480,7 +583,11 @@ class NewsTimelineView(ListView):
         if not self.request.headers.get("HX-Request"):
             context["form"] = NoticiaForm()
 
-        # Add current filter to context
+        # Feed mode and algorithmic transparency
+        context["feed_mode"] = self.get_feed_mode()
+        context["feed_algorithm_description"] = self.get_feed_algorithm_description()
+
+        # Add current filter to context (only meaningful when feed=avanzado)
         current_filter = self.request.GET.get("filter", "nuevas")
         context["current_filter"] = current_filter
 
@@ -638,11 +745,15 @@ class NewsTimelineView(ListView):
                     response.content + entity_filter_with_oob.encode()
                 )
 
-                # Send filter description update via HX-Trigger
+                # Send filter and algorithm description for client-side sync
                 import json
                 response["HX-Trigger"] = json.dumps({
                     "updateActiveFilters": {
-                        "description": context["filter_description"]
+                        "description": context["filter_description"],
+                        "algorithmDescription": context.get("feed_algorithm_description", "")
+                    },
+                    "updateFeedMode": {
+                        "feedMode": context.get("feed_mode", "confort")
                     }
                 })
                 return response
