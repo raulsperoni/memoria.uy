@@ -43,22 +43,19 @@
   </div>
 
   <!-- Hero / Value Prop -->
-  <div class="border-0 border-black bg-white p-4 mb-6">
-    <h2 class="text-lg md:text-xl font-bold mb-2">
-      Votá noticias. Descubrí patrones. Salí de tu burbuja.
-    </h2>
-    <p class="text-xs md:text-sm text-gray-700">
+  <div class="border-0 border-black bg-white p-4 mb-3">
+    <h2 class="text-lg md:text-xl font-bold">
       {% if has_cluster %}
-        Votá anónimamente y explorá cómo votan otras burbujas.
-        <a href="{% url 'mapa' %}" class="underline hover:text-black">Ver tu burbuja →</a>
-      {% else %}
-        Votá anónimamente y explorá cómo votan otras burbujas. Sin registro. Sin seguimiento.
-      {% endif %}
-    </p>
+      Votá noticias. Descubrí patrones. Salí de <a href="{% url 'mapa' %}" class="underline hover:text-black">tu burbuja →</a>
+    {% else %}
+      Votá noticias. Descubrí patrones. Salí de tu burbuja.
+    {% endif %}
+    </h2>
   </div>
 
-  <!-- Filter bar - Simplified and compact -->
+  <!-- Feed selector: Recientes | Afín (confort) | Puente | Avanzado -->
   <div x-data="{
+    feedMode: '{{ feed_mode|default:"recientes" }}',
     openAdvanced: false,
     primaryFilter: {% if current_filter == 'todas' %}'todas'{% elif current_filter == 'nuevas' or not current_filter %}'nuevas'{% elif current_filter in 'buena_mi,buena_mayoria,cluster_consenso_buena' %}'buenas'{% elif current_filter in 'mala_mi,mala_mayoria' %}'malas'{% elif current_filter in 'mencionan_a,mencionan_positiva,mencionan_negativa' %}''{% else %}'nuevas'{% endif %},
     perspective: {% if current_filter in 'buena_mi,mala_mi' %}'mi'{% elif current_filter == 'cluster_consenso_buena' %}'burbuja'{% elif current_filter in 'buena_mayoria,mala_mayoria' %}'mayoria'{% else %}'mi'{% endif %},
@@ -73,60 +70,110 @@
       this.primaryFilter = '';
       this.perspective = 'mi';
     }
-  }" class="mb-4">
+  }" x-init="
+    $watch('feedMode', function() {});
+    window.addEventListener('updateFeedMode', function(e) {
+      if (e.detail && e.detail.feedMode) feedMode = e.detail.feedMode;
+    });
+  " class="mb-4">
 
-    <!-- Active filter indicator (compact) -->
-    {% if current_filter %}
-    <div id="active-filter-text" class="mb-2 text-[10px] text-gray-600 mono">
-      > {{ filter_description }}
-      <button @click="window.location.href='{% url 'timeline' %}?filter=nuevas'"
-              class="ml-2 underline hover:text-black">
-        [limpiar]
+    <!-- Feed selector: Recientes | Afín | Puente | Avanzado (only these get feed-mode styling) -->
+    <p class="text-[11px] text-gray-600 mono mb-2">Elegí cómo leer</p>
+    <div id="feed-selector" class="flex flex-wrap items-center gap-2 mb-3">
+      <button type="button" class="js-feed-tab border border-black px-3 py-1.5 transition-colors text-[11px] mono font-medium"
+              @click="feedMode = 'recientes'; trackEvent('feed-change', {feed: 'recientes'});"
+              hx-get="{% url 'timeline' %}?feed=recientes"
+              hx-target="#timeline-items"
+              hx-swap="innerHTML"
+              hx-indicator="#timeline-skeleton-container"
+              hx-push-url="true"
+              :class="feedMode === 'recientes' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
+              title="Lo más reciente que aún no votaste">
+        recientes
+      </button>
+      <button type="button" class="js-feed-tab border border-black px-3 py-1.5 transition-colors text-[11px] mono font-medium"
+              @click="feedMode = 'confort'; trackEvent('feed-change', {feed: 'confort'});"
+              hx-get="{% url 'timeline' %}?feed=confort"
+              hx-target="#timeline-items"
+              hx-swap="innerHTML"
+              hx-indicator="#timeline-skeleton-container"
+              hx-push-url="true"
+              :class="feedMode === 'confort' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
+              title="Lo que tu burbuja valora y las entidades que te interesan">
+        afín
+      </button>
+      <button type="button" class="js-feed-tab border border-black px-3 py-1.5 transition-colors text-[11px] mono font-medium"
+              @click="feedMode = 'puente'; trackEvent('feed-change', {feed: 'puente'});"
+              hx-get="{% url 'timeline' %}?feed=puente"
+              hx-target="#timeline-items"
+              hx-swap="innerHTML"
+              hx-indicator="#timeline-skeleton-container"
+              hx-push-url="true"
+              :class="feedMode === 'puente' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
+              title="Donde las burbujas coinciden — salí de tu burbuja">
+        puente
+      </button>
+      <button type="button" class="js-feed-tab border border-black px-3 py-1.5 transition-colors text-[11px] mono font-medium"
+              @click="feedMode = 'avanzado'; trackEvent('feed-change', {feed: 'avanzado'});"
+              hx-get="{% url 'timeline' %}?feed=avanzado&filter=nuevas"
+              hx-target="#timeline-items"
+              hx-swap="innerHTML"
+              hx-indicator="#timeline-skeleton-container"
+              hx-push-url="true"
+              :class="feedMode === 'avanzado' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
+              title="Filtros completos a tu mano">
+        avanzado
+      </button>
+      <button onclick="shareTimeline()"
+              class="hidden md:flex ml-auto border border-black px-2.5 py-1 hover:bg-black hover:text-white transition-all text-[10px] mono font-medium items-center gap-1.5"
+              title="Compartir timeline en WhatsApp">
+        {% include "noticias/_share_icons.html" with icon="whatsapp" class="w-3 h-3" %}
+        <span>compartir</span>
       </button>
     </div>
-    {% endif %}
 
-    <!-- Primary filters - Always visible, compact -->
-    <div class="flex flex-wrap items-center justify-between gap-1.5 mb-2">
-      <div class="flex flex-wrap gap-1.5">
-        <button @click="primaryFilter = 'nuevas'; clearEntityFilter(); trackEvent('filter-change', {filter: 'nuevas'});"
-                hx-get="{% url 'timeline' %}?filter=nuevas"
+    <!-- How this feed is built (transparency) -->
+    <div id="feed-algorithm-box" class="border border-gray-200 bg-gray-50/80 p-3 mb-3">
+      <p class="text-[10px] text-gray-500 mono uppercase tracking-wide mb-1.5">Qué muestra este algoritmo</p>
+      <p id="active-filter-text" class="text-[11px] md:text-xs text-gray-700 leading-relaxed">
+        {{ feed_algorithm_description }}
+      </p>
+    </div>
+
+    <!-- Avanzado only: filter bar (nuevas, buenas, malas, todas, + más) -->
+    <div x-show="feedMode === 'avanzado'" x-transition class="mb-2">
+      <div class="flex flex-wrap items-center gap-1.5 mb-2">
+        <span class="text-[9px] text-gray-500 mono">filtro:</span>
+        <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=nuevas"
                 hx-target="#timeline-items"
                 hx-swap="innerHTML"
                 hx-indicator="#timeline-skeleton-container"
                 hx-push-url="true"
-                :class="primaryFilter === 'nuevas' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
-                class="border border-black px-2.5 py-1 transition-colors text-[10px] mono font-medium">
+                class="border border-black px-2.5 py-1 text-[10px] mono transition-colors {% if current_filter == 'nuevas' or not current_filter %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %}">
           nuevas
         </button>
-        <button @click="primaryFilter = 'buenas'; perspective = 'mi'; clearEntityFilter(); trackEvent('filter-change', {filter: 'buena_mi'});"
-                hx-get="{% url 'timeline' %}?filter=buena_mi"
+        <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=buena_mi"
                 hx-target="#timeline-items"
                 hx-swap="innerHTML"
                 hx-indicator="#timeline-skeleton-container"
                 hx-push-url="true"
-                :class="primaryFilter === 'buenas' ? 'bg-green-600 text-white border-green-600' : 'bg-white hover:bg-green-50 border-green-600'"
-                class="border px-2.5 py-1 transition-colors text-[10px] mono font-medium">
+                class="border border-green-600 px-2.5 py-1 text-[10px] mono transition-colors {% if current_filter == 'buena_mi' %}bg-green-600 text-white{% else %}bg-white hover:bg-green-50{% endif %}">
           😊 buenas
         </button>
-        <button @click="primaryFilter = 'malas'; perspective = 'mi'; clearEntityFilter(); trackEvent('filter-change', {filter: 'mala_mi'});"
-                hx-get="{% url 'timeline' %}?filter=mala_mi"
+        <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=mala_mi"
                 hx-target="#timeline-items"
                 hx-swap="innerHTML"
                 hx-indicator="#timeline-skeleton-container"
                 hx-push-url="true"
-                :class="primaryFilter === 'malas' ? 'bg-red-600 text-white border-red-600' : 'bg-white hover:bg-red-50 border-red-600'"
-                class="border px-2.5 py-1 transition-colors text-[10px] mono font-medium">
+                class="border border-red-600 px-2.5 py-1 text-[10px] mono transition-colors {% if current_filter == 'mala_mi' %}bg-red-600 text-white{% else %}bg-white hover:bg-red-50{% endif %}">
           😞 malas
         </button>
-        <button @click="primaryFilter = 'todas'; clearEntityFilter(); trackEvent('filter-change', {filter: 'todas'});"
-                hx-get="{% url 'timeline' %}?filter=todas"
+        <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=todas"
                 hx-target="#timeline-items"
                 hx-swap="innerHTML"
                 hx-indicator="#timeline-skeleton-container"
                 hx-push-url="true"
-                :class="primaryFilter === 'todas' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
-                class="border border-black px-2.5 py-1 transition-colors text-[10px] mono font-medium">
+                class="border border-black px-2.5 py-1 text-[10px] mono transition-colors {% if current_filter == 'todas' %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %}">
           todas
         </button>
         <button @click="openAdvanced = !openAdvanced"
@@ -135,58 +182,53 @@
           <span x-show="openAdvanced">- menos</span>
         </button>
       </div>
-      <button onclick="shareTimeline()"
-              class="hidden md:flex border border-black px-2.5 py-1 hover:bg-black hover:text-white transition-all text-[10px] mono font-medium items-center gap-1.5"
-              title="Compartir timeline en WhatsApp">
-        {% include "noticias/_share_icons.html" with icon="whatsapp" class="w-3 h-3" %}
-        <span>compartir</span>
-      </button>
-    </div>
 
-    <!-- Advanced filters (collapsible) -->
-    <div x-show="openAdvanced" x-transition class="border border-gray-300 bg-gray-50 p-2.5 space-y-2.5 mb-2">
-
-      <!-- Perspective selector (compact) -->
-      <div x-show="showPerspectiveSelector()" x-transition class="pb-2 border-b border-gray-300">
-        <div class="text-[9px] text-gray-600 mb-1.5 mono">según:</div>
+      <!-- Advanced filters (collapsible): perspective + entity -->
+      <div x-show="openAdvanced" x-transition class="border border-gray-300 bg-gray-50 p-2.5 space-y-2.5 mb-2">
+        <div class="text-[9px] text-gray-600 mb-1.5 mono">según: mi opinión | mi burbuja | la mayoría</div>
         <div class="flex flex-wrap gap-1.5">
-          <button @click="perspective = 'mi'; clearEntityFilter()"
-                  x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mi'"
+          <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=buena_mi"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
                   hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
-                  :class="perspective === 'mi' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
-                  class="border border-black px-2 py-1 transition-colors text-[10px] mono">
-            mi opinión
-          </button>
-          <button @click="perspective = 'burbuja'; clearEntityFilter()"
-                  hx-get="{% url 'timeline' %}?filter=cluster_consenso_buena"
+                  class="border border-black px-2 py-1 text-[10px] mono {% if current_filter == 'buena_mi' %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %}">mi opinión (buenas)</button>
+          <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=mala_mi"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
                   hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
-                  :class="perspective === 'burbuja' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-blue-50 border-blue-600'"
-                  class="border px-2 py-1 transition-colors text-[10px] mono {% if not has_cluster %}opacity-50 cursor-not-allowed{% endif %}"
-                  {% if not has_cluster %}disabled{% endif %}>
-            mi burbuja
-          </button>
-          <button @click="perspective = 'mayoria'; clearEntityFilter()"
-                  x-bind:hx-get="'{% url 'timeline' %}?filter=' + (primaryFilter === 'buenas' ? 'buena' : 'mala') + '_mayoria'"
+                  class="border border-black px-2 py-1 text-[10px] mono {% if current_filter == 'mala_mi' %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %}">mi opinión (malas)</button>
+          <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=cluster_consenso_buena"
                   hx-target="#timeline-items"
                   hx-swap="innerHTML"
                   hx-indicator="#timeline-skeleton-container"
                   hx-push-url="true"
-                  :class="perspective === 'mayoria' ? 'bg-black text-white' : 'bg-white hover:bg-gray-100'"
-                  class="border border-black px-2 py-1 transition-colors text-[10px] mono">
-            la mayoría
-          </button>
+                  class="border border-blue-600 px-2 py-1 text-[10px] mono {% if current_filter == 'cluster_consenso_buena' %}bg-blue-600 text-white{% else %}bg-white hover:bg-blue-50{% endif %} {% if not has_cluster %}opacity-50 cursor-not-allowed{% endif %}"
+                  {% if not has_cluster %}disabled{% endif %}>mi burbuja</button>
+          <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=buena_mayoria"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
+                  hx-push-url="true"
+                  class="border border-black px-2 py-1 text-[10px] mono {% if current_filter == 'buena_mayoria' %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %}">la mayoría (buenas)</button>
+          <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=mala_mayoria"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
+                  hx-push-url="true"
+                  class="border border-black px-2 py-1 text-[10px] mono {% if current_filter == 'mala_mayoria' %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %}">la mayoría (malas)</button>
+          <button hx-get="{% url 'timeline' %}?feed=avanzado&filter=otras_burbujas"
+                  hx-target="#timeline-items"
+                  hx-swap="innerHTML"
+                  hx-indicator="#timeline-skeleton-container"
+                  hx-push-url="true"
+                  class="border border-black px-2 py-1 text-[10px] mono {% if current_filter == 'otras_burbujas' %}bg-black text-white{% else %}bg-white hover:bg-gray-100{% endif %} {% if not has_cluster %}opacity-50 cursor-not-allowed{% endif %}"
+                  {% if not has_cluster %}disabled{% endif %}>otras burbujas</button>
         </div>
-      </div>
-
-      <!-- Entity filters (compact) -->
-      <div>
-        {% include "noticias/entity_filter.html" %}
+        <div>
+          {% include "noticias/entity_filter.html" with feed_param="avanzado" %}
+        </div>
       </div>
     </div>
   </div>
@@ -460,9 +502,28 @@
   });
 
   document.body.addEventListener('updateActiveFilters', function(event) {
-    const filterText = document.getElementById('active-filter-text');
-    if (filterText && event.detail && event.detail.description) {
-      filterText.textContent = '> ' + event.detail.description;
+    const algorithmBox = document.getElementById('active-filter-text');
+    if (algorithmBox && event.detail) {
+      if (event.detail.algorithmDescription) {
+        algorithmBox.textContent = event.detail.algorithmDescription;
+      } else if (event.detail.description) {
+        algorithmBox.textContent = event.detail.description;
+      }
+    }
+  });
+  document.body.addEventListener('updateFeedMode', function(event) {
+    if (event.detail && event.detail.feedMode) {
+      // Only the four top-level feed tabs (recientes, afín, puente, avanzado)
+      const feedTabs = document.querySelectorAll('#feed-selector .js-feed-tab');
+      const currentFeed = event.detail.feedMode;
+      feedTabs.forEach(function(btn) {
+        const url = btn.getAttribute('hx-get') || '';
+        const isActive = url.indexOf('feed=' + currentFeed) !== -1;
+        btn.classList.toggle('bg-black', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('bg-white', !isActive);
+        btn.classList.toggle('hover:bg-gray-100', !isActive);
+      });
     }
   });
 
@@ -1005,11 +1066,12 @@
       entries.forEach(entry => {
         if (entry.isIntersecting && loadMoreTrigger && !isPreloading) {
           const nextPage = loadMoreTrigger.getAttribute('data-next-page');
+          const feed = loadMoreTrigger.getAttribute('data-feed');
           const currentFilter = loadMoreTrigger.getAttribute('data-current-filter');
           const entityFilter = loadMoreTrigger.getAttribute('data-entity-filter');
           
           if (nextPage) {
-            const cacheKey = `${nextPage}-${currentFilter}-${entityFilter}`;
+            const cacheKey = `${nextPage}-${feed || ''}-${currentFilter}-${entityFilter}`;
             
             // Check if already cached
             if (preloadCache.has(cacheKey)) {
@@ -1021,6 +1083,7 @@
             // Preload next page in background
             const url = '{% url "timeline" %}?page=' + nextPage;
             const params = [];
+            if (feed) params.push('feed=' + feed);
             if (currentFilter) params.push('filter=' + currentFilter);
             if (entityFilter) params.push('entidad=' + entityFilter);
             const fullUrl = url + (params.length ? '&' + params.join('&') : '');
@@ -1075,9 +1138,10 @@
     const trigger = event.detail.elt;
     if (trigger && trigger.id === 'load-more-trigger') {
       const nextPage = trigger.getAttribute('data-next-page');
+      const feed = trigger.getAttribute('data-feed');
       const currentFilter = trigger.getAttribute('data-current-filter');
       const entityFilter = trigger.getAttribute('data-entity-filter');
-      const cacheKey = `${nextPage}-${currentFilter}-${entityFilter}`;
+      const cacheKey = `${nextPage}-${feed || ''}-${currentFilter}-${entityFilter}`;
       
       if (preloadCache.has(cacheKey)) {
         const preloadedContent = preloadCache.get(cacheKey);

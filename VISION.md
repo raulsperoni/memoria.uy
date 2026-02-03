@@ -51,6 +51,16 @@ El sistema agrupa votantes por patrones de voto similares, revelando
 "burbujas" de opinión. Podés ver tu posición en el mapa y filtrar noticias
 por consenso de tu cluster.
 
+### 5. Feeds del timeline: recientes, afín, puente, avanzado
+En el timeline podés elegir cómo querés leer:
+
+- **Recientes**: lo que aún no votaste, ordenado por fecha. Sin personalización.
+- **Afín (confort)**: noticias que encajan con tu perfil —las que tu burbuja valora como buenas, las que otras personas de tu burbuja marcaron como buenas, y noticias sobre entidades con las que te involucraste positivamente.
+- **Puente**: noticias donde varias burbujas coinciden (alto consenso entre clusters). Pensado para *salir de tu burbuja* y ver dónde hay acuerdo entre perspectivas distintas.
+- **Avanzado**: filtros completos a tu mano (por opinión, mayoría, burbuja, entidades).
+
+Cada feed explica en la interfaz cómo se arma (transparencia algorítmica).
+
 ## Usuarios objetivo
 
 - Uruguayos interesados en noticias locales
@@ -85,6 +95,7 @@ por consenso de tu cluster.
 - [x] Clustering Polis-style (PCA + K-Means + silhouette)
 - [x] Visualización interactiva de clusters
 - [x] Filtro por consenso de cluster ("mi burbuja")
+- [x] **Feeds del timeline**: recientes, afín (confort), puente, avanzado — con transparencia algorítmica
 - [x] Sincronización de sesión extensión ↔ web
 - [x] Rediseño del mapa (estilo cartográfico, no scatter plot)
 - [x] Noticias proyectadas en el mapa de clusters
@@ -101,7 +112,6 @@ por consenso de tu cluster.
 - [ ] Email semanal automático basado en cluster
 - [ ] Página de settings de usuario
 - [ ] Seguimiento temporal de entidades (evolución de sentimiento)
-- [ ] Recomendaciones basadas en cluster
 - [ ] Bridge-builder detection (votantes que conectan clusters)
 - [ ] API pública para investigadores
 

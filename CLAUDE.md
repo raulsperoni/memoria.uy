@@ -216,6 +216,7 @@ docker-compose up -d --build
 | Archivo | Propósito |
 |---------|-----------|
 | `core/views.py` | Timeline, votación, filtros, signup prompt |
+| `core/feeds.py` | Algoritmos de feeds: recientes, confort (afín), puente (testeables, sin request) |
 | `core/views_clustering.py` | Mapa de burbujas, reporte de investigación, APIs de análisis |
 | `core/templates/clustering/report.html` | Reporte narrativo completo |
 | `core/templates/clustering/components/` | Componentes modulares del reporte |
