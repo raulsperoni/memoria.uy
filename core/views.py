@@ -10,6 +10,7 @@ from django.views.generic import (
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import login
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
@@ -21,7 +22,7 @@ from core.models import (
     VoterClusterRun,
     VoterClusterMembership,
 )
-from core.utils import normalize_url
+from core.utils import normalize_url, get_user_from_reengagement_token
 import validators
 from urllib.parse import urlparse
 
@@ -1186,6 +1187,29 @@ class NoticiaDetailView(DetailView):
             context["has_cluster"] = False
 
         return context
+
+
+class EmailAccessProfileView(View):
+    """
+    One-click link from reengagement email: validate token, unsubscribe from
+    reengagement emails, log the user in, and redirect to profile.
+    """
+    def get(self, request):
+        token = request.GET.get("token")
+        if not token:
+            messages.error(request, "Link inválido o expirado.")
+            return redirect("timeline")
+        user = get_user_from_reengagement_token(token)
+        if not user:
+            messages.error(request, "Link inválido o expirado.")
+            return redirect("timeline")
+        from core.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.reengagement_email_enabled = False
+        profile.save(update_fields=["reengagement_email_enabled", "updated_at"])
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        messages.success(request, "Dejaste de recibir estos correos. Podés cambiar más opciones abajo.")
+        return redirect("profile")
 
 
 class ProfileEditView(LoginRequiredMixin, FormView):

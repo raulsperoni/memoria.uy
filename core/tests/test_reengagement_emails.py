@@ -7,6 +7,7 @@ from django.utils import timezone
 from core.models import (
     Noticia,
     ReengagementEmailLog,
+    UserProfile,
     VoterCluster,
     VoterClusterMembership,
     VoterClusterRun,
@@ -195,3 +196,27 @@ def test_send_reengagement_emails_sends_after_threshold():
     
     # Verify that a new log entry was created
     assert ReengagementEmailLog.objects.filter(user=user).count() == 2
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def test_send_reengagement_emails_skips_when_reengagement_disabled():
+    """Users with reengagement_email_enabled=False are not sent the email."""
+    user = User.objects.create_user(
+        username="optedout",
+        email="optedout@example.com",
+        password="pass1234",
+    )
+    user.last_login = timezone.now() - timezone.timedelta(days=10)
+    user.save()
+    profile, _ = UserProfile.objects.get_or_create(user=user, defaults={"reengagement_email_enabled": True})
+    profile.reengagement_email_enabled = False
+    profile.save()
+
+    Noticia.objects.create(enlace="https://example.com/8")
+
+    result = send_reengagement_emails(days_inactive=7, notify_staff=False)
+
+    assert result["sent"] == 0
+    assert result["skipped"] == 0
+    assert len(mail.outbox) == 0
