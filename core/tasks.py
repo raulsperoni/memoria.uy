@@ -19,7 +19,9 @@ from django.core.mail import get_connection, send_mail
 from django.db.models import Max, OuterRef, Q, Subquery
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.urls import reverse
 from functools import wraps
+from core.utils import make_reengagement_access_token
 from core import url_requests
 from django.utils import timezone
 import time
@@ -864,10 +866,12 @@ def send_reengagement_emails(
     )
 
     User = get_user_model()
+    from core.models import UserProfile
     inactive_users = (
         User.objects.filter(is_active=True)
         .exclude(email="")
         .exclude(is_staff=True)  # Exclude staff users from reengagement emails
+        .exclude(profile__reengagement_email_enabled=False)
         .annotate(
             last_vote=Subquery(last_vote_subquery),
             last_reengagement_email=Subquery(last_email_subquery),
@@ -954,9 +958,14 @@ def send_reengagement_emails(
                 "",
                 f"Entrar a votar: {site_url}",
                 "",
+                "Si no queres recibir mas estos correos: "
+                + f"{site_url.rstrip('/')}{reverse('email_access_profile')}?token={make_reengagement_access_token(user.id)}",
+                "",
                 "Gracias!",
             ]
         )
+
+        unsubscribe_url = f"{site_url.rstrip('/')}{reverse('email_access_profile')}?token={make_reengagement_access_token(user.id)}"
 
         # HTML version with clickable links
         html_lines = [
@@ -973,6 +982,7 @@ def send_reengagement_emails(
             [
                 "<p>En cual estas?</p>",
                 f'<p><a href="{site_url}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Entrar a votar</a></p>',
+                f'<p style="font-size: 12px; color: #666;"><a href="{unsubscribe_url}">Dejar de recibir estos correos</a></p>',
                 "<p>Gracias!</p>",
             ]
         )

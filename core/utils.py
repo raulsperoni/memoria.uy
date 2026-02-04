@@ -86,3 +86,28 @@ def normalize_url(url):
         # If normalization fails, return original URL
         logger.warning(f"Failed to normalize URL {url}: {e}")
         return url
+
+
+# Token for one-click unsubscribe + profile access (reengagement email)
+REENGAGEMENT_TOKEN_MAX_AGE_DAYS = 30
+
+
+def make_reengagement_access_token(user_id):
+    """Return a signed token for the user to access profile and unsubscribe (no login)."""
+    from django.core.signing import TimestampSigner
+    signer = TimestampSigner()
+    return signer.sign(str(user_id))
+
+
+def get_user_from_reengagement_token(token):
+    """
+    Validate token and return the User or None if invalid/expired.
+    """
+    from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
+    from django.contrib.auth import get_user_model
+    try:
+        signer = TimestampSigner()
+        user_id = signer.unsign(token, max_age=REENGAGEMENT_TOKEN_MAX_AGE_DAYS * 24 * 3600)
+        return get_user_model().objects.filter(pk=int(user_id)).first()
+    except (SignatureExpired, BadSignature, ValueError):
+        return None

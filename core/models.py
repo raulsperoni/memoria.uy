@@ -664,6 +664,10 @@ class UserProfile(models.Model):
         default=False,
         help_text="Receive weekly emails with news in your area of interest"
     )
+    reengagement_email_enabled = models.BooleanField(
+        default=True,
+        help_text="Receive re-engagement emails when inactive"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

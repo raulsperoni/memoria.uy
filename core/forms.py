@@ -83,11 +83,12 @@ class ProfileEditForm(forms.ModelForm):
     class Meta:
         from core.models import UserProfile
         model = UserProfile
-        fields = ['alias', 'show_alias_on_map', 'weekly_email_enabled']
+        fields = ['alias', 'show_alias_on_map', 'weekly_email_enabled', 'reengagement_email_enabled']
         labels = {
             'alias': 'Alias (opcional)',
             'show_alias_on_map': 'Mostrar mi alias en el mapa de opiniones',
             'weekly_email_enabled': 'Recibir email semanal con nuevas noticias',
+            'reengagement_email_enabled': 'Recibir correos cuando hace tiempo que no entrás',
         }
         help_texts = {
             'alias': 'Nombre que aparecerá en el mapa de opiniones',
@@ -106,6 +107,11 @@ class ProfileEditForm(forms.ModelForm):
                 }
             ),
             'weekly_email_enabled': forms.CheckboxInput(
+                attrs={
+                    "class": "w-4 h-4 border-2 border-black focus:ring-2 focus:ring-black",
+                }
+            ),
+            'reengagement_email_enabled': forms.CheckboxInput(
                 attrs={
                     "class": "w-4 h-4 border-2 border-black focus:ring-2 focus:ring-black",
                 }
