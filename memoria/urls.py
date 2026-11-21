@@ -190,6 +190,7 @@ urlpatterns = [
         ClusterReportView.as_view(),
         name="cluster-report",
     ),
+    path("", include("archivo.urls")),
     path("accounts/", include("allauth.urls")),
     path("accounts/email-access/", EmailAccessProfileView.as_view(), name="email_access_profile"),
     path("accounts/profile/", ProfileEditView.as_view(), name="profile"),

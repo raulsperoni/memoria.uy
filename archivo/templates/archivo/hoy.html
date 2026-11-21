@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Lo que pasó hoy · archivo · memoria.uy{% endblock %}
+{% block meta_description %}Las noticias uruguayas del día, agrupadas por hecho, con lo que dijo cada medio y las notas que cambiaron después de publicadas.{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+  {% include "archivo/_nav.html" %}
+  <h2 class="mono text-2xl font-bold mb-1">Lo que pasó</h2>
+  <p class="mono text-xs text-gray-600 mb-6">// Historias de las últimas 48 h, ordenadas por cobertura. Cada hecho, con sus fuentes.</p>
+
+  {% if cambios %}
+  <section class="mb-8 border-2 border-black p-4">
+    <h3 class="mono font-bold text-sm mb-2">Notas que cambiaron después de publicadas</h3>
+    <ul class="space-y-2">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
+    <a href="{% url 'archivo:cambios' %}?sentido=1" class="mono text-xs underline mt-2 inline-block">ver todas →</a>
+  </section>
+  {% endif %}
+
+  <div class="space-y-4">
+    {% for h in historias %}{% include "archivo/_historia_item.html" %}
+    {% empty %}<p class="mono text-sm text-gray-600">Todavía no hay historias procesadas.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

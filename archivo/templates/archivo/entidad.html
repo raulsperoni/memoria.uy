@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ entidad.nombre }} · archivo · memoria.uy{% endblock %}
+{% block meta_description %}Todo lo que pasó con {{ entidad.nombre }} en las noticias uruguayas, con fuentes.{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+  {% include "archivo/_nav.html" %}
+  <p class="mono text-xs text-gray-600">{{ entidad.get_tipo_display }}</p>
+  <h2 class="text-3xl font-bold mb-6">{{ entidad.nombre }}</h2>
+
+  {% if proposiciones %}
+  <section class="mb-8 border-2 border-black p-4">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">Para opinar</h3>
+    <ul class="space-y-1">{% for p in proposiciones %}<li>«{{ p.texto }}» <a class="mono text-[11px] underline" href="{% url 'archivo:historia' p.historia.slug %}">contexto</a></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Línea de tiempo</h3>
+  <ol class="relative border-l-2 border-black ml-2 space-y-5">
+    {% for h in historias %}
+    <li class="ml-4">
+      <span class="absolute -left-[7px] w-3 h-3 bg-black"></span>
+      <p class="mono text-[11px] text-gray-600">{{ h.primera_fuente_en|date:"d/m/Y" }} · {{ h.n_medios }} medio{{ h.n_medios|pluralize }}</p>
+      <a href="{% url 'archivo:historia' h.slug %}" class="font-bold hover:underline">{{ h.titulo }}</a>
+      <p class="text-sm text-gray-700">{{ h.resumen|truncatechars:180 }}</p>
+    </li>
+    {% empty %}<li class="ml-4 mono text-sm text-gray-600">Sin historias todavía.</li>
+    {% endfor %}
+  </ol>
+</div>
+{% endblock %}

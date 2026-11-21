@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{% if q %}«{{ q }}» · {% endif %}buscar · archivo · memoria.uy{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+  {% include "archivo/_nav.html" %}
+  {% if q %}
+    {% if entidades %}
+    <div class="flex flex-wrap gap-2 mb-6">
+      {% for e in entidades %}<a href="{% url 'archivo:entidad-slug' e.pk e.nombre|slugify %}" class="mono text-xs border border-black px-2 py-1 hover:bg-black hover:text-white">{{ e.nombre }} ({{ e.n }})</a>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="space-y-4">
+      {% for h in historias %}{% include "archivo/_historia_item.html" %}
+      {% empty %}<p class="mono text-sm text-gray-600">Sin resultados para «{{ q }}».</p>{% endfor %}
+    </div>
+    {% include "archivo/_paginacion.html" %}
+  {% else %}
+    <p class="mono text-sm text-gray-600">Buscá personas, organizaciones o temas.</p>
+  {% endif %}
+</div>
+{% endblock %}

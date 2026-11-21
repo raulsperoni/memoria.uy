@@ -1,0 +1,11 @@
+<article class="border-2 border-black p-4 hover:bg-gray-50">
+  <div class="mono text-[11px] text-gray-600 flex flex-wrap gap-x-3 mb-1">
+    <span>{{ h.primera_fuente_en|date:"d/m/Y H:i" }}</span>
+    {% if h.categoria %}<span>#{{ h.categoria }}</span>{% endif %}
+    <span>{{ h.n_medios }} medio{{ h.n_medios|pluralize }}</span>
+  </div>
+  <h3 class="font-bold text-lg leading-snug">
+    <a href="{% url 'archivo:historia' h.slug %}" class="hover:underline">{{ h.titulo }}</a>
+  </h3>
+  {% if h.resumen %}<p class="text-sm text-gray-800 mt-1">{{ h.resumen|truncatechars:240 }}</p>{% endif %}
+</article>
