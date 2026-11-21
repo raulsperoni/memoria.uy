@@ -42,6 +42,22 @@ app.conf.beat_schedule = {
         "task": "core.tasks.generate_cluster_report_snapshot",
         "schedule": crontab(minute=0),  # Run every hour at minute 0
     },
+    "archivo-ciclo-ingesta": {
+        "task": "archivo.tasks.ciclo_ingesta",
+        "schedule": crontab(minute="*/30"),
+    },
+    "archivo-procesar-historias": {
+        "task": "archivo.tasks.procesar_historias",
+        "schedule": crontab(minute="*/15"),
+    },
+    "archivo-recrawls": {
+        "task": "archivo.tasks.recrawls_pendientes",
+        "schedule": crontab(minute=40),
+    },
+    "archivo-cerrar-historias": {
+        "task": "archivo.tasks.cerrar_historias",
+        "schedule": crontab(minute=5),
+    },
 }
 
 if os.getenv("ENABLE_REENGAGEMENT_EMAILS", "False") == "True":
