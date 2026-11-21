@@ -21,7 +21,13 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
-from core.sitemaps import NoticiaSitemap, StaticViewSitemap
+from core.sitemaps import (
+    CambioSitemap,
+    EntidadSitemap,
+    HistoriaSitemap,
+    NoticiaSitemap,
+    StaticViewSitemap,
+)
 from core.views import (
     NewsTimelineView,
     VoteView,
@@ -64,6 +70,9 @@ from memoria.views import health_check, robots_txt, favicon
 sitemaps = {
     "noticias": NoticiaSitemap,
     "static": StaticViewSitemap,
+    "historias": HistoriaSitemap,
+    "entidades": EntidadSitemap,
+    "cambios": CambioSitemap,
 }
 
 # Custom error handlers

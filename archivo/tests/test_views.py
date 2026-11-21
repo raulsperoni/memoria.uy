@@ -69,3 +69,18 @@ def test_dia_invalido_404(client, db):
 def test_historia_no_procesada_404(client, db):
     h = Historia.objects.create(titulo="x", slug="x")
     assert client.get(reverse("archivo:historia", args=["x"])).status_code == 404
+
+
+def test_sitemap_incluye_historias(client, historia):
+    r = client.get("/sitemap.xml")
+    assert r.status_code == 200
+    assert f"/h/{historia.slug}/" in r.content.decode()
+
+
+def test_metricas_resumen(historia):
+    from archivo.metricas import lineas_html, lineas_texto, resumen_ingesta
+
+    r = resumen_ingesta()
+    assert r["historias"] == 1
+    assert r["cambios"] == 1
+    assert lineas_texto(r) and lineas_html(r)

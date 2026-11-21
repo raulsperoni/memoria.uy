@@ -1182,9 +1182,20 @@ def send_daily_staff_summary():
         if new_users_count > 10:
             html_lines.append(f"<p>... y {new_users_count - 10} más</p>")
 
+    try:
+        from archivo.metricas import lineas_html, lineas_texto, resumen_ingesta
+
+        resumen_archivo = resumen_ingesta()
+        lines.extend(lineas_texto(resumen_archivo))
+        archivo_html = lineas_html(resumen_archivo)
+    except Exception as exc:  # el resumen no debe fallar por el archivo
+        logger.error(f"Resumen de archivo falló: {exc}")
+        archivo_html = []
+
     html_lines.extend(
         [
             f"<h3>🗳️ Votos nuevos: {new_votes_count}</h3>",
+            *archivo_html,
             "<hr>",
             f'<p><a href="{site_url}">Ver más en memoria.uy</a></p>',
         ]
