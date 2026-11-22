@@ -87,21 +87,6 @@ class Noticia(models.Model):
         """Display date (just submission date for MVP)."""
         return self.fecha_agregado
 
-    def update_meta_from_url(self):
-        """
-        Fetch title, image, and description from original URL meta tags.
-        Fast, synchronous operation (just HTTP HEAD + parse <meta> tags).
-        """
-        title, image, description = parse.parse_from_meta_tags(self.enlace)
-        if title:
-            self.meta_titulo = title
-        if image:
-            self.meta_imagen = image
-        if description:
-            self.meta_descripcion = description
-        self.save()
-
-
 class Voto(models.Model):
     """
     User vote on a news article.

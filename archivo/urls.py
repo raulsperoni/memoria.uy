@@ -5,6 +5,7 @@ from . import views
 app_name = "archivo"
 
 urlpatterns = [
+    path("", views.HoyView.as_view(), name="home"),
     path("archivo/", views.HoyView.as_view(), name="hoy"),
     path("archivo/<int:y>/<int:m>/<int:d>/", views.DiaView.as_view(), name="dia"),
     path("h/<slug:slug>/", views.HistoriaView.as_view(), name="historia"),

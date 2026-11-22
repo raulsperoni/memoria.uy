@@ -104,15 +104,6 @@
     {% if user.is_staff %}
     <div class="ml-auto flex gap-2">
       <button
-        hx-post="{% url 'noticia-refresh' noticia.pk %}"
-        hx-target="#noticia-{{ noticia.pk }}"
-        hx-swap="outerHTML"
-        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-        hx-indicator="#refresh-indicator-{{ noticia.pk }}"
-        class="border border-black px-2 py-1 hover:bg-black hover:text-white text-xs">
-        ↻ refresh
-      </button>
-      <button
         hx-post="{% url 'noticia-delete' noticia.pk %}"
         hx-target="#noticia-{{ noticia.pk }}"
         hx-swap="outerHTML swap:1s"

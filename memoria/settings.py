@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sitemaps",
-    "corsheaders",
     "django_browser_reload",
     "allauth",
     "allauth.account",
@@ -52,7 +51,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -277,25 +275,3 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# CORS Configuration for Browser Extension
-# Allow extensions to communicate with API
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-cors_allowed = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:8000,https://memoria.uy"
-).split(",")
-if railway_domain:
-    cors_allowed.append(f"https://{railway_domain}")
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_allowed]
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-    "x-extension-session",
-]

@@ -81,21 +81,6 @@ class TestRateLimiting:
         # El endpoint funciona (puede ser 200/302 por success, o 403 por CSRF en tests)
         assert response.status_code in [200, 302, 403], f"Unexpected status: {response.status_code}"
 
-    def test_submit_api_has_ratelimit(self, client):
-        """Verifica que el API de submit responde (decorator aplicado)."""
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://example.com/article',
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_FORWARDED_FOR='192.168.1.200',
-            HTTP_X_EXTENSION_SESSION='test-session-123'
-        )
-        # El endpoint responde (200/201 success, 400 validation error son OK)
-        assert response.status_code in [200, 201, 400, 429]
 
     def test_check_vote_endpoint_works(self, client):
         """Verifica que el endpoint check-vote responde."""
@@ -111,101 +96,6 @@ class TestRateLimiting:
 # Tests de Validación de URLs
 # ============================================================================
 
-@pytest.mark.django_db
-class TestURLValidation:
-    """Tests de validación de URLs en submit de noticias."""
-
-    def test_reject_http_url(self, client):
-        """Rechaza URLs HTTP (solo HTTPS permitido)."""
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'http://example.com/article',  # HTTP en vez de HTTPS
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
-        data = json.loads(response.content)
-        assert 'HTTPS' in data['error']
-
-    def test_reject_invalid_url_format(self, client):
-        """Rechaza URLs con formato inválido."""
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'not-a-valid-url',
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
-        data = json.loads(response.content)
-        assert 'inválida' in data['error'].lower()
-
-    def test_reject_blacklisted_domain(self, client):
-        """Rechaza dominios en blacklist."""
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://spam.com/article',
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
-        data = json.loads(response.content)
-        assert 'permitido' in data['error'].lower()
-
-    def test_accept_valid_https_url(self, client):
-        """Acepta URLs HTTPS válidas."""
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://ladiaria.com.uy/articulo/2024/test',
-                'html': '<html><body>Test Article</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code in [200, 201], "Valid HTTPS URL should be accepted"
-
-    def test_reject_url_too_long(self, client):
-        """Rechaza URLs excesivamente largas."""
-        long_url = 'https://example.com/' + 'a' * 2000
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': long_url,
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
-        data = json.loads(response.content)
-        assert 'larga' in data['error'].lower()
-
-    def test_url_validation_in_web_form(self, client):
-        """Verifica validación de URL en formulario web."""
-        response = client.post(
-            '/noticias/new/',
-            {
-                'enlace': 'http://example.com/article',  # HTTP
-                'opinion': 'buena'
-            },
-            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
-        )
-        # Debe fallar por HTTP
-        assert response.status_code in [200, 400]  # Form error
 
 
 # ============================================================================
@@ -289,43 +179,6 @@ class TestErrorHandling:
         )
         assert response.status_code == 400, "Invalid vote opinion should be rejected"
 
-    def test_missing_required_fields_in_api(self, client):
-        """Rechaza requests de API sin campos requeridos."""
-        # Sin URL
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
-
-        # Sin HTML
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://example.com/article',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
-
-        # Sin voto
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://example.com/article',
-                'html': '<html><body>Test</body></html>'
-            }),
-            content_type='application/json',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400
 
 
 # ============================================================================
@@ -333,59 +186,6 @@ class TestErrorHandling:
 # ============================================================================
 
 @pytest.mark.django_db
-class TestSecurityIntegration:
-    """Tests de integración de múltiples capas de seguridad."""
-
-    def test_security_layers_stack(self, client):
-        """Verifica que múltiples capas de seguridad funcionan juntas."""
-        # 1. URL inválida debe ser rechazada por validación
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'http://invalid.com/article',  # HTTP (no HTTPS)
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_FORWARDED_FOR='192.168.1.50',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        assert response.status_code == 400, "Invalid URL should be rejected"
-
-        # 2. URL válida debe pasar validación
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://example.com/valid-article',
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_FORWARDED_FOR='192.168.1.50',
-            HTTP_X_EXTENSION_SESSION='test-session'
-        )
-        # Puede ser 200/201 (success) o 429 (rate limited) - ambos son OK
-        assert response.status_code in [200, 201, 429]
-
-    def test_session_and_ip_rate_limiting_configured(self, client):
-        """Verifica que rate limiting por sesión está configurado."""
-        session_id = 'unique-extension-session-123'
-        
-        # Hacer un request - el endpoint debe responder
-        response = client.post(
-            '/api/submit-from-extension/',
-            json.dumps({
-                'url': 'https://example.com/article-test',
-                'html': '<html><body>Test</body></html>',
-                'vote': 'buena'
-            }),
-            content_type='application/json',
-            HTTP_X_FORWARDED_FOR='192.168.1.100',
-            HTTP_X_EXTENSION_SESSION=session_id
-        )
-        # Endpoint responde correctamente
-        assert response.status_code in [200, 201, 400, 429]
-
 
 # ============================================================================
 # Tests de Regresión
@@ -395,18 +195,6 @@ class TestSecurityIntegration:
 class TestSecurityRegression:
     """Tests para prevenir regresiones en seguridad."""
 
-    def test_csrf_still_active_for_web_forms(self, client):
-        """CSRF protection debe seguir activa para formularios web."""
-        # Request sin CSRF token debe fallar
-        response = client.post(
-            '/noticias/new/',
-            {
-                'enlace': 'https://example.com/article',
-                'opinion': 'buena'
-            }
-        )
-        # Django debe rechazar por CSRF (a menos que sea AJAX con excepción)
-        assert response.status_code in [403, 302, 200]  # Depende de configuración
 
     def test_api_endpoints_still_csrf_exempt(self, client):
         """API endpoints deben seguir siendo CSRF exempt."""
