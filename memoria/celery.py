@@ -54,6 +54,10 @@ app.conf.beat_schedule = {
         "task": "archivo.tasks.recrawls_pendientes",
         "schedule": crontab(minute=40),
     },
+    "juego-armar-jornada": {
+        "task": "juego.tasks.armar_jornada_del_dia",
+        "schedule": crontab(hour=5, minute=30),
+    },
     "archivo-cerrar-historias": {
         "task": "archivo.tasks.cerrar_historias",
         "schedule": crontab(minute=5),

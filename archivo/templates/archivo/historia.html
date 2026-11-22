@@ -43,13 +43,17 @@
     </ol>
   </section>
 
-  {% if historia.proposiciones.all %}
+  {% if props_votos %}
   <section class="mb-8 border-2 border-black p-4">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">Para opinar</h3>
-    <ul class="space-y-2">
-      {% for p in historia.proposiciones.all %}<li class="text-base">«{{ p.texto }}»</li>{% endfor %}
+    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">¿Qué pensás?</h3>
+    <ul class="space-y-4">
+      {% for p, voto, r in props_votos %}
+      <li>
+        <p class="text-base">«{{ p.texto }}»</p>
+        {% if voto %}{% include "juego/_voto_archivo.html" %}{% else %}{% include "juego/_votar_archivo.html" %}{% endif %}
+      </li>
+      {% endfor %}
     </ul>
-    <p class="mono text-[11px] text-gray-600 mt-2">// Pronto vas a poder votar acá.</p>
   </section>
   {% endif %}
 

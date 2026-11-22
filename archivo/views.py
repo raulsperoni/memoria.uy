@@ -29,6 +29,12 @@ class HoyView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["historias"] = historias_top(n=20, horas=48)
+        from juego.logica import completa, jornada_de_hoy
+        from juego.votante import votante
+
+        jornada = jornada_de_hoy()
+        ctx["jornada"] = jornada
+        ctx["jornada_completa"] = bool(jornada and completa(votante(self.request), jornada))
         ctx["cambios"] = (
             Cambio.objects.select_related("fuente__medio")
             .filter(Q(cambia_sentido__gte=0.5) | Q(tipo="despublicada"))
@@ -62,6 +68,16 @@ class HistoriaView(DetailView):
         ctx["entidades"] = (
             Entidad.objects.filter(hechos__historia=h).distinct().order_by("nombre")
         )
+        from juego.logica import filtro_votante, resultado
+        from juego.models import VotoProposicion
+        from juego.votante import votante
+
+        props = list(h.proposiciones.all())
+        mis_votos = {
+            v.proposicion_id: v
+            for v in VotoProposicion.objects.filter(filtro_votante(votante(self.request)), proposicion__in=props)
+        }
+        ctx["props_votos"] = [(p, mis_votos.get(p.pk), resultado(p)) for p in props]
         ctx["jsonld"] = json.dumps(
             {
                 "@context": "https://schema.org",

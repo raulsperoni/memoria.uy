@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load vote_extras %}
+{% block title %}Mi resultado · ¿Qué piensa Uruguay? · memoria.uy{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-6">
+  {% include "juego/_cabecera.html" %}
+  <div class="border-2 border-black p-5 mb-6 text-center">
+    <p class="mono text-sm">Leíste a Uruguay</p>
+    <p class="text-5xl font-bold my-2">{{ aciertos }}/{{ filas|length }}</p>
+    {% if racha > 1 %}<p class="mono text-sm">racha 🔥 {{ racha }} días</p>{% endif %}
+    <p class="mono text-[11px] text-gray-500 mt-2">// provisorio hasta las 23:59</p>
+  </div>
+
+  <div class="space-y-2 mb-6">
+    <a href="{{ whatsapp }}" target="_blank" rel="noopener" class="block w-full text-center bg-black text-white py-3 mono font-bold hover:bg-gray-800">compartir por WhatsApp</a>
+    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('tarjeta').textContent).then(()=>{this.textContent='copiado ✓'})"
+            class="block w-full text-center border-2 border-black py-3 mono hover:bg-black hover:text-white">copiar resultado</button>
+    <pre id="tarjeta" class="mono text-xs bg-gray-50 border border-gray-300 p-3 whitespace-pre-wrap">{{ tarjeta }}</pre>
+  </div>
+
+  <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo votó Uruguay</h3>
+  <ol class="space-y-4">
+    {% for item, voto, r, acierto in filas %}
+    <li>
+      <p class="font-medium">«{{ item.proposicion.texto }}»</p>
+      {% if r.pct_acuerdo is not None %}
+      <div class="h-3 border border-black flex mt-1"><div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div></div>
+      <p class="mono text-[11px] text-gray-600">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · vos: {{ voto.get_opinion_display|lower }}, predijiste {{ bucket_label|get_item:voto.prediccion }} {% if acierto %}✓{% elif acierto is False %}✗{% endif %}
+        · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>
+      {% else %}
+      <p class="mono text-[11px] text-gray-600">todavía sin opiniones · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  <p class="mono text-xs mt-8"><a class="underline" href="{% url 'archivo:home' %}">← lo que pasó hoy</a></p>
+</div>
+{% endblock %}

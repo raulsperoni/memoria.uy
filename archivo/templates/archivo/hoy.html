@@ -4,6 +4,15 @@
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 py-6">
   {% include "archivo/_nav.html" %}
+  {% if jornada %}
+  <a href="{% if jornada_completa %}{% url 'juego:resultado' %}{% else %}{% url 'juego:hoy' %}{% endif %}"
+     class="block border-2 border-black bg-black text-white p-5 mb-8 hover:bg-gray-900">
+    <p class="mono text-xs opacity-75">{{ jornada.fecha|date:"d/m" }} · 5 frases · 1 minuto</p>
+    <p class="text-2xl font-bold">¿Qué piensa Uruguay?</p>
+    <p class="mono text-sm mt-1">{% if jornada_completa %}ver mi resultado →{% else %}jugar la de hoy →{% endif %}</p>
+  </a>
+  {% endif %}
+
   <h2 class="mono text-2xl font-bold mb-1">Lo que pasó</h2>
   <p class="mono text-xs text-gray-600 mb-6">// Historias de las últimas 48 h, ordenadas por cobertura. Cada hecho, con sus fuentes.</p>
 
