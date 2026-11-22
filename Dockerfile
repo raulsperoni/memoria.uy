@@ -35,7 +35,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* ./
 
 # Install dependencies including dev dependencies for testing
-RUN poetry install --no-interaction --no-ansi --no-root --with dev
+RUN poetry install --no-interaction --no-ansi --no-root --without dev
 
 # Copy project
 COPY . .
@@ -58,20 +58,18 @@ EXPOSE 8000
 RUN echo '#!/bin/sh\n\
 set -e\n\
 echo "Starting container with command: $1"\n\
-echo "REDIS_URL: ${REDIS_URL:-not set}"\n\
-echo "DATABASE_URL: ${DATABASE_URL:-not set}"\n\
 \n\
 if [ "$1" = "web" ]; then\n\
-    echo "Starting web server..."\n\
+    python manage.py migrate --noinput\n\
+    python manage.py createcachetable\n\
     PORT=${PORT:-8000}\n\
-    gunicorn memoria.wsgi:application --bind 0.0.0.0:$PORT --timeout 120\n\
+    exec gunicorn memoria.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --threads 2\n\
+elif [ "$1" = "tick" ]; then\n\
+    python manage.py createcachetable\n\
+    exec python manage.py tick\n\
 elif [ "$1" = "worker" ]; then\n\
-    echo "Starting Celery worker..."\n\
-    echo "Testing Redis connection..."\n\
-    python -c "import redis; r=redis.from_url(\"${REDIS_URL}\"); r.ping(); print(\"Redis OK\")" || echo "Redis connection failed!"\n\
     celery -A memoria worker --loglevel=info --concurrency=2\n\
 elif [ "$1" = "beat" ]; then\n\
-    echo "Starting Celery beat..."\n\
     celery -A memoria beat --loglevel=info\n\
 else\n\
     exec "$@"\n\

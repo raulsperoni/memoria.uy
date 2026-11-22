@@ -4,9 +4,12 @@ from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "memoria.settings")
 
-# Use Redis as broker and result backend
-broker_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-result_backend = os.getenv("REDIS_URL", "redis://redis:6379/0")
+# Redis opcional: sin REDIS_URL las tasks corren en línea (CELERY_TASK_ALWAYS_EAGER
+# en settings) y las periódicas las dispara `manage.py tick` (ver
+# core/management/commands/tick.py). El beat_schedule de abajo solo se usa
+# si se corre Celery beat con Redis.
+broker_url = os.getenv("REDIS_URL") or "memory://"
+result_backend = os.getenv("REDIS_URL") or "cache+memory://"
 
 app = Celery(
     "memoria",

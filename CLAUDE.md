@@ -21,8 +21,9 @@ poetry run pytest
 poetry run pytest --cov=. --cov-report=html
 poetry run pytest -k "test_vote"
 
-# Celery (requiere Redis)
-poetry run celery -A memoria worker --loglevel=info
+# Tareas periódicas (sin Celery/Redis)
+poetry run python manage.py tick --listar
+poetry run python manage.py tick
 
 # Archivo y juego
 poetry run python manage.py cargar_medios
@@ -54,7 +55,7 @@ Ver [docs/PROPUESTA_2027.md](docs/PROPUESTA_2027.md) (por qué) y
 5. **Procesar**: LLM (Claude Haiku 5.5 vía OpenRouter) → `Hecho` + `Proposicion` + `Entidad`
 6. **Verificar**: Jev chequea cada hecho contra cada fuente, el resumen y la calidad de proposiciones
 7. **Recrawl** de historias top a 24 h / 7 días → `Cambio` (diff, ¿cambia el sentido?)
-8. **Jornada** diaria 05:30 → juego; **burbujas** diarias 02:15
+8. **Jornada** diaria 05:30 → juego; **burbujas** diarias 02:15 (todo vía `manage.py tick`)
 
 ### Proveedores intercambiables (`archivo/providers/`)
 
@@ -191,12 +192,16 @@ y `upload_cluster_og_image()` en [core/views_clustering.py](core/views_clusterin
 - pytest con pytest-django
 - Fixtures en `conftest.py`
 - Tests en `core/tests/`, `archivo/tests/`, `juego/tests/`
-- Tests necesitan Redis (`REDIS_URL=redis://localhost:6379/0`)
+- Tests corren sin Redis (cache en tabla de la base; `conftest.py` la crea)
 
 ## Deployment
 
-### Railway
-Tres servicios: web, worker, beat. Todos comparten `REDIS_URL`.
+### Railway (setup barato)
+Dos servicios del mismo repo + Postgres, sin Redis:
+- **web** (`railway.toml`): migra, crea la tabla de cache y levanta gunicorn; duerme sin tráfico.
+- **cron** (`railway.cron.toml`): `manage.py tick` cada 15 min.
+
+Con `REDIS_URL` definido vuelve a funcionar el modo Celery (worker/beat) del `Dockerfile`.
 
 ### Docker
 ```bash

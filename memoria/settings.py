@@ -193,17 +193,26 @@ LOGGING = {
     },
 }
 
-# Cache configuration for task locking, rate limiting, and report snapshots
-# Using Redis for persistence and sharing across workers
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": redis_url,
-        "KEY_PREFIX": "memoria_cache",
-        "TIMEOUT": 3600,  # Default timeout 1 hour
+# Cache: Redis si hay REDIS_URL; si no, tabla en la base (setup barato en
+# Railway sin Redis: correr `manage.py createcachetable`).
+redis_url = os.getenv("REDIS_URL")
+if redis_url:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": redis_url,
+            "KEY_PREFIX": "memoria_cache",
+            "TIMEOUT": 3600,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "memoria_cache",
+            "TIMEOUT": 3600,
+        }
+    }
 
 # Rate limiting configuration
 RATELIMIT_ENABLE = os.getenv("RATELIMIT_ENABLE", "True") == "True"
@@ -268,8 +277,11 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 # Celery Configuration
 # Using Redis as broker and result backend
-CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://redis:6379/0")
+# Sin Redis no hay worker: las tasks corren en línea (las periódicas las
+# dispara `manage.py tick` desde un cron service).
+CELERY_BROKER_URL = redis_url or "memory://"
+CELERY_RESULT_BACKEND = redis_url or "cache+memory://"
+CELERY_TASK_ALWAYS_EAGER = not redis_url
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"

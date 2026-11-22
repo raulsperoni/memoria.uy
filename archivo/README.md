@@ -13,14 +13,22 @@ poetry run python manage.py detectar_feeds     # busca RSS/sitemaps (requiere re
 
 Revisar en `/admin/archivo/medio/` los que quedaron sin feeds y cargarlos a mano.
 
-Celery beat corre solo (ver `memoria/celery.py`):
+Las tareas periódicas las corre `manage.py tick` (cron service de Railway
+cada 15 min; ver `core/management/commands/tick.py`). No hace falta Celery ni
+Redis: sin `REDIS_URL` el cache es una tabla en Postgres y las tasks corren en
+línea.
 
-| Task | Frecuencia |
+| Tarea | Frecuencia |
 |---|---|
-| `archivo.tasks.ciclo_ingesta` | cada 30 min |
-| `archivo.tasks.procesar_historias` | cada 15 min |
-| `archivo.tasks.recrawls_pendientes` | cada hora (:40) |
-| `archivo.tasks.cerrar_historias` | cada hora (:05) |
+| `medios` (carga medios y detecta feeds faltantes) | cada 23 h |
+| `ciclo_ingesta` | cada 30 min |
+| `procesar_historias` (incluye fusión de duplicadas) | cada 15 min |
+| `recrawls`, `cerrar_historias` | cada hora |
+| `burbujas` | diaria desde 02:15 |
+| `jornada` | diaria desde 05:30 |
+| `resumen_staff` | diaria desde 09:00 |
+
+`manage.py tick --listar` muestra la última corrida; `--forzar X` corre una ya.
 
 ## Variables de entorno
 
