@@ -88,17 +88,32 @@ cuando exportemos los datos viejos (fase 4).
   pueden leerse como etiquetas políticas y generar rechazo. Alternativa:
   solo letras + descripción neutra. Lo dejé activo; decidí vos.
 
-## 7. Pendiente / para vos
+## 7. Hecho después (misma noche)
+
+- **Imágenes OG** generadas en el servidor (historia, nota editada, juego,
+  default) con JetBrains Mono (Apache 2.0). Antes el og:image era un SVG, que
+  las redes no muestran.
+- **PWA**: manifest + service worker mínimo (red primero, caché offline).
+- **Datos abiertos** `/datos/`: CSV de historias, hechos con fuentes,
+  proposiciones con totales, burbujas y notas editadas. Nunca votos
+  individuales.
+- **Docker**: no pude construir la imagen acá (el contenedor no llega a los
+  mirrors de Debian). El `poetry.lock` es formato 2.1 y el Dockerfile instala
+  Poetry 1.6.1: avisa "might not be compatible" pero instala. **Ya era así en
+  `main`** antes de mis cambios. ⚠️ Recomiendo subir `POETRY_VERSION` a 2.x en
+  el Dockerfile cuando lo puedas probar en Railway.
+
+## 8. Pendiente / para vos
 
 1. ⚠️ Deploy en Railway: cargar variables (ver `archivo/README.md`), crear
    bucket R2 y sus keys, correr `cargar_medios` y `detectar_feeds` (desde acá
    no llego a los sitios de los medios).
 2. ⚠️ Plan Workers Paid de Cloudflare (US$5) por el rate limit.
-3. Imágenes OG generadas y PWA (no hechas todavía).
-4. Datos abiertos `/datos/` y borrado del sistema viejo (fase 4).
+3. Borrado del sistema viejo `Noticia`/`Voto` (fase 4) — antes, exportar sus datos.
 5. Revisar el texto legal de "agregador" con alguien que sepa de derecho de cita.
 
 ## Capturas
 
 En el scratchpad de la sesión (`shots/`): portada, paso del juego, resultado
-de un ítem, resultado del día, historia (TIAR, 3 medios), burbujas.
+de un ítem, resultado del día, historia (TIAR, 3 medios), burbujas, e
+imágenes OG (`og-*.png`).

@@ -43,8 +43,9 @@ diff, rápido y simple, usado por todos los lados.
 - [x] Juego diario con predicción, puntaje, racha y tarjeta compartible
 - [x] Burbujas sobre proposiciones (lo que nos une / nos divide)
 - [ ] Despliegue con ingesta real (Railway + Cloudflare)
-- [ ] Imágenes OG generadas, PWA
-- [ ] Datos abiertos (`/datos/`) y API de solo lectura
+- [x] Imágenes OG generadas, PWA
+- [x] Datos abiertos (`/datos/`, CSV)
+- [ ] API de solo lectura
 - [ ] Borrar el sistema viejo (`Noticia`/`Voto`)
 
 ## Métricas
