@@ -24,78 +24,69 @@ poetry run pytest -k "test_vote"
 # Celery (requiere Redis)
 poetry run celery -A memoria worker --loglevel=info
 
-# Clustering manual
-poetry run python manage.py cluster_voters --days 30 --min-voters 50
+# Archivo y juego
+poetry run python manage.py cargar_medios
+poetry run python manage.py detectar_feeds
+poetry run python manage.py probar_archivo URL [URL ...]
+poetry run python manage.py armar_jornada
 
 # Tailwind
 poetry run python manage.py tailwind start
 ```
 
-## Arquitectura
+## Arquitectura (desde nov 2026)
+
+Ver [docs/PROPUESTA_2027.md](docs/PROPUESTA_2027.md) (por qué) y
+[docs/PLAN_2027.md](docs/PLAN_2027.md) (cómo). Tres apps:
+
+| App | Qué hace |
+|-----|----------|
+| `archivo` | Ingesta automática de medios → Historias con Hechos (con procedencia) y Proposiciones; snapshots y detección de notas editadas. Ver [archivo/README.md](archivo/README.md) |
+| `juego` | Juego diario «¿Qué piensa Uruguay?» (5 proposiciones, voto + predicción) y burbujas de opinión sobre proposiciones |
+| `core` | Usuarios/perfiles, `Entidad`, motor matemático de clustering (`core/clustering/`), emails. El sistema viejo (`Noticia`/`Voto`, timeline en `/noticias/`, `/mapa/`, `/clusters/report/`) queda como legado hasta borrarlo |
 
 ### Flujo de datos
 
-1. **Submission**: Usuario envía URL via web o extensión
-2. **Captura**: Extensión captura HTML completo (bypasea paywalls)
-3. **Enrichment**: Celery task extrae título, resumen, entidades via LLM
-4. **Voting**: Usuario vota (buena/mala/neutral)
-5. **Clustering**: Task periódico agrupa votantes por patrones
+1. **Descubrir** (RSS/sitemaps, gratis) → `Fuente`
+2. **Filtrar**: secciones + decisión tipada (Jev) «¿interés público uruguayo?»
+3. **Extraer**: Cloudflare Browser Rendering + trafilatura → `Snapshot` privado (R2)
+4. **Agrupar**: embeddings (Workers AI bge-m3) → `Historia`
+5. **Procesar**: LLM (Claude Haiku 5.5 vía OpenRouter) → `Hecho` + `Proposicion` + `Entidad`
+6. **Verificar**: Jev chequea cada hecho contra cada fuente, el resumen y la calidad de proposiciones
+7. **Recrawl** de historias top a 24 h / 7 días → `Cambio` (diff, ¿cambia el sentido?)
+8. **Jornada** diaria 05:30 → juego; **burbujas** diarias 02:15
 
-### Modelos principales
+### Proveedores intercambiables (`archivo/providers/`)
 
-- `Noticia`: URL, metadata, HTML capturado
-- `Voto`: Opinión de usuario sobre noticia (usuario o session_key)
-- `Entidad`: Personas, organizaciones, lugares extraídos
-- `VoterCluster*`: Modelos de clustering (Run, Cluster, Projection, etc.)
-- `ClusterNameCache`: Cache de nombres LLM con TTL de 7 días
-- `UserProfile`: Alias, preferencias de email, show_alias_on_map
+Extractor, Decider (decisiones tipadas sí/no/score con caché en `Decision`),
+Embedder y Storage; cada uno con versión `Fake` para tests. Selección por env
+(ver `archivo/README.md`).
 
 ### Sesiones
 
-Prioridad de identificación de votante:
-1. Usuario autenticado → `usuario` field
-2. Extensión → header `X-Extension-Session` o cookie `memoria_extension_session`
-3. Django session → `session_key`
-
-Ver `get_voter_identifier()` en [core/views.py](core/views.py).
+Votante = usuario autenticado, o id anónimo guardado en los **datos** de la
+sesión (`juego/votante.py`; no se usa `session_key` porque Django la rota al
+hacer login). Al iniciar sesión los votos anónimos pasan a la cuenta
+(`juego/signals.py`).
 
 ### URL normalization
 
-URLs are automatically normalized before storage to prevent duplicates:
-- Strips tracking parameters (utm_*, fbclid, gclid, etc.)
-- Removes URL fragments (# anchors)
-- Preserves functional parameters (search queries, IDs, etc.)
-- Ensures same article from different sources deduplicates
-
-Ver `normalize_url()` en [core/utils.py](core/utils.py).
+Ver `normalize_url()` en [core/utils.py](core/utils.py): quita parámetros de
+tracking y fragmentos antes de guardar URLs.
 
 ## Patrones importantes
-
-### Signup prompt
-Aparece después del 3er voto o al agotar noticias disponibles ("estado vacío").
-- Lógica en `VoteView.post()` y `NewsTimelineView.get_context_data()`
-- Banner flotante: `signup_prompt.html`
-- Form custom: `CustomSignupForm` (extiende allauth)
-- Al crear cuenta: signal auto-crea `UserProfile`
-
-### Vote claiming
-Al hacer login/signup, los votos anónimos se vinculan a la cuenta:
-- Signal `reclaim_session_votes` en [core/signals.py](core/signals.py)
-- Detecta session_key de extensión o Django
-- Transfiere votos a usuario
-- Previene duplicados (prioridad a voto de usuario)
 
 ### Task locking
 Todos los Celery tasks usan `@task_lock(timeout=...)` para prevenir ejecución
 duplicada.
 
-### Model fallback en AI parsing
-Si el modelo primario falla, automáticamente intenta el siguiente en prioridad.
-Ver [core/parse.py](core/parse.py).
+### Model fallback en LLM
+`archivo/llm.py` y `core/parse.py` prueban modelos en orden. No pasar
+`temperature`: Claude Haiku 5.5 rechaza valores no default.
 
 ### Clustering Polis-style
-Motor matemático en `core/clustering/`. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md)
-para detalles de algoritmos.
+Motor matemático en `core/clustering/`, reutilizado por `juego/burbujas.py`
+sobre proposiciones. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md).
 
 ### Cluster name caching
 Los nombres de clusters generados por LLM se cachean para evitar cambios
@@ -199,7 +190,8 @@ y `upload_cluster_og_image()` en [core/views_clustering.py](core/views_clusterin
 
 - pytest con pytest-django
 - Fixtures en `conftest.py`
-- Tests en `core/tests/`
+- Tests en `core/tests/`, `archivo/tests/`, `juego/tests/`
+- Tests necesitan Redis (`REDIS_URL=redis://localhost:6379/0`)
 
 ## Deployment
 
@@ -215,7 +207,7 @@ docker-compose up -d --build
 
 | Archivo | Propósito |
 |---------|-----------|
-| `core/views.py` | Timeline, votación, filtros, signup prompt |
+| `core/views.py` | Timeline viejo (legado), perfil |
 | `core/feeds.py` | Algoritmos de feeds: recientes, confort (afín), puente (testeables, sin request) |
 | `core/views_clustering.py` | Mapa de burbujas, reporte de investigación, APIs de análisis |
 | `core/templates/clustering/report.html` | Reporte narrativo completo |
@@ -227,9 +219,12 @@ docker-compose up -d --build
 | `core/clustering/kmeans.py` | K-Means clustering |
 | `core/clustering/hierarchical.py` | Agrupación jerárquica |
 | `core/clustering/metrics.py` | Métricas de calidad |
-| `core/api_views.py` | API para extensión |
 | `core/tasks.py` | Celery tasks |
-| `core/parse.py` | LLM parsing |
+| `core/parse.py` | Nombres de burbujas con LLM |
 | `core/forms.py` | CustomSignupForm con alias |
 | `core/signals.py` | Vote claiming, UserProfile auto-create |
-| `browser-extension/` | Chrome/Firefox extension |
+| `archivo/pipeline.py` | Pipeline de ingesta (testeable, sin Celery) |
+| `archivo/llm.py` | Prompt y esquema de historias |
+| `archivo/providers/` | Cloudflare, Jev, embeddings, R2 |
+| `juego/logica.py` | Armado de jornada, puntaje, racha |
+| `juego/burbujas.py` | Burbujas sobre proposiciones |
