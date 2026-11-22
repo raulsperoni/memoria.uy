@@ -11,6 +11,10 @@
   <section class="mb-8 border-2 border-black p-4">
     <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">Para opinar</h3>
     <ul class="space-y-1">{% for p in proposiciones %}<li>«{{ p.texto }}» <a class="mono text-[11px] underline" href="{% url 'archivo:historia' p.historia.slug %}">contexto</a></li>{% endfor %}</ul>
+    {% if props_burbujas %}
+    <h4 class="mono font-bold text-xs uppercase tracking-wide mt-4 mb-1">Cómo lo ve cada burbuja</h4>
+    <ul class="mono text-[11px] space-y-1">{% for p, pats in props_burbujas %}<li>«{{ p.texto|truncatechars:80 }}»: {% for b, pat in pats.items %}{{ b.letra }} {{ pat.pct_acuerdo|floatformat:0 }} %{% if not forloop.last %} · {% endif %}{% endfor %}</li>{% endfor %}</ul>
+    {% endif %}
   </section>
   {% endif %}
 

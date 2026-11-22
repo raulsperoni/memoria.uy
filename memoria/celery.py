@@ -54,6 +54,10 @@ app.conf.beat_schedule = {
         "task": "archivo.tasks.recrawls_pendientes",
         "schedule": crontab(minute=40),
     },
+    "juego-burbujas": {
+        "task": "juego.tasks.calcular_burbujas_diario",
+        "schedule": crontab(hour=2, minute=15),
+    },
     "juego-armar-jornada": {
         "task": "juego.tasks.armar_jornada_del_dia",
         "schedule": crontab(hour=5, minute=30),

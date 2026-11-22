@@ -77,7 +77,11 @@ class HistoriaView(DetailView):
             v.proposicion_id: v
             for v in VotoProposicion.objects.filter(filtro_votante(votante(self.request)), proposicion__in=props)
         }
-        ctx["props_votos"] = [(p, mis_votos.get(p.pk), resultado(p)) for p in props]
+        from juego.burbujas import patrones_por_proposicion, ultimo_run
+
+        run = ultimo_run()
+        pats = patrones_por_proposicion(run) if run else {}
+        ctx["props_votos"] = [(p, mis_votos.get(p.pk), resultado(p), pats.get(p.pk, {})) for p in props]
         ctx["jsonld"] = json.dumps(
             {
                 "@context": "https://schema.org",
@@ -122,6 +126,12 @@ class EntidadView(DetailView):
         )
         ctx["historias"] = historias
         ctx["proposiciones"] = ent.proposiciones.filter(estado="publicada").select_related("historia")[:30]
+        from juego.burbujas import patrones_por_proposicion, ultimo_run
+
+        run = ultimo_run()
+        if run:
+            pats = patrones_por_proposicion(run)
+            ctx["props_burbujas"] = [(p, pats[p.pk]) for p in ctx["proposiciones"] if p.pk in pats]
         return ctx
 
 

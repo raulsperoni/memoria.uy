@@ -86,3 +86,78 @@ class VotoProposicion(models.Model):
 
     def __str__(self):
         return f"{self.get_opinion_display()} · {self.proposicion_id}"
+
+
+# ---------------------------------------------------------------------------
+# Burbujas (clustering Polis-style sobre proposiciones)
+# ---------------------------------------------------------------------------
+
+
+class BurbujaRun(models.Model):
+    creada_en = models.DateTimeField(auto_now_add=True)
+    n_votantes = models.PositiveIntegerField(default=0)
+    n_proposiciones = models.PositiveIntegerField(default=0)
+    k = models.PositiveSmallIntegerField(default=0)
+    silhouette = models.FloatField(null=True, blank=True)
+    varianza = models.JSONField(default=list, blank=True)
+    parametros = models.JSONField(default=dict, blank=True)
+    estado = models.CharField(max_length=10, default="ok")  # ok / insuficiente / error
+    mensaje = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-creada_en"]
+
+    def __str__(self):
+        return f"Run {self.pk} · {self.k} burbujas · {self.n_votantes} votantes"
+
+
+class Burbuja(models.Model):
+    run = models.ForeignKey(BurbujaRun, on_delete=models.CASCADE, related_name="burbujas")
+    numero = models.PositiveSmallIntegerField()
+    nombre = models.CharField(max_length=80, blank=True)
+    descripcion = models.CharField(max_length=300, blank=True)
+    tamano = models.PositiveIntegerField(default=0)
+    cx = models.FloatField(default=0)
+    cy = models.FloatField(default=0)
+
+    class Meta:
+        ordering = ["run", "numero"]
+        unique_together = ("run", "numero")
+
+    def __str__(self):
+        return self.nombre or f"Burbuja {'ABCDEFGH'[self.numero]}"
+
+    @property
+    def letra(self):
+        return "ABCDEFGH"[self.numero]
+
+
+class BurbujaMiembro(models.Model):
+    run = models.ForeignKey(BurbujaRun, on_delete=models.CASCADE, related_name="miembros")
+    burbuja = models.ForeignKey(Burbuja, on_delete=models.CASCADE, related_name="miembros")
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE)
+    session_key = models.CharField(max_length=40, null=True, blank=True, db_index=True)
+    x = models.FloatField()
+    y = models.FloatField()
+
+
+class BurbujaPatron(models.Model):
+    """Cómo votó una burbuja una proposición."""
+
+    run = models.ForeignKey(BurbujaRun, on_delete=models.CASCADE, related_name="patrones")
+    burbuja = models.ForeignKey(Burbuja, on_delete=models.CASCADE, related_name="patrones")
+    proposicion = models.ForeignKey(Proposicion, on_delete=models.CASCADE, related_name="patrones_burbuja")
+    acuerdo = models.PositiveIntegerField(default=0)
+    desacuerdo = models.PositiveIntegerField(default=0)
+    nose = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("burbuja", "proposicion")
+
+    @property
+    def opinan(self):
+        return self.acuerdo + self.desacuerdo
+
+    @property
+    def pct_acuerdo(self):
+        return 100 * self.acuerdo / self.opinan if self.opinan else None

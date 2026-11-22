@@ -13,6 +13,7 @@ from archivo.models import Proposicion
 
 from . import logica
 from .models import BUCKETS, JornadaItem, VotoProposicion
+from .burbujas import burbuja_de
 from .votante import votante
 
 OPINIONES = dict(VotoProposicion.OPINIONES)
@@ -109,6 +110,7 @@ class ResultadoView(View):
                 "filas": filas,
                 "aciertos": aciertos,
                 "racha": logica.racha(voter),
+                "mi_burbuja": burbuja_de(voter),
                 "tarjeta": texto,
                 "whatsapp": "https://wa.me/?text=" + quote(texto),
                 "bucket_label": dict(BUCKETS),
@@ -129,3 +131,43 @@ class VotarProposicionView(View):
         if not request.headers.get("HX-Request"):
             return redirect("archivo:historia", slug=prop.historia.slug)
         return render(request, "juego/_voto_archivo.html", {"p": prop, "voto": voto, "r": logica.resultado(prop)})
+
+
+class BurbujasView(View):
+    def get(self, request):
+        from . import burbujas as B
+
+        run = B.ultimo_run()
+        ctx = {"run": run}
+        if run:
+            miembros = list(run.miembros.select_related("burbuja").values_list("x", "y", "burbuja__numero", "session_key", "usuario_id"))
+            xs = [m[0] for m in miembros] or [0]
+            ys = [m[1] for m in miembros] or [0]
+            x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+            sx = lambda x: 5 + 90 * (x - x0) / ((x1 - x0) or 1)  # noqa: E731
+            sy = lambda y: 5 + 90 * (y - y0) / ((y1 - y0) or 1)  # noqa: E731
+            voter = votante(request)
+            yo = None
+            puntos = []
+            for x, y, num, sk, uid in miembros:
+                es_yo = (voter.get("usuario") and uid == voter["usuario"].pk) or (sk and sk == voter.get("session_key"))
+                punto = (round(sx(x), 2), round(sy(y), 2), num)
+                if es_yo:
+                    yo = punto
+                puntos.append(punto)
+            burbujas = list(run.burbujas.all())
+            une, divide = B.consenso_y_division(run)
+            ctx.update(
+                {
+                    "puntos": puntos,
+                    "yo": yo,
+                    "mi_burbuja": B.burbuja_de(voter, run),
+                    "burbujas": [
+                        (b, round(sx(b.cx), 2), round(sy(b.cy), 2), B.distintivas(run, b)) for b in burbujas
+                    ],
+                    "une": une,
+                    "divide": divide,
+                    "grises": dict(enumerate(["#000000", "#6b7280", "#a3a3a3", "#404040", "#d4d4d4"])),
+                }
+            )
+        return render(request, "juego/burbujas.html", ctx)

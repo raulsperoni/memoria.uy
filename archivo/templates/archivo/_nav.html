@@ -3,6 +3,7 @@
   {% now "Y" as hoy_y %}{% now "n" as hoy_m %}{% now "j" as hoy_d %}
   <a href="{% url 'archivo:dia' y=hoy_y m=hoy_m d=hoy_d %}" class="px-2 py-1 border border-black hover:bg-black hover:text-white">por día</a>
   <a href="{% url 'archivo:cambios' %}" class="px-2 py-1 border border-black hover:bg-black hover:text-white">notas editadas</a>
+  <a href="{% url 'juego:burbujas' %}" class="px-2 py-1 border border-black hover:bg-black hover:text-white">burbujas</a>
   <form action="{% url 'archivo:buscar' %}" method="get" class="flex-1 min-w-[12rem] flex">
     <input type="search" name="q" value="{{ q|default:'' }}" placeholder="buscar en el archivo…" aria-label="Buscar en el archivo"
            class="flex-1 border border-black px-2 py-1 mono text-xs focus:outline-none focus:bg-gray-50">

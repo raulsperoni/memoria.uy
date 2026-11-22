@@ -47,10 +47,12 @@
   <section class="mb-8 border-2 border-black p-4">
     <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">¿Qué pensás?</h3>
     <ul class="space-y-4">
-      {% for p, voto, r in props_votos %}
+      {% for p, voto, r, pats in props_votos %}
       <li>
         <p class="text-base">«{{ p.texto }}»</p>
-        {% if voto %}{% include "juego/_voto_archivo.html" %}{% else %}{% include "juego/_votar_archivo.html" %}{% endif %}
+        {% if voto %}{% include "juego/_voto_archivo.html" %}
+          {% if pats %}<div class="mono text-[11px] text-gray-600 mt-1">por burbuja: {% for b, pat in pats.items %}<a class="underline" href="{% url 'juego:burbujas' %}">{{ b.letra }}</a> {{ pat.pct_acuerdo|floatformat:0 }} %{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        {% else %}{% include "juego/_votar_archivo.html" %}{% endif %}
       </li>
       {% endfor %}
     </ul>
