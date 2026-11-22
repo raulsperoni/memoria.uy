@@ -234,3 +234,32 @@ def test_cerrar_historias(db):
     h = Historia.objects.create()
     Historia.objects.filter(pk=h.pk).update(ultima_fuente_en=timezone.now() - timedelta(days=4))
     assert pipeline.cerrar_historias() == 1
+
+
+def test_verificacion_agrega_otras_fuentes_que_respaldan(fakes, medios):
+    ext, dec = fakes
+    a, b = medios
+    f1 = _extraida(ext, a, "/p/1", "Sánchez se reunió con ediles por Praxis", TEXTO_PRAXIS)
+    f2 = _extraida(ext, b, "/p/2", "Sánchez y ediles hablaron de Praxis", TEXTO_PRAXIS)
+    h = pipeline.agrupar(f1)
+    pipeline.agrupar(f2)
+    h.refresh_from_db()
+    # FakeProcesador atribuye cada hecho a una sola fuente.
+    pipeline.procesar_historia(h)
+    for hecho in Hecho.objects.filter(historia=h):
+        assert hecho.fuentes.count() == 2
+
+
+def test_resumen_no_fiel_se_rearma_con_hechos(fakes, medios):
+    ext, dec = fakes
+    a, b = medios
+    dec.respuestas["resumen_fiel"] = 0.1
+    f1 = _extraida(ext, a, "/p/1", "Sánchez se reunió con ediles por Praxis", TEXTO_PRAXIS)
+    f2 = _extraida(ext, b, "/p/2", "Sánchez y ediles hablaron de Praxis", TEXTO_PRAXIS)
+    h = pipeline.agrupar(f1)
+    pipeline.agrupar(f2)
+    h.refresh_from_db()
+    pipeline.procesar_historia(h)
+    h.refresh_from_db()
+    primer = Hecho.objects.filter(historia=h).order_by("orden").first()
+    assert h.resumen.startswith(primer.texto)

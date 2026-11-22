@@ -460,21 +460,49 @@ def procesar_historia(historia: Historia) -> bool:
 
 
 def verificar_historia(historia: Historia):
-    """Verifica procedencia de hechos y puntúa proposiciones."""
+    """Verifica procedencia de hechos, completa atribuciones, chequea el
+    resumen y puntúa proposiciones."""
+    fuentes = [
+        f
+        for f in historia.fuentes.filter(estado__in=["extraida", "procesada"])
+        .select_related("medio")
+        .order_by("-publicada_en")[:8]
+        if f.texto
+    ]
+    umbral = UMBRAL_FIEL()
     for hecho in historia.hechos.all():
-        fieles = 0
+        fieles = set()
         for hf in HechoFuente.objects.filter(hecho=hecho).select_related("fuente"):
             hf.fiel = decidir(
                 "fuente_respalda",
                 {"afirmacion": hecho.texto, "fuente": hf.fuente.texto[:4000]},
             )
-            hf.save(update_fields=["fiel"])
-            if hf.fiel >= UMBRAL_FIEL():
-                fieles += 1
+            if hf.fiel >= umbral:
+                hf.save(update_fields=["fiel"])
+                fieles.add(hf.fuente_id)
             else:
                 hf.delete()
-        if fieles == 0:
+        # Atribuir el hecho a otras fuentes de la historia que también lo respaldan.
+        for f in fuentes:
+            if f.pk in fieles:
+                continue
+            p = decidir("fuente_respalda", {"afirmacion": hecho.texto, "fuente": f.texto[:4000]})
+            if p >= umbral:
+                HechoFuente.objects.create(hecho=hecho, fuente=f, fiel=p)
+                fieles.add(f.pk)
+        if not fieles:
             hecho.delete()
+
+    hechos = list(historia.hechos.order_by("orden"))
+    if historia.resumen and hechos:
+        p = decidir(
+            "resumen_fiel",
+            {"resumen": historia.resumen, "hechos": [h.texto for h in hechos]},
+        )
+        if p < 0.5:
+            # El resumen afirma algo no verificado: lo rearmamos con hechos verificados.
+            historia.resumen = " ".join(h.texto for h in hechos[:3])
+            historia.save(update_fields=["resumen"])
 
     for prop in historia.proposiciones.filter(estado="candidata"):
         estado = {"proposicion": prop.texto, "contexto": historia.resumen}

@@ -73,6 +73,15 @@ PREGUNTAS = {
             "Responder no si la afirmación agrega datos que la fuente no dice."
         ),
     },
+    "resumen_fiel": {
+        "tipo": "noul",
+        "instrucciones": (
+            "¿Todo lo que afirma el resumen (datos, nombres, cifras, cantidades) "
+            "está respaldado por los hechos verificados? Responder no si el "
+            "resumen contiene algún dato que no aparece en los hechos o que los "
+            "contradice."
+        ),
+    },
     "cambia_sentido": {
         "tipo": "noul",
         "instrucciones": (
