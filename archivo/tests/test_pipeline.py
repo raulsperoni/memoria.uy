@@ -263,3 +263,37 @@ def test_resumen_no_fiel_se_rearma_con_hechos(fakes, medios):
     h.refresh_from_db()
     primer = Hecho.objects.filter(historia=h).order_by("orden").first()
     assert h.resumen.startswith(primer.texto)
+
+
+def test_fusionar_duplicadas(fakes, medios):
+    ext, dec = fakes
+    a, b = medios
+    f1 = _extraida(ext, a, "/p/1", "Sánchez se reunió con ediles por Praxis", TEXTO_PRAXIS)
+    f2 = _extraida(ext, b, "/p/2", "Lluvias récord en Rocha", "Las lluvias en Rocha afectaron al sapito de Darwin. " * 5)
+    h1 = pipeline.agrupar(f1)
+    h2 = pipeline.agrupar(f2)
+    assert h1.pk != h2.pk
+    # Simulamos que en realidad son el mismo hecho y que los centroides están en zona de duda.
+    Historia.objects.filter(pk=h2.pk).update(centroide=h1.centroide)
+    dec.respuestas["mismo_hecho"] = 0.9
+    assert pipeline.fusionar_duplicadas() == 1
+    assert not Historia.objects.filter(pk=h2.pk).exists()
+    h1.refresh_from_db()
+    assert h1.n_medios == 2 and h1.fuentes.count() == 2
+
+
+def test_no_fusiona_si_hay_votos(fakes, medios):
+    from juego.models import VotoProposicion
+
+    ext, dec = fakes
+    a, b = medios
+    f1 = _extraida(ext, a, "/p/1", "Sánchez se reunió con ediles por Praxis", TEXTO_PRAXIS)
+    f2 = _extraida(ext, b, "/p/2", "Lluvias récord en Rocha", "Las lluvias en Rocha afectaron al sapito de Darwin. " * 5)
+    h1 = pipeline.agrupar(f1)
+    h2 = pipeline.agrupar(f2)
+    h2.refresh_from_db()
+    pipeline.procesar_historia(h2)
+    VotoProposicion.objects.create(proposicion=h2.proposiciones.first(), opinion="acuerdo", session_key="x")
+    Historia.objects.filter(pk=h2.pk).update(centroide=h1.centroide)
+    dec.respuestas["mismo_hecho"] = 0.9
+    assert pipeline.fusionar_duplicadas() == 0

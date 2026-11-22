@@ -61,6 +61,10 @@ def procesar_historias():
     """Procesa historias quietas con fuentes nuevas. Cada 15 min."""
     if not ingesta_activa():
         return "ingesta desactivada"
+    try:
+        pipeline.fusionar_duplicadas()
+    except Exception:
+        logger.exception("Fusión de historias falló")
     n = 0
     for h in list(pipeline.historias_listas()):
         try:

@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 import feedparser
 import requests
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from core.models import Entidad
@@ -55,12 +55,13 @@ def env_int(nombre, default):
 
 
 # Umbrales (calibrables por env)
-UMBRAL_INTERES = lambda: env_float("UMBRAL_INTERES", 0.7)  # noqa: E731
+UMBRAL_INTERES = lambda: env_float("UMBRAL_INTERES", 0.6)  # noqa: E731
 UMBRAL_VALE_HISTORIA = lambda: env_float("UMBRAL_VALE_HISTORIA", 0.34)  # noqa: E731
 UMBRAL_FIEL = lambda: env_float("UMBRAL_FIEL", 0.5)  # noqa: E731
 UMBRAL_CALIDAD = lambda: env_float("UMBRAL_CALIDAD", 0.6)  # noqa: E731
 SIM_MISMA = lambda: env_float("SIM_MISMA_HISTORIA", 0.75)  # noqa: E731
-SIM_DUDA = lambda: env_float("SIM_DUDA_HISTORIA", 0.55)  # noqa: E731
+SIM_DUDA = lambda: env_float("SIM_DUDA_HISTORIA", 0.40)  # noqa: E731
+MAX_CANDIDATAS_DUDA = 3
 MAX_EXTRACCIONES_DIA = lambda: env_int("MAX_EXTRACCIONES_DIA", 150)  # noqa: E731
 MAX_EDAD_HORAS = lambda: env_int("MAX_EDAD_HORAS", 48)  # noqa: E731
 VENTANA_HISTORIA_HORAS = 72
@@ -313,18 +314,24 @@ def agrupar(fuente: Fuente) -> Historia | None:
     desde = timezone.now() - timedelta(hours=VENTANA_HISTORIA_HORAS)
     candidatas = Historia.objects.filter(estado="abierta", ultima_fuente_en__gte=desde)
 
-    mejor, mejor_sim = None, 0.0
-    for h in candidatas:
-        s = coseno(fuente.embedding, h.centroide)
-        if s > mejor_sim:
-            mejor, mejor_sim = h, s
+    ranking = sorted(
+        ((coseno(fuente.embedding, h.centroide), h) for h in candidatas),
+        key=lambda t: -t[0],
+    )
 
     historia = None
-    if mejor and mejor_sim >= SIM_MISMA():
-        historia = mejor
-    elif mejor and mejor_sim >= SIM_DUDA():
-        otra = mejor.fuentes.exclude(pk=fuente.pk).first()
-        if otra:
+    if ranking and ranking[0][0] >= SIM_MISMA():
+        historia = ranking[0][1]
+    else:
+        # Zona de duda: los embeddings separan mal notas del mismo hecho con
+        # ángulos distintos (0.4–0.75 en bge-m3); Jev decide, es barato y
+        # separa bien (≈0.03 vs ≈0.9). Probamos hasta 3 candidatas.
+        for sim, h in ranking[:MAX_CANDIDATAS_DUDA]:
+            if sim < SIM_DUDA():
+                break
+            otra = h.fuentes.exclude(pk=fuente.pk).first()
+            if not otra:
+                continue
             p = decidir(
                 "mismo_hecho",
                 {
@@ -333,7 +340,8 @@ def agrupar(fuente: Fuente) -> Historia | None:
                 },
             )
             if p >= 0.5:
-                historia = mejor
+                historia = h
+                break
 
     with transaction.atomic():
         if historia is None:
@@ -645,6 +653,49 @@ def analizar_cambio(cambio: Cambio, texto_antes: str):
     else:
         cambio.resumen = f"Cuerpo editado: {quitado} caracteres quitados, {agregado} agregados."
     cambio.save(update_fields=["cambia_sentido", "resumen"])
+
+
+def fusionar_duplicadas() -> int:
+    """Fusiona historias abiertas que resultan ser el mismo hecho (p.ej. notas
+    que llegaron antes de que existiera la otra). La más nueva se absorbe en
+    la más vieja, salvo que sus proposiciones ya tengan votos o estén en una
+    jornada (no perdemos votos)."""
+    abiertas = list(Historia.objects.filter(estado="abierta").exclude(centroide=[]).order_by("pk"))
+    absorbidas, fusiones = set(), 0
+    for i, vieja in enumerate(abiertas):
+        if vieja.pk in absorbidas:
+            continue
+        for nueva in abiertas[i + 1 :]:
+            if nueva.pk in absorbidas:
+                continue
+            if coseno(vieja.centroide, nueva.centroide) < SIM_DUDA():
+                continue
+            if nueva.proposiciones.filter(Q(votos__isnull=False) | Q(jornadas__isnull=False)).exists():
+                continue
+            a, b = vieja.fuentes.first(), nueva.fuentes.first()
+            if not a or not b:
+                continue
+            p = decidir(
+                "mismo_hecho",
+                {
+                    "A": {"titulo": a.titulo, "texto": (a.texto or a.bajada)[:800]},
+                    "B": {"titulo": b.titulo, "texto": (b.texto or b.bajada)[:800]},
+                },
+            )
+            if p < 0.5:
+                continue
+            with transaction.atomic():
+                for f in nueva.fuentes.all():
+                    _actualizar_centroide(vieja, f.embedding or nueva.centroide)
+                nueva.fuentes.update(historia=vieja, estado="extraida")
+                vieja.fuentes.filter(estado="procesada").update(estado="extraida")
+                vieja.ultima_fuente_en = max(vieja.ultima_fuente_en, nueva.ultima_fuente_en)
+                vieja.recalcular_n_medios()
+                vieja.save()
+                nueva.delete()
+            absorbidas.add(nueva.pk)
+            fusiones += 1
+    return fusiones
 
 
 def cerrar_historias():
