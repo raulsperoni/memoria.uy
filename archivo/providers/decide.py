@@ -27,12 +27,24 @@ PREGUNTAS = {
     "interes_publico": {
         "tipo": "noul",
         "instrucciones": (
-            "¿Es esta una noticia de interés público sobre Uruguay (política, "
-            "economía, sociedad, seguridad, salud, educación, trabajo, ambiente)? "
-            "Responder no si es deportes, espectáculos, farándula, horóscopo, "
-            "recetas, publicidad, policiales menores sin interés público, o "
-            "noticias internacionales sin relación con Uruguay."
+            "Esta nota es de un medio uruguayo. ¿Es relevante para el debate "
+            "público uruguayo?"
         ),
+        "criterios": {
+            "true": (
+                "Política, gobierno, Parlamento, partidos, economía y finanzas "
+                "públicas, impuestos, trabajo y sindicatos, justicia y Fiscalía, "
+                "políticas de seguridad, salud y educación públicas, ambiente, "
+                "empresas públicas, relaciones internacionales de Uruguay. Asumí "
+                "que 'Gobierno', 'Senado', 'ministerio' refieren a Uruguay."
+            ),
+            "false": (
+                "Deportes, espectáculos, celebridades, cultura y ciencia de "
+                "divulgación, estilo de vida, recetas, eventos y agenda, crímenes "
+                "individuales (rapiñas, accidentes) sin dimensión política, "
+                "noticias de otros países sin vínculo con Uruguay."
+            ),
+        },
     },
     "vale_historia": {
         "tipo": "score",
@@ -121,7 +133,7 @@ class JevDecider(Decider):
 
         p = PREGUNTAS[pregunta]
         if p["tipo"] == "noul":
-            q = Noul(instructions=p["instrucciones"])
+            q = Noul(instructions=p["instrucciones"], criteria=p.get("criterios"))
         else:
             q = Score(instructions=p["instrucciones"], criteria=p["niveles"])
         resp = self.client.system_one(state=estado, questions={"q": q})
@@ -146,6 +158,11 @@ class LLMDecider(Decider):
         p = PREGUNTAS[pregunta]
         if p["tipo"] == "noul":
             formato = 'Respondé solo JSON: {"p": <probabilidad de sí entre 0 y 1>}'
+            if p.get("criterios"):
+                formato = (
+                    f"Sí: {p['criterios']['true']}\nNo: {p['criterios']['false']}\n"
+                    + formato
+                )
         else:
             niveles = "\n".join(f"{i}: {n}" for i, n in enumerate(p["niveles"]))
             formato = f'Niveles:\n{niveles}\nRespondé solo JSON: {{"nivel": <entero>}}'

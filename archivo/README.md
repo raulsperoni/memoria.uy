@@ -34,14 +34,14 @@ Celery beat corre solo (ver `memoria/celery.py`):
 | `DECIDER` | `jev` | `jev` / `llm` |
 | `TYPESAFE_API_KEY` | — | Key de Jev (o la de OpenRouter si se usa `TYPESAFE_BASE_URL`) |
 | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` | `https://openrouter.ai/api` para ir por OpenRouter |
-| `TYPESAFE_DEFAULT_MODEL` | `jev-latest` | `typesafe/jev-router` vía OpenRouter |
+| `TYPESAFE_DEFAULT_MODEL` | `jev-latest` | `jev-latest` también funciona vía OpenRouter |
 | `OPENROUTER_API_KEY` | — | LLM de historias (ya existente) |
 | `ARCHIVO_LLM_MODELS` | flash-lite | Modelos en orden de fallback, separados por coma |
 | `SNAPSHOT_STORAGE` | `local` | `r2` en producción |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | — / — / `memoria-snapshots` | Credenciales R2 |
 | `MAX_EXTRACCIONES_DIA` | `150` | Cupo diario de extracciones |
 | `RECRAWL_OFFSETS_HORAS` | `24,168` | Cuándo re-capturar notas top |
-| `UMBRAL_INTERES` | `0.5` | Filtro 1 (antes de extraer) |
+| `UMBRAL_INTERES` | `0.7` | Filtro 1 (antes de extraer) |
 | `UMBRAL_VALE_HISTORIA` | `0.34` | Filtro 2 (historias de un solo medio) |
 | `UMBRAL_FIEL` / `UMBRAL_CALIDAD` | `0.5` / `0.6` | Verificación de hechos / proposiciones |
 | `SIM_MISMA_HISTORIA` / `SIM_DUDA_HISTORIA` | `0.75` / `0.55` | Agrupamiento por embeddings (bge-m3) |

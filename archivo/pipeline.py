@@ -55,7 +55,7 @@ def env_int(nombre, default):
 
 
 # Umbrales (calibrables por env)
-UMBRAL_INTERES = lambda: env_float("UMBRAL_INTERES", 0.5)  # noqa: E731
+UMBRAL_INTERES = lambda: env_float("UMBRAL_INTERES", 0.7)  # noqa: E731
 UMBRAL_VALE_HISTORIA = lambda: env_float("UMBRAL_VALE_HISTORIA", 0.34)  # noqa: E731
 UMBRAL_FIEL = lambda: env_float("UMBRAL_FIEL", 0.5)  # noqa: E731
 UMBRAL_CALIDAD = lambda: env_float("UMBRAL_CALIDAD", 0.6)  # noqa: E731
@@ -227,7 +227,7 @@ def filtrar(fuente: Fuente) -> bool:
     titulo = fuente.titulo or path.rsplit("/", 1)[-1].replace("-", " ")
     fuente.interes = decidir(
         "interes_publico",
-        {"medio": medio.nombre, "titulo": titulo, "bajada": fuente.bajada[:500], "seccion": fuente.seccion or path},
+        {"medio": f"{medio.nombre} (Uruguay)", "titulo": titulo, "bajada": fuente.bajada[:500], "seccion": fuente.seccion or path},
     )
     fuente.save(update_fields=["interes"])
     if fuente.interes < UMBRAL_INTERES():
@@ -270,7 +270,7 @@ def extraer(fuente: Fuente, respetar_cupo=True) -> bool:
     snap = guardar_snapshot(fuente, res)
     fuente.ultimo_snapshot = snap
     fuente.texto = res.texto
-    fuente.titulo = fuente.titulo or res.titulo[:500]
+    fuente.titulo = res.titulo[:500] or fuente.titulo
     fuente.autor = res.autor[:255]
     if not fuente.publicada_en and res.fecha:
         try:
@@ -303,7 +303,9 @@ def _actualizar_centroide(historia, emb):
     historia.n_embeddings = n + 1
 
 
-def agrupar(fuente: Fuente) -> Historia:
+def agrupar(fuente: Fuente) -> Historia | None:
+    if fuente.estado not in ("extraida", "procesada") or not fuente.texto:
+        return None
     if not fuente.embedding:
         fuente.embedding = get_embedder().embed([_texto_para_embedding(fuente)])[0]
         registrar_uso("embed", "embed")

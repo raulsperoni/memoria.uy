@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODELS = [
     "openrouter/google/gemini-2.5-flash-lite",
-    "openrouter/google/gemini-2.0-flash-lite-001",
+    "openrouter/deepseek/deepseek-v4.1-flash",
+    "openrouter/qwen/qwen3.7-flash",
 ]
 
 MAX_CHARS_FUENTE = 6000
