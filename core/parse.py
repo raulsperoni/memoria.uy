@@ -24,18 +24,18 @@ logger = logging.getLogger(__name__)
 # Purpose: Extract structured article metadata (title, entities, sentiment) from HTML
 # Requirements: JSON output mode, good at entity extraction and sentiment analysis
 MODELS_PRIORITY_JSON = {
-    "openrouter/google/gemini-2.5-flash-lite": 1,
-    "openrouter/google/gemini-2.0-flash-lite-001": 2,
-    "openrouter/mistralai/mistral-saba": 3,
+    "openrouter/anthropic/claude-haiku-5.5": 1,
+    "openrouter/openai/gpt-6-luna": 2,
+    "openrouter/openai/gpt-5-nano": 3,
 }
 
 # Used by: generate_cluster_description()
 # Purpose: Generate creative cluster names and descriptions in Spanish
 # Requirements: JSON output mode, creative writing in Spanish (rioplatense)
 MODELS_PRIORITY_CLUSTER = {
-    "openrouter/google/google/gemini-2.5-flash-lite": 1,
-    "openrouter/google/gemini-2.0-flash-lite-001": 2,
-    "openrouter/mistralai/mistral-saba": 3,
+    "openrouter/anthropic/claude-haiku-5.5": 1,
+    "openrouter/openai/gpt-6-luna": 2,
+    "openrouter/openai/gpt-5-nano": 3,
 }
 
 

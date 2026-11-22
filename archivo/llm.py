@@ -17,10 +17,13 @@ from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
+# Benchmark 2026-11-22 (4 historias reales, verificación con Jev): Haiku 5.5
+# dio los hechos más completos y precisos y las proposiciones más claras
+# (~US$0,0018/historia, ~10 s). Fallbacks baratos y rápidos.
 DEFAULT_MODELS = [
-    "openrouter/google/gemini-2.5-flash-lite",
-    "openrouter/deepseek/deepseek-v4.1-flash",
-    "openrouter/qwen/qwen3.7-flash",
+    "openrouter/anthropic/claude-haiku-5.5",
+    "openrouter/openai/gpt-6-luna",
+    "openrouter/openai/gpt-5-nano",
 ]
 
 MAX_CHARS_FUENTE = 6000
@@ -139,9 +142,13 @@ class LLMProcesador(Procesador):
                         {"role": "user", "content": entrada},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.2,
+                    # Razonamiento bajo: suficiente para extracción y 3-5x más rápido.
+                    extra_body={"reasoning": {"effort": "low"}},
+                    timeout=120,
                 )
-                data = json.loads(resp.choices[0].message.content)
+                texto = resp.choices[0].message.content or ""
+                # Algunos modelos envuelven el JSON en ```json ... ```
+                data = json.loads(texto[texto.find("{") : texto.rfind("}") + 1])
                 return HistoriaOut.model_validate(data)
             except (ValidationError, json.JSONDecodeError, Exception) as e:  # noqa: B014
                 logger.warning("Modelo %s falló procesando historia: %s", modelo, e)

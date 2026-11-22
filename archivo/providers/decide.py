@@ -148,7 +148,7 @@ class LLMDecider(Decider):
 
     def __init__(self, modelo=None):
         self.modelo = modelo or os.environ.get(
-            "DECIDER_LLM_MODEL", "openrouter/google/gemini-2.5-flash-lite"
+            "DECIDER_LLM_MODEL", "openrouter/openai/gpt-5-nano"
         )
         self.nombre = f"llm:{self.modelo}"
 
@@ -173,7 +173,7 @@ class LLMDecider(Decider):
                 {"role": "user", "content": json.dumps(estado, ensure_ascii=False)},
             ],
             response_format={"type": "json_object"},
-            temperature=0,
+            extra_body={"reasoning": {"effort": "low"}},
         )
         data = json.loads(resp.choices[0].message.content)
         if p["tipo"] == "noul":
