@@ -14,5 +14,7 @@ urlpatterns = [
     path("cambios/", views.CambiosView.as_view(), name="cambios"),
     path("cambios/<int:pk>/", views.CambioView.as_view(), name="cambio"),
     path("medios/<slug:slug>/", views.MedioView.as_view(), name="medio"),
+    path("og/h/<slug:slug>.png", views.og_historia, name="og-historia"),
+    path("og/cambios/<int:pk>.png", views.og_cambio, name="og-cambio"),
     path("buscar/", views.BuscarView.as_view(), name="buscar"),
 ]

@@ -171,3 +171,29 @@ class BurbujasView(View):
                 }
             )
         return render(request, "juego/burbujas.html", ctx)
+
+
+from django.http import HttpResponse  # noqa: E402
+from django.utils import timezone  # noqa: E402
+from django.views.decorators.cache import cache_page  # noqa: E402
+
+from archivo.og import imagen  # noqa: E402
+
+
+@cache_page(60 * 30)
+def og_hoy(request):
+    j = logica.jornada_de_hoy()
+    fecha = (j.fecha if j else timezone.localdate()).strftime("%d/%m")
+    primera = j.items_ordenados()[0].proposicion.texto if j and j.items.exists() else "5 frases de las noticias de hoy."
+    return HttpResponse(
+        imagen(f"«{primera}»", f"¿Qué piensa Uruguay? · {fecha}", "¿de acuerdo? ¿y el resto?", invertida=True),
+        content_type="image/png",
+    )
+
+
+@cache_page(60 * 60 * 24)
+def og_default(request):
+    return HttpResponse(
+        imagen("Lo que pasó en Uruguay, con fuentes. Y lo que pensamos.", "archivo · juego diario · burbujas", ""),
+        content_type="image/png",
+    )

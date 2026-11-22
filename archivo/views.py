@@ -250,3 +250,35 @@ class BuscarView(ListView):
             else []
         )
         return ctx
+
+
+# ---------------------------------------------------------------------------
+# Imágenes OG
+# ---------------------------------------------------------------------------
+
+from django.http import HttpResponse  # noqa: E402
+from django.views.decorators.cache import cache_page  # noqa: E402
+
+from .og import imagen  # noqa: E402
+
+
+@cache_page(60 * 60 * 6)
+def og_historia(request, slug):
+    h = _historias_publicas().filter(slug=slug).first()
+    if not h:
+        raise Http404
+    arriba = f"{h.primera_fuente_en:%d/%m/%Y}" + (f" · #{h.categoria}" if h.categoria else "")
+    abajo = f"{h.n_medios} medio{'s' if h.n_medios != 1 else ''} · hechos con fuentes"
+    return HttpResponse(imagen(h.titulo, arriba, abajo), content_type="image/png")
+
+
+@cache_page(60 * 60 * 6)
+def og_cambio(request, pk):
+    c = Cambio.objects.select_related("fuente__medio").filter(pk=pk).first()
+    if not c:
+        raise Http404
+    titulo = c.titulo_despues if c.tipo == "titulo" and c.titulo_despues else (c.titulo_antes or c.fuente.titulo)
+    return HttpResponse(
+        imagen(titulo, f"{c.fuente.medio.nombre} · {c.get_tipo_display().lower()}", "notas editadas"),
+        content_type="image/png",
+    )

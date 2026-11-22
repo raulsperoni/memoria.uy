@@ -84,3 +84,16 @@ def test_metricas_resumen(historia):
     assert r["historias"] == 1
     assert r["cambios"] == 1
     assert lineas_texto(r) and lineas_html(r)
+
+
+def test_og_y_pwa(client, historia):
+    r = client.get(f"/og/h/{historia.slug}.png")
+    assert r.status_code == 200 and r["Content-Type"] == "image/png" and r.content[:4] == b"\x89PNG"
+    assert client.get("/og/hoy.png").status_code == 200
+    assert client.get("/og/memoria.png").status_code == 200
+    assert client.get("/og/h/no-existe.png").status_code == 404
+    r = client.get("/manifest.webmanifest")
+    assert r.status_code == 200 and r.json()["short_name"] == "memoria.uy"
+    assert client.get("/sw.js")["Content-Type"] == "application/javascript"
+    html = client.get(f"/h/{historia.slug}/").content.decode()
+    assert f"/og/h/{historia.slug}.png" in html

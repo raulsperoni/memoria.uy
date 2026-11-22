@@ -4,6 +4,8 @@
 {% block og_title %}{{ historia.titulo }}{% endblock %}
 {% block og_description %}{{ historia.resumen|truncatechars:155 }}{% endblock %}
 {% block og_type %}article{% endblock %}
+{% block og_image %}https://memoria.uy{% url 'archivo:og-historia' historia.slug %}{% endblock %}
+{% block twitter_image %}https://memoria.uy{% url 'archivo:og-historia' historia.slug %}{% endblock %}
 {% block extra_head %}
 <script type="application/ld+json">{{ jsonld|safe }}</script>
 {% endblock %}

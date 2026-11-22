@@ -17,7 +17,7 @@
   <meta property="og:title" content="{% block og_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
   <meta property="og:description" content="{% block og_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
   <meta property="og:url" content="{% block og_url %}https://memoria.uy{{ request.path }}{% endblock %}">
-  <meta property="og:image" content="{% block og_image %}{% static 'core/logo.svg' %}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://memoria.uy/og/memoria.png{% endblock %}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="es_UY">
@@ -26,7 +26,7 @@
   <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
   <meta name="twitter:title" content="{% block twitter_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
-  <meta name="twitter:image" content="{% block twitter_image %}{% static 'core/logo.svg' %}{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}https://memoria.uy/og/memoria.png{% endblock %}">
 
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -34,6 +34,9 @@
   <link rel="icon" type="image/png" sizes="16x16" href="{% static 'core/favicon-16x16.png' %}">
   <link rel="shortcut icon" href="/favicon.ico">
 
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <link rel="apple-touch-icon" href="{% static 'core/icons/icon-256.png' %}">
   {% tailwind_css %}
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
@@ -130,6 +133,11 @@
     });
   </script>
 
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+  </script>
   {% block extra_head %}{% endblock %}
 </head>
 

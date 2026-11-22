@@ -58,7 +58,7 @@ from core.views_clustering import (
     polarization_timeline_json,
     cluster_stability_json,
 )
-from memoria.views import health_check, robots_txt, favicon
+from memoria.views import favicon, health_check, manifest, robots_txt, service_worker
 
 # Sitemap configuration
 sitemaps = {
@@ -77,6 +77,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("favicon.ico", favicon, name="favicon"),
     path("robots.txt", robots_txt, name="robots_txt"),
+    path("manifest.webmanifest", manifest, name="manifest"),
+    path("sw.js", service_worker, name="service_worker"),
     path(
         "sitemap.xml",
         sitemap,
