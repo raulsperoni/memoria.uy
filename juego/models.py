@@ -161,3 +161,7 @@ class BurbujaPatron(models.Model):
     @property
     def pct_acuerdo(self):
         return 100 * self.acuerdo / self.opinan if self.opinan else None
+
+    @property
+    def pct_desacuerdo(self):
+        return 100 - self.pct_acuerdo if self.opinan else None

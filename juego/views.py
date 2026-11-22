@@ -153,7 +153,7 @@ class BurbujasView(View):
                 es_yo = (voter.get("usuario") and uid == voter["usuario"].pk) or (sk and sk == voter.get("session_key"))
                 punto = (round(sx(x), 2), round(sy(y), 2), num)
                 if es_yo:
-                    yo = punto
+                    yo = (*punto, 0, round(punto[1] - 3.5, 2))
                 puntos.append(punto)
             burbujas = list(run.burbujas.all())
             une, divide = B.consenso_y_division(run)

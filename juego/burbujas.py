@@ -154,8 +154,10 @@ def consenso_y_division(run, n=10):
             continue
         pcts = [p.pct_acuerdo for p in pats.values()]
         prop = next(iter(pats.values())).proposicion
-        if min(pcts) >= UMBRAL_CONSENSO or max(pcts) <= 100 - UMBRAL_CONSENSO:
-            une.append((prop, pats, min(pcts) if min(pcts) >= UMBRAL_CONSENSO else 100 - max(pcts)))
+        if min(pcts) >= UMBRAL_CONSENSO:
+            une.append((prop, pats, min(pcts), True))
+        elif max(pcts) <= 100 - UMBRAL_CONSENSO:
+            une.append((prop, pats, 100 - max(pcts), False))
         divide.append((prop, pats, max(pcts) - min(pcts)))
     une.sort(key=lambda t: -t[2])
     divide.sort(key=lambda t: -t[2])

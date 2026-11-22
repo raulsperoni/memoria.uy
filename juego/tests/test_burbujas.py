@@ -46,7 +46,7 @@ def test_detecta_dos_burbujas(dos_grupos):
     puros = sum(burbujas.burbuja_de({"session_key": f"A{i}"}, run) == a for i in range(40))
     assert puros >= 38
     une, divide = burbujas.consenso_y_division(run)
-    assert {p.texto for p, _, _ in une} == {"Proposición 6", "Proposición 7"}
+    assert {p.texto for p, _, _, _ in une} == {"Proposición 6", "Proposición 7"}
     assert len(divide) >= 5
     dist = burbujas.distintivas(run, a)
     assert dist and abs(dist[0][3]) > 50

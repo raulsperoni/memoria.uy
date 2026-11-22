@@ -64,6 +64,14 @@ class HistoriaView(DetailView):
         ctx = super().get_context_data(**kwargs)
         h = self.object
         ctx["fuentes"] = h.fuentes.select_related("medio").order_by("publicada_en")
+        # Un chip por medio en cada hecho (si dos notas del mismo medio lo respaldan)
+        for hecho in h.hechos.all():
+            vistos, unicos = set(), []
+            for hf in hecho.hechofuente_set.all():
+                if hf.fuente.medio_id not in vistos:
+                    vistos.add(hf.fuente.medio_id)
+                    unicos.append(hf)
+            hecho.respaldos = unicos
         ctx["cambios"] = Cambio.objects.filter(fuente__historia=h).select_related("fuente__medio")
         ctx["entidades"] = (
             Entidad.objects.filter(hechos__historia=h).distinct().order_by("nombre")

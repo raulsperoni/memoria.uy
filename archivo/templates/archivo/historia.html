@@ -26,7 +26,7 @@
       <li>
         <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-[11px] border border-black px-1 ml-1">las fuentes difieren</span>{% endif %}</p>
         <div class="flex flex-wrap gap-2 mt-1">
-          {% for hf in hecho.hechofuente_set.all %}
+          {% for hf in hecho.respaldos %}
           <details class="mono text-[11px]">
             <summary class="cursor-pointer border border-black px-2 py-0.5 inline-block hover:bg-black hover:text-white list-none">{{ hf.fuente.medio.nombre }}</summary>
             <div class="mt-1 p-2 bg-gray-50 border border-gray-300 max-w-prose">
