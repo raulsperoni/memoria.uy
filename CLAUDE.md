@@ -197,9 +197,10 @@ y `upload_cluster_og_image()` en [core/views_clustering.py](core/views_clusterin
 ## Deployment
 
 ### Railway (setup barato)
-Dos servicios del mismo repo + Postgres, sin Redis:
-- **web** (`railway.toml`): migra, crea la tabla de cache y levanta gunicorn; duerme sin tráfico.
-- **cron** (`railway.cron.toml`): `manage.py tick` cada 15 min.
+Proyecto `memoria-uy`: dos servicios del mismo repo (Dockerfile) + Postgres, sin Redis.
+La configuración vive en Railway (config-as-code está deprecado allá):
+- **web**: start `/entrypoint.sh web` (migra, crea tabla de cache, gunicorn), healthcheck `/health/`, sleep sin tráfico.
+- **cron**: start `/entrypoint.sh tick`, cron `*/15 * * * *`, restart NEVER.
 
 Con `REDIS_URL` definido vuelve a funcionar el modo Celery (worker/beat) del `Dockerfile`.
 

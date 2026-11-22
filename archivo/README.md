@@ -13,7 +13,7 @@ poetry run python manage.py detectar_feeds     # busca RSS/sitemaps (requiere re
 
 Revisar en `/admin/archivo/medio/` los que quedaron sin feeds y cargarlos a mano.
 
-Las tareas periódicas las corre `manage.py tick` (cron service de Railway
+Las tareas periódicas las corre `manage.py tick` (servicio cron de Railway
 cada 15 min; ver `core/management/commands/tick.py`). No hace falta Celery ni
 Redis: sin `REDIS_URL` el cache es una tabla en Postgres y las tasks corren en
 línea.
