@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import datos, views
 
 app_name = "archivo"
 
@@ -16,5 +16,7 @@ urlpatterns = [
     path("medios/<slug:slug>/", views.MedioView.as_view(), name="medio"),
     path("og/h/<slug:slug>.png", views.og_historia, name="og-historia"),
     path("og/cambios/<int:pk>.png", views.og_cambio, name="og-cambio"),
+    path("datos/", datos.datos, name="datos"),
+    path("datos/<slug:nombre>.csv", datos.export, name="export"),
     path("buscar/", views.BuscarView.as_view(), name="buscar"),
 ]

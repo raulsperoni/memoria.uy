@@ -97,3 +97,19 @@ def test_og_y_pwa(client, historia):
     assert client.get("/sw.js")["Content-Type"] == "application/javascript"
     html = client.get(f"/h/{historia.slug}/").content.decode()
     assert f"/og/h/{historia.slug}.png" in html
+
+
+def test_datos_abiertos(client, historia):
+    from juego.models import VotoProposicion
+
+    p = historia.proposiciones.filter(estado="publicada").first()
+    VotoProposicion.objects.create(proposicion=p, opinion="acuerdo", session_key="secreta-123")
+    assert client.get("/datos/").status_code == 200
+    for nombre in ("historias", "hechos", "proposiciones", "burbujas", "cambios"):
+        r = client.get(f"/datos/{nombre}.csv")
+        assert r.status_code == 200 and r["Content-Type"].startswith("text/csv")
+        contenido = b"".join(r.streaming_content).decode()
+        assert "secreta-123" not in contenido  # nunca datos de votantes
+    contenido = b"".join(client.get("/datos/proposiciones.csv").streaming_content).decode()
+    assert p.texto in contenido
+    assert client.get("/datos/otra.csv").status_code == 404
