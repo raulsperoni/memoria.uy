@@ -44,7 +44,7 @@ Ver [docs/PROPUESTA_2027.md](docs/PROPUESTA_2027.md) (por qué) y
 |-----|----------|
 | `archivo` | Ingesta automática de medios → Historias con Hechos (con procedencia) y Proposiciones; snapshots y detección de notas editadas. Ver [archivo/README.md](archivo/README.md) |
 | `juego` | Juego diario «¿Qué piensa Uruguay?» (5 proposiciones, voto + predicción) y burbujas de opinión sobre proposiciones |
-| `core` | Usuarios/perfiles, `Entidad`, motor matemático de clustering (`core/clustering/`), emails. El sistema viejo (`Noticia`/`Voto`, timeline en `/noticias/`, `/mapa/`, `/clusters/report/`) queda como legado hasta borrarlo |
+| `core` | `Entidad`, motor de clustering (`core/clustering/`, lo usa `juego/burbujas.py`), `tick`, resumen diario para staff, páginas acerca/privacidad, 404/429/500. El producto anterior (votar noticias, `/noticias/`, `/mapa/`, `/clusters/*`) se borró en nov 2026; sus URLs redirigen (301) a `/` o `/burbujas/` |
 
 ### Flujo de datos
 
@@ -89,104 +89,6 @@ duplicada.
 Motor matemático en `core/clustering/`, reutilizado por `juego/burbujas.py`
 sobre proposiciones. Ver [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md).
 
-### Cluster name caching
-Los nombres de clusters generados por LLM se cachean para evitar cambios
-frecuentes cuando el contenido (noticias/entidades) no cambia:
-- Modelo `ClusterNameCache`: hash del contenido → nombre + descripción
-- TTL de 7 días: después se regenera aunque el contenido sea igual
-- Hash basado en: top noticia IDs + entity names (ordenados)
-- Ver `get_or_create_cluster_name()` en [core/tasks.py](core/tasks.py)
-
-### Reporte de Investigación (`/clusters/report/`)
-
-Reporte narrativo completo enfocado en **consenso oculto** entre burbujas. Diseñado para investigadores.
-
-**Arquitectura de análisis:**
-- `core/clustering/consensus.py`: Análisis cross-cluster, métricas de polarización
-- `core/clustering/bridges.py`: Identificación de votantes "puente"
-- `core/clustering/evolution.py`: Estabilidad temporal y drift de opiniones
-
-**Secciones del reporte:**
-
-1. **Executive Summary**
-   - % de consenso cross-cluster
-   - Noticias consensuadas vs divisivas
-   - Número de bridge-builders
-   - Patrones por tipo de entidad
-
-2. **Consenso Oculto**
-   - Carousel interactivo de noticias con alto consenso
-   - Visualización de acuerdo por burbuja
-   - Top 10 noticias donde todas las burbujas coinciden
-
-3. **Lo que nos Divide**
-   - Lista de noticias polarizantes
-   - Heatmap de desacuerdo entre burbujas
-   - Timeline de polarización (últimos 6 meses)
-
-4. **Los Puentes (Bridge-Builders)**
-   - Network visualization (D3.js)
-   - Top 25 votantes que conectan múltiples burbujas
-   - Estadísticas: fuerza de conexión, votos, clusters conectados
-
-5. **Evolución Temporal**
-   - Sankey diagram mejorado
-   - Índice de estabilidad entre runs
-   - Métricas over time (polarización, consenso, silhouette)
-
-6. **Análisis por Burbuja**
-   - Consenso interno
-   - Entidades vistas positiva/negativamente
-   - Top noticias con mayor acuerdo
-
-**APIs JSON:**
-- `/api/clustering/consensus/` - Datos de consenso y división
-- `/api/clustering/bridges/` - Red de bridge-builders
-- `/api/clustering/polarization-timeline/` - Métricas temporales
-- `/api/clustering/stability/` - Índice de estabilidad
-
-**Caching:**
-- Executive summary: 1 hora
-- Bridge analysis: 6 horas
-- Evolution metrics: 24 horas
-
-Ver `ClusterReportView` en [core/views_clustering.py](core/views_clustering.py).
-Templates en [core/templates/clustering/report.html](core/templates/clustering/report.html).
-
-### Analytics page (`/clusters/stats/`) - DEPRECATED
-
-Mantenido por compatibilidad. Use `/clusters/report/` para el reporte completo.
-
-Ver análisis técnico de evolución en [docs/CLUSTER_EVOLUTION_ANALYSIS.md](docs/CLUSTER_EVOLUTION_ANALYSIS.md).
-
-### Viralización y compartir
-Sistema de captura del mapa de burbujas para compartir en redes sociales:
-
-1. **Botón "Compartir mi burbuja"** en `/mapa/`
-   - Captura SVG real del mapa → convierte a JPEG optimizado (~50-80KB)
-   - Sube imagen al servidor automáticamente (`/api/mapa/upload-og-image/`)
-   - Mobile: Web Share API nativo (WhatsApp, etc.)
-   - Desktop: Descarga imagen + copia texto
-
-2. **Imágenes OG para links compartidos**
-   - Endpoint: `/api/mapa/og-image/?cluster=X`
-   - Sirve SOLO imágenes reales capturadas por usuarios (`media/og-images/og-cluster-X.jpg`)
-   - Sin fallback generado - si no hay captura, muestra logo estático
-   - Ventaja: Imagen OG es siempre el mapa REAL
-
-3. **Flujo completo:**
-   ```
-   Usuario hace click "Compartir"
-   → Captura SVG del mapa en el navegador
-   → Convierte a JPEG con Canvas API
-   → Sube al servidor (fire-and-forget)
-   → Guarda como og-cluster-{id}.jpg
-   → Próximo que comparta ese link verá la imagen real
-   ```
-
-Ver `svgToBlob()` y `uploadOGImage()` en [visualization.html](core/templates/clustering/visualization.html)
-y `upload_cluster_og_image()` en [core/views_clustering.py](core/views_clustering.py).
-
 ## Testing
 
 - pytest con pytest-django
@@ -199,10 +101,12 @@ y `upload_cluster_og_image()` en [core/views_clustering.py](core/views_clusterin
 ### Railway (setup barato)
 Proyecto `memoria-uy`: dos servicios del mismo repo (Dockerfile) + Postgres, sin Redis.
 La configuración vive en Railway (config-as-code está deprecado allá):
-- **web**: start `/entrypoint.sh web` (migra, crea tabla de cache, gunicorn), healthcheck `/health/`, sleep sin tráfico.
+- **web**: start `/entrypoint.sh web` (migra, crea tabla de cache, gunicorn), healthcheck `/health/`, sleep sin tráfico. Necesita `PORT=8000`: el dominio público de Railway enruta al 8000 y sin la variable gunicorn escucha en el 8080 que inyecta Railway.
 - **cron**: start `/entrypoint.sh tick`, cron `*/15 * * * *`, restart NEVER.
 
 Con `REDIS_URL` definido vuelve a funcionar el modo Celery (worker/beat) del `Dockerfile`.
+
+Dominio: `memoria.uy` en Cloudflare (cuenta propia), CNAME a Railway sin proxy. Los snapshots van al bucket R2 `memoria-snapshots` de la misma cuenta; las credenciales R2 salen del mismo token de Cloudflare.
 
 ### Docker
 ```bash
@@ -213,24 +117,13 @@ docker-compose up -d --build
 
 | Archivo | Propósito |
 |---------|-----------|
-| `core/views.py` | Timeline viejo (legado), perfil |
-| `core/feeds.py` | Algoritmos de feeds: recientes, confort (afín), puente (testeables, sin request) |
-| `core/views_clustering.py` | Mapa de burbujas, reporte de investigación, APIs de análisis |
-| `core/templates/clustering/report.html` | Reporte narrativo completo |
-| `core/templates/clustering/components/` | Componentes modulares del reporte |
-| `core/clustering/consensus.py` | Análisis de consenso cross-cluster |
-| `core/clustering/bridges.py` | Identificación de bridge-builders |
-| `core/clustering/evolution.py` | Métricas de estabilidad temporal |
-| `core/clustering/pca.py` | PCA sparsity-aware |
-| `core/clustering/kmeans.py` | K-Means clustering |
-| `core/clustering/hierarchical.py` | Agrupación jerárquica |
-| `core/clustering/metrics.py` | Métricas de calidad |
-| `core/tasks.py` | Celery tasks |
-| `core/parse.py` | Nombres de burbujas con LLM |
-| `core/forms.py` | CustomSignupForm con alias |
-| `core/signals.py` | Vote claiming, UserProfile auto-create |
 | `archivo/pipeline.py` | Pipeline de ingesta (testeable, sin Celery) |
 | `archivo/llm.py` | Prompt y esquema de historias |
 | `archivo/providers/` | Cloudflare, Jev, embeddings, R2 |
 | `juego/logica.py` | Armado de jornada, puntaje, racha |
 | `juego/burbujas.py` | Burbujas sobre proposiciones |
+| `juego/votante.py` | Identidad del votante (anónimo o usuario) |
+| `core/clustering/` | PCA sparsity-aware, grupos por silhouette |
+| `core/parse.py` | Nombres de burbujas con LLM |
+| `core/management/commands/tick.py` | Tareas periódicas (cron de Railway) |
+| `core/tasks.py` | `task_lock` y resumen diario para staff |

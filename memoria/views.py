@@ -29,15 +29,9 @@ def robots_txt(request):
         "# Sitemaps",
         "Sitemap: https://memoria.uy/sitemap.xml",
         "",
-        "# Disallow admin and API endpoints",
         "Disallow: /admin/",
-        "Disallow: /api/",
         "Disallow: /accounts/",
-        "",
-        "# Allow crawling of public pages",
-        "Allow: /noticias/",
-        "Allow: /acerca-de/",
-        "Allow: /privacidad/",
+        "Disallow: /hoy/resultado/",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
 

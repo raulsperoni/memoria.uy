@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "rest_framework",
     "tailwind",
     "theme",
     "core",
@@ -59,6 +58,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # Convierte el Ratelimited (403) de django-ratelimit en RATELIMIT_VIEW (429)
+    "django_ratelimit.middleware.RatelimitMiddleware",
 ]
 
 # Only add browser reload middleware in DEBUG mode
@@ -72,7 +73,6 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
             BASE_DIR / "templates",
-            os.path.join(BASE_DIR, "memoria", "templates"),
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -134,16 +134,6 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# Configuración de Django REST Framework
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.SessionAuthentication",
-    ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
-    ),
-}
 
 
 LOGGING = {
@@ -217,6 +207,7 @@ else:
 # Rate limiting configuration
 RATELIMIT_ENABLE = os.getenv("RATELIMIT_ENABLE", "True") == "True"
 RATELIMIT_USE_CACHE = "default"
+RATELIMIT_VIEW = "core.error_handlers.ratelimited_error"
 
 
 AUTHENTICATION_BACKENDS = [
@@ -231,8 +222,8 @@ LOGIN_REDIRECT_URL = "/"
 ACCOUNT_ADAPTER = "memoria.adapter.CustomAccountAdapter"
 
 # Email confirmation redirects
-ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/"  # Redirige a timeline
-ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/"  # Redirige a timeline después de confirmar
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/"
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/"
 
 # A custom variable we created to tell the CustomAccountAdapter whether to
 # allow signups.
@@ -266,9 +257,6 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True  # Auto-login after email confirmation
 SOCIALACCOUNT_AUTO_SIGNUP = True
-ACCOUNT_FORMS = {
-    'signup': 'core.forms.CustomSignupForm',
-}
 
 TAILWIND_APP_NAME = "theme"
 

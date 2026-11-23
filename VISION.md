@@ -42,11 +42,11 @@ diff, rápido y simple, usado por todos los lados.
       búsqueda, sitemaps
 - [x] Juego diario con predicción, puntaje, racha y tarjeta compartible
 - [x] Burbujas sobre proposiciones (lo que nos une / nos divide)
-- [ ] Despliegue con ingesta real (Railway + Cloudflare)
+- [x] Despliegue con ingesta real (Railway + Cloudflare)
 - [x] Imágenes OG generadas, PWA
 - [x] Datos abiertos (`/datos/`, CSV)
 - [ ] API de solo lectura
-- [ ] Borrar el sistema viejo (`Noticia`/`Voto`)
+- [x] Borrar el sistema viejo (`Noticia`/`Voto`)
 
 ## Métricas
 

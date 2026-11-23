@@ -25,25 +25,12 @@ app.autodiscover_tasks()
 
 # Periodic task schedule
 app.conf.beat_schedule = {
-    "update-voter-clusters-daily": {
-        "task": "core.tasks.update_voter_clusters",
-        "schedule": crontab(hour=2, minute=0),  # Run at 2 AM every day
-        "kwargs": {
-            "time_window_days": 30,
-            "min_voters": 50,
-            "min_votes_per_voter": 3,
-        },
-    },
     "send-daily-staff-summary": {
         "task": "core.tasks.send_daily_staff_summary",
         "schedule": crontab(
             hour=int(os.getenv("DAILY_SUMMARY_HOUR", "9")),
             minute=int(os.getenv("DAILY_SUMMARY_MINUTE", "0")),
         ),  # Run once per day at 9 AM by default
-    },
-    "generate-cluster-report-snapshot": {
-        "task": "core.tasks.generate_cluster_report_snapshot",
-        "schedule": crontab(minute=0),  # Run every hour at minute 0
     },
     "archivo-ciclo-ingesta": {
         "task": "archivo.tasks.ciclo_ingesta",
@@ -70,19 +57,3 @@ app.conf.beat_schedule = {
         "schedule": crontab(minute=5),
     },
 }
-
-if os.getenv("ENABLE_REENGAGEMENT_EMAILS", "False") == "True":
-    app.conf.beat_schedule["send-reengagement-emails"] = {
-        "task": "core.tasks.send_reengagement_emails",
-        "schedule": crontab(
-            hour=int(os.getenv("REENGAGEMENT_EMAIL_HOUR", "10")),
-            minute=int(os.getenv("REENGAGEMENT_EMAIL_MINUTE", "0")),
-        ),
-        "kwargs": {
-            "days_inactive": int(os.getenv("REENGAGEMENT_DAYS_INACTIVE", "7")),
-            "max_emails": int(os.getenv("REENGAGEMENT_MAX_EMAILS", "500")),
-            "min_days_between_emails": int(
-                os.getenv("REENGAGEMENT_MIN_DAYS_BETWEEN", "7")
-            ),
-        },
-    }

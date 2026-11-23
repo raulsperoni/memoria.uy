@@ -40,7 +40,6 @@
   <link rel="apple-touch-icon" href="{% static 'core/icons/icon-256.png' %}">
   {% tailwind_css %}
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -105,41 +104,6 @@
   </style>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="db76d1bd-b4b1-4615-9b35-7b95b58f942a"></script>
 
-  <!-- Umami event tracking helper -->
-  <script>
-    // Helper function for tracking custom events with Umami
-    function trackEvent(eventName, eventData) {
-      if (typeof umami !== 'undefined') {
-        umami.track(eventName, eventData);
-      } else {
-        // Fallback: log to console in development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          console.log('[Umami Event]', eventName, eventData);
-        }
-      }
-    }
-
-    // Track page views with additional context
-    document.addEventListener('DOMContentLoaded', function() {
-      const path = window.location.pathname;
-      const search = window.location.search;
-      
-      // Track page view with filter context
-      if (path === '/' && search) {
-        const params = new URLSearchParams(search);
-        const filter = params.get('filter');
-        const entidad = params.get('entidad');
-        
-        if (filter || entidad) {
-          trackEvent('timeline-filter-view', {
-            filter: filter || 'none',
-            entidad: entidad || 'none',
-            url: path + search
-          });
-        }
-      }
-    });
-  </script>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -198,10 +162,6 @@
             <span class="hidden md:inline mono text-gray-600">
               > usuario: <span class="text-black font-semibold">{{ user.username }}</span>
             </span>
-            <a href="{% url 'profile' %}"
-               class="border border-black px-3 py-1 hover:bg-black hover:text-white transition-colors mono">
-              perfil
-            </a>
             {% if user.is_staff %}
               <a href="{% url 'admin:index' %}"
                  class="border border-black px-2 py-1 hover:bg-black hover:text-white transition-colors mono text-xs">
@@ -266,7 +226,5 @@
     </div>
   </footer>
 
-  <!-- Placeholder for signup prompt (populated via HTMX out-of-band swap) -->
-  <div id="signup-prompt-banner"></div>
 </body>
 </html>

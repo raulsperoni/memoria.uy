@@ -44,7 +44,7 @@ línea.
 | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` | `https://openrouter.ai/api` para ir por OpenRouter |
 | `TYPESAFE_DEFAULT_MODEL` | `jev-latest` | `jev-latest` también funciona vía OpenRouter |
 | `OPENROUTER_API_KEY` | — | LLM de historias (ya existente) |
-| `ARCHIVO_LLM_MODELS` | flash-lite | Modelos en orden de fallback, separados por coma |
+| `ARCHIVO_LLM_MODELS` | Haiku 5.5 → GPT-6-luna → GPT-5-nano | Modelos en orden de fallback, separados por coma |
 | `SNAPSHOT_STORAGE` | `local` | `r2` en producción |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | — / — / `memoria-snapshots` | Credenciales R2 |
 | `MAX_EXTRACCIONES_DIA` | `150` | Cupo diario de extracciones |

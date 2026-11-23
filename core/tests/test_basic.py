@@ -9,7 +9,7 @@ def client():
 @pytest.mark.django_db
 def test_homepage_status(client):
     """Test that the homepage returns a 200 status code."""
-    url = reverse('timeline')
+    url = reverse('archivo:home')
     response = client.get(url)
     assert response.status_code == 200
 
