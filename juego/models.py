@@ -101,7 +101,7 @@ class BurbujaRun(models.Model):
     silhouette = models.FloatField(null=True, blank=True)
     varianza = models.JSONField(default=list, blank=True)
     parametros = models.JSONField(default=dict, blank=True)
-    estado = models.CharField(max_length=10, default="ok")  # ok / insuficiente / error
+    estado = models.CharField(max_length=20, default="ok")  # ok / insuficiente / error
     mensaje = models.CharField(max_length=255, blank=True)
 
     class Meta:
