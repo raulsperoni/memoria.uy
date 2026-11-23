@@ -29,15 +29,9 @@ def robots_txt(request):
         "# Sitemaps",
         "Sitemap: https://memoria.uy/sitemap.xml",
         "",
-        "# Disallow admin and API endpoints",
         "Disallow: /admin/",
-        "Disallow: /api/",
         "Disallow: /accounts/",
-        "",
-        "# Allow crawling of public pages",
-        "Allow: /noticias/",
-        "Allow: /acerca-de/",
-        "Allow: /privacidad/",
+        "Disallow: /hoy/resultado/",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
@@ -69,24 +63,32 @@ def manifest(request):
 
 
 SERVICE_WORKER = """
-// memoria.uy — service worker mínimo: red primero, caché como respaldo offline.
-const CACHE = 'memoria-v1';
-self.addEventListener('install', e => self.skipWaiting());
+// memoria.uy — service worker mínimo: red primero; sin red, la copia guardada o una página offline.
+const CACHE = 'memoria-v2';
+const OFFLINE = '/offline/';
+// Páginas que dependen de la sesión o del día: nunca se guardan.
+const NO_GUARDAR = ['/accounts/', '/admin/', '/hoy/', '/p/', '/perfil', '/profile'];
+self.addEventListener('install', e => e.waitUntil(
+  caches.open(CACHE).then(c => c.add(OFFLINE)).then(() => self.skipWaiting())
+));
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim())
 ));
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (NO_GUARDAR.some(p => url.pathname.startsWith(p))) return;
+  const navegacion = req.mode === 'navigate';
   e.respondWith(
     fetch(req).then(res => {
-      if (res.ok && (req.mode === 'navigate' || req.url.includes('/static/'))) {
+      if (res.ok && (navegacion || url.pathname.startsWith('/static/'))) {
         const copia = res.clone();
         caches.open(CACHE).then(c => c.put(req, copia));
       }
       return res;
-    }).catch(() => caches.match(req).then(r => r || caches.match('/')))
+    }).catch(() => caches.match(req).then(r => r || (navegacion ? caches.match(OFFLINE) : Response.error())))
   );
 });
 """
@@ -98,3 +100,9 @@ def service_worker(request):
     resp = HttpResponse(SERVICE_WORKER, content_type="application/javascript")
     resp["Cache-Control"] = "no-cache"
     return resp
+
+
+def offline(request):
+    from django.shortcuts import render
+
+    return render(request, "offline.html")

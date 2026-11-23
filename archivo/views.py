@@ -8,7 +8,9 @@ from django.contrib.postgres.search import SearchQuery, SearchVector  # noqa: F4
 from django.db import connection
 from django.db.models import Count, Prefetch, Q
 from django.http import Http404
+from django.shortcuts import redirect
 from django.utils import timezone
+from django.utils.text import slugify
 from django.views.generic import DetailView, ListView, TemplateView
 
 from core.models import Entidad
@@ -57,7 +59,7 @@ class HistoriaView(DetailView):
         )
         return _historias_publicas().prefetch_related(
             Prefetch("hechos", queryset=hechos),
-            Prefetch("proposiciones", queryset=Proposicion.objects.filter(estado="publicada")),
+            Prefetch("proposiciones", queryset=Proposicion.objects.filter(estado="publicada").order_by("pk")),
         )
 
     def get_context_data(self, **kwargs):
@@ -123,6 +125,14 @@ class EntidadView(DetailView):
             raise Http404
         return ent
 
+    def get(self, request, *args, **kwargs):
+        # Una sola URL por entidad: /e/<id>/ y slugs viejos o inventados van a la canónica.
+        ent = self.get_object()
+        slug = slugify(ent.nombre)
+        if slug and kwargs.get("slug") != slug:
+            return redirect("archivo:entidad-slug", pk=ent.pk, slug=slug, permanent=True)
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ent = self.object
@@ -187,6 +197,10 @@ class MedioView(DetailView):
         return ctx
 
 
+# Antes de esta fecha no hay archivo; evita fechas absurdas (y el OverflowError de date.min).
+PRIMER_DIA = date(2024, 1, 1)
+
+
 class DiaView(TemplateView):
     template_name = "archivo/dia.html"
 
@@ -194,13 +208,15 @@ class DiaView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         try:
             d = date(int(kwargs["y"]), int(kwargs["m"]), int(kwargs["d"]))
-        except ValueError:
+        except (ValueError, OverflowError):
+            raise Http404
+        if d < PRIMER_DIA or d > timezone.localdate():
             raise Http404
         tz = timezone.get_current_timezone()
         desde = datetime.combine(d, time.min, tzinfo=tz)
         hasta = desde + timedelta(days=1)
         ctx["dia"] = d
-        ctx["anterior"] = d - timedelta(days=1)
+        ctx["anterior"] = d - timedelta(days=1) if d > PRIMER_DIA else None
         ctx["siguiente"] = d + timedelta(days=1) if d < timezone.localdate() else None
         ctx["historias"] = (
             _historias_publicas()

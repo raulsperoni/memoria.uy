@@ -25,7 +25,7 @@ poetry run python manage.py runserver
 
 ## Stack
 
-- **Backend**: Django 5.1, Python 3.11+, Celery + Redis
+- **Backend**: Django 5.1, Python 3.10–3.11 (la imagen usa 3.10). Tareas periódicas con `manage.py tick`; Celery + Redis opcional
 - **Frontend**: HTMX, Tailwind CSS (monocromo)
 - **Ingesta**: RSS/sitemaps + Cloudflare Browser Rendering + trafilatura; snapshots en R2
 - **IA**: Claude Haiku 5.5 vía OpenRouter (historias), Jev (decisiones tipadas), Workers AI bge-m3 (embeddings)
@@ -37,7 +37,7 @@ poetry run python manage.py runserver
 ```
 archivo/   # Ingesta, historias, hechos, proposiciones, notas editadas
 juego/     # Juego diario y burbujas
-core/      # Usuarios, entidades, motor de clustering, emails (y sistema viejo)
+core/      # Entidades, motor de clustering, tick, resumen para staff
 memoria/   # Settings, urls, celery
 theme/     # Tailwind
 docs/      # Propuesta, plan, ciencia
@@ -55,11 +55,9 @@ poetry run python manage.py migrate
 poetry run pytest
 poetry run pytest --cov=. --cov-report=html
 
-# Tests de seguridad
-poetry run pytest core/tests/test_security.py -v
-
-# Celery (requiere Redis)
-poetry run celery -A memoria worker --loglevel=info
+# Tareas periódicas (lo que corre el cron de producción)
+poetry run python manage.py tick --listar
+poetry run python manage.py tick --forzar ciclo_ingesta
 
 # Archivo y juego
 poetry run python manage.py cargar_medios
@@ -95,27 +93,18 @@ SNAPSHOT_STORAGE=r2
 R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
 
-# Celery
-REDIS_URL=redis://localhost:6379/0
-
-# Re-engagement emails (optional)
-ENABLE_REENGAGEMENT_EMAILS=True          # Enable re-engagement emails
-REENGAGEMENT_EMAIL_HOUR=10               # Hour to send (default: 10 AM)
-REENGAGEMENT_EMAIL_MINUTE=0              # Minute to send (default: 0)
-REENGAGEMENT_DAYS_INACTIVE=7             # Days of inactivity to trigger email
-REENGAGEMENT_MAX_EMAILS=500              # Max emails per run
-REENGAGEMENT_MIN_DAYS_BETWEEN=7          # Minimum days between emails to same user
+# Opcional: con REDIS_URL vuelve el modo Celery (worker + beat)
+# REDIS_URL=redis://localhost:6379/0
 ```
 
 ## Deployment (Railway)
 
-Tres servicios requeridos:
+Dos servicios del mismo `Dockerfile` más Postgres, sin Redis:
 
-1. **Web**: `/entrypoint.sh web`
-2. **Worker**: `/entrypoint.sh worker`
-3. **Beat**: `/entrypoint.sh beat`
+1. **web**: `/entrypoint.sh web` (migra, crea la tabla de cache, gunicorn). Healthcheck `/health/`. Necesita `PORT=8000`.
+2. **cron**: `/entrypoint.sh tick`, cron `*/15 * * * *`, restart `NEVER`.
 
-Todos comparten `REDIS_URL`.
+Ver [CLAUDE.md](CLAUDE.md#deployment) y [archivo/README.md](archivo/README.md) para las variables.
 
 ## Licencia
 

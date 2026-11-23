@@ -3,7 +3,7 @@
 {% block title %}Burbujas · memoria.uy{% endblock %}
 {% block meta_description %}Cómo se agrupa la opinión en Uruguay según cómo votamos las frases de las noticias: lo que nos une y lo que nos divide.{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-6">
+<div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <h2 class="mono text-2xl font-bold mb-1">Burbujas</h2>
   {% if not run %}
@@ -22,7 +22,7 @@
     </svg>{% endlocalize %}
   </figure>
   {% if mi_burbuja %}<p class="mono text-sm mb-8">Estás en la burbuja <strong>{{ mi_burbuja.letra }}{% if mi_burbuja.nombre %} · {{ mi_burbuja.nombre }}{% endif %}</strong>.</p>
-  {% else %}<p class="mono text-xs text-gray-600 mb-8">// Votá al menos 5 frases para aparecer en el mapa.</p>{% endif %}
+  {% else %}<p class="mono text-xs text-gray-600 mb-8">// Aparecés en el mapa cuando votaste al menos 5 frases. El mapa se recalcula cada noche (02:15).</p>{% endif %}
 
   {% if une %}
   <section class="mb-8 border-2 border-black p-4">

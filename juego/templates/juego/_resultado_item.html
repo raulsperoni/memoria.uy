@@ -7,20 +7,20 @@
     <div class="h-6 border-2 border-black flex" role="img" aria-label="{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo">
       <div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div>
     </div>
-    <p class="mono text-[11px] text-gray-600 mt-1">{{ r.opinan }} opinión{{ r.opinan|pluralize:"es" }}{% if r.nose %} · {{ r.nose }} no sabe{{ r.nose|pluralize:"n" }}{% endif %}{% if r.provisorio %} · provisorio{% endif %}</p>
+    <p class="mono text-[11px] text-gray-600 mt-1">{{ r.opinan }} {{ r.opinan|pluralize:"opinión,opiniones" }}{% if r.nose %} · {{ r.nose }} no sabe{{ r.nose|pluralize:"n" }}{% endif %}{% if r.provisorio %} · provisorio{% endif %}</p>
   </div>
   {% else %}
   <p class="mono text-xs text-gray-600">Sos de los primeros: todavía no hay otras opiniones.</p>
   {% endif %}
   <p class="mono text-sm">
     Vos: <strong>{{ voto.get_opinion_display }}</strong> · predijiste {{ bucket_label|get_item:voto.prediccion }}
-    {% if acierto is True %}<span class="ml-1 bg-black text-white px-1">acertaste</span>{% elif acierto is False %}<span class="ml-1 border border-black px-1">no esta vez</span>{% endif %}
+    {% if acierto is True %}<span class="ml-1 bg-black text-white px-1 whitespace-nowrap inline-block">acertaste</span>{% elif acierto is False %}<span class="ml-1 border border-black px-1 whitespace-nowrap inline-block">no esta vez</span>{% endif %}
   </p>
   <p class="mono text-[11px] text-gray-500">// El puntaje final se calcula con el resultado al cierre del día.</p>
   {% if hay_mas %}
-  <a href="{% url 'juego:hoy' %}"
+  <a href="{% url 'juego:hoy' %}" autofocus
      class="block w-full text-center bg-black text-white py-3 mono font-bold hover:bg-gray-800">siguiente →</a>
   {% else %}
-  <a href="{% url 'juego:resultado' %}" class="block w-full text-center bg-black text-white py-3 mono font-bold hover:bg-gray-800">ver mi resultado →</a>
+  <a href="{% url 'juego:resultado' %}" autofocus class="block w-full text-center bg-black text-white py-3 mono font-bold hover:bg-gray-800">ver mi resultado →</a>
   {% endif %}
 </div>

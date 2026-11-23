@@ -1,224 +1,73 @@
 {% extends "base.html" %}
+{% block title %}Acerca · memoria.uy{% endblock %}
+{% block meta_description %}Qué es memoria.uy: un archivo de las noticias uruguayas con fuentes, las notas que cambian después de publicadas, y un juego diario sobre qué piensa Uruguay.{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto">
+<div class="max-w-3xl mx-auto py-2">
+  {% include "archivo/_nav.html" %}
 
-  <!-- Header -->
-  <div class="mb-8 border-b-2 border-black pb-4">
-    <h1 class="text-3xl md:text-4xl font-bold mono mb-2">Acerca de memoria.uy</h1>
-    <p class="text-sm text-gray-600 mono">// visión, motivación y funcionamiento del proyecto</p>
+  <h2 class="mono text-2xl font-bold mb-1">Acerca de memoria.uy</h2>
+  <p class="mono text-xs text-gray-600 mb-8">// Lo que pasó en Uruguay, con fuentes. Y lo que pensamos.</p>
+
+  <div class="space-y-8 text-[15px] leading-relaxed">
+
+    <section>
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué es</h3>
+      <p class="mb-3">memoria.uy es dos cosas que se alimentan entre sí:</p>
+      <ul class="space-y-2 pl-4 list-disc">
+        <li><strong>Un archivo</strong> de las noticias uruguayas. Junta las notas de varios medios sobre un mismo hecho y las convierte en una <em>historia</em>: un resumen y una lista de hechos, cada uno con los medios que lo respaldan.</li>
+        <li><strong>Un juego diario</strong>, «¿Qué piensa Uruguay?»: frases opinables sacadas de las noticias del día. Decís si estás de acuerdo y adivinás qué porcentaje del resto lo está.</li>
+      </ul>
+      <p class="mt-3 text-gray-700">Es un proyecto de interés social, no comercial.</p>
+    </section>
+
+    <section>
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo se arma el archivo</h3>
+      <ol class="space-y-3 pl-4 list-decimal">
+        <li><strong>Descubrir.</strong> Leemos los feeds y sitemaps de medios uruguayos y fuentes oficiales.</li>
+        <li><strong>Filtrar.</strong> Un modelo decide si cada nota es de interés público para Uruguay (política, economía, justicia, salud, educación…). Deportes, espectáculos y crímenes sin dimensión política quedan afuera.</li>
+        <li><strong>Capturar.</strong> Guardamos una copia de la nota tal como estaba publicada. La copia es privada: sirve como evidencia, no se republica.</li>
+        <li><strong>Agrupar.</strong> Las notas que cubren el mismo hecho se juntan en una historia.</li>
+        <li><strong>Redactar y verificar.</strong> Un modelo de lenguaje escribe el resumen y los hechos. Después, cada hecho se chequea contra cada nota, y solo se muestra un medio al lado de un hecho si su nota lo respalda.</li>
+        <li><strong>Volver a mirar.</strong> Las notas de las historias más importantes se vuelven a capturar a las 24 horas y a los 7 días. Si cambiaron, aparecen en <a class="underline" href="{% url 'archivo:cambios' %}">notas editadas</a>, con lo que se sacó y lo que se agregó.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">El juego y las burbujas</h3>
+      <p class="mb-3">Cada mañana a las 05:30 salen las frases del día, de historias distintas. Votás sin cuenta. Tu voto no cuenta para evaluar tu propia predicción, y el puntaje final se calcula con el resultado al cierre del día.</p>
+      <p>Con los votos de varias semanas armamos las <a class="underline" href="{% url 'juego:burbujas' %}">burbujas</a>: grupos de personas que votan parecido, al estilo de <a class="underline" href="https://pol.is" rel="noopener" target="_blank">Polis</a>. Mostramos en qué coinciden todas y en qué se separan.</p>
+    </section>
+
+    <section>
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Principios</h3>
+      <ul class="space-y-2 pl-4 list-disc">
+        <li><strong>Fuente primaria.</strong> Cada hecho dice de dónde sale, con un link a la nota original.</li>
+        <li><strong>Agregador, no copia.</strong> Lo público son hechos redactados por memoria.uy, citas breves y links. Las notas pertenecen a sus medios.</li>
+        <li><strong>Transparente.</strong> El código es abierto y los datos agregados se pueden <a class="underline" href="{% url 'archivo:datos' %}">descargar</a>. Nunca publicamos votos individuales.</li>
+        <li><strong>Sin cuenta.</strong> Para leer, votar y jugar no hace falta registrarse.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Límites</h3>
+      <ul class="space-y-2 pl-4 list-disc text-gray-800">
+        <li>La verificación es automática. Detecta datos inventados, pero se le pueden escapar errores sutiles, como un número mal contado.</li>
+        <li>No todos los medios publican feeds o dejan leer sus sitemaps, así que la cobertura de algunos es parcial.</li>
+        <li>Los resultados del juego y las burbujas reflejan a quienes juegan, no a todo Uruguay.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Errores, ideas, código</h3>
+      <p class="mb-3">Si encontrás un error en un hecho o en el sitio, o tenés una idea, abrí un issue en GitHub. El código está en el mismo lugar.</p>
+      <div class="flex flex-wrap gap-2 mono text-sm">
+        <a href="https://github.com/raulsperoni/memoria.uy/issues/new" target="_blank" rel="noopener" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white">avisar un error →</a>
+        <a href="https://github.com/raulsperoni/memoria.uy" target="_blank" rel="noopener" class="border border-black px-4 py-2 hover:bg-black hover:text-white break-all">github.com/raulsperoni/memoria.uy</a>
+      </div>
+    </section>
+
+    <p class="mono text-xs"><a class="underline" href="{% url 'privacidad' %}">política de privacidad →</a></p>
   </div>
-
-  <!-- Main Content -->
-  <div class="space-y-8 text-sm md:text-base leading-relaxed">
-
-    <!-- Qué es -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> ¿Qué es memoria.uy?
-      </h2>
-      <p class="mb-3">
-        Memoria.uy es una herramienta para votar noticias uruguayas. Te permite expresar qué pensás sobre el contenido de los artículos que leés —si te parece buena o mala noticia— y ver qué opinan otras personas.
-      </p>
-      <p class="text-gray-700">
-        Es un proyecto académico y de interés social. No es un producto comercial.
-      </p>
-    </section>
-
-    <!-- Por qué existe -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> ¿Por qué existe?
-      </h2>
-      <p class="mb-3">
-        Las noticias nos impactan de diferentes maneras. El mismo artículo puede ser visto como buena noticia por algunas personas y como mala noticia por otras.
-      </p>
-      <p class="mb-3">
-        Nos interesa entender estos patrones: ¿qué noticias generan consenso en Uruguay? ¿Cuáles nos dividen? ¿Existen burbujas de opinión claramente diferenciadas?
-      </p>
-      <p class="text-gray-700">
-        Memoria.uy busca hacer visible el panorama mediático uruguayo desde la perspectiva de quienes leen las noticias, no solo de quienes las producen.
-      </p>
-    </section>
-
-    <!-- Cómo funciona -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> ¿Cómo funciona?
-      </h2>
-      <div class="space-y-3">
-        <p class="font-semibold mono text-sm">1. Captura de contenido</p>
-        <p class="pl-4 text-gray-700">
-          Cuando agregás una URL (desde el sitio web o la extensión del navegador), el sistema captura el contenido del artículo para poder procesarlo.
-        </p>
-
-        <p class="font-semibold mono text-sm">2. Votación</p>
-        <p class="pl-4 text-gray-700">
-          Podés votar si el contenido te parece buena noticia, mala noticia, o neutral. No hace falta registro. Tu voto se guarda de forma anónima usando tu sesión del navegador.
-        </p>
-
-        <p class="font-semibold mono text-sm">3. Procesamiento</p>
-        <p class="pl-4 text-gray-700">
-          El sistema usa modelos de lenguaje (LLMs) para extraer información del artículo: título, resumen, entidades mencionadas (personas, organizaciones, lugares) y sentimiento general.
-        </p>
-
-        <p class="font-semibold mono text-sm">4. Clustering</p>
-        <p class="pl-4 text-gray-700">
-          El sistema agrupa votantes por patrones de voto similares, revelando "burbujas" de opinión. Podés ver tu posición en el mapa y filtrar noticias por consenso de tu cluster.
-        </p>
-
-        <p class="font-semibold mono text-sm">5. Feeds del timeline: recientes, afín, puente, avanzado</p>
-        <p class="pl-4 text-gray-700 mb-2">
-          En el timeline elegís cómo querés leer:
-        </p>
-        <ul class="pl-6 list-disc text-gray-700 space-y-1 mb-2">
-          <li><strong>Recientes</strong>: lo que aún no votaste, ordenado por fecha. Sin personalización.</li>
-          <li><strong>Afín</strong>: noticias que encajan con tu perfil —tu burbuja las valora como buenas, o son sobre entidades con las que te involucraste positivamente. «Quienes votan como vos también marcaron estas.»</li>
-          <li><strong>Puente</strong>: noticias donde varias burbujas coinciden. Pensado para <em>salir de tu burbuja</em> y ver dónde hay acuerdo entre perspectivas distintas.</li>
-          <li><strong>Avanzado</strong>: filtros completos (por opinión, mayoría, burbuja, entidades).</li>
-        </ul>
-        <p class="pl-4 text-gray-600 text-xs">
-          Cada feed muestra en la página cómo se arma (transparencia algorítmica).
-        </p>
-      </div>
-    </section>
-
-    <!-- Privacidad -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> Privacidad
-      </h2>
-      <p class="mb-3">
-        No hace falta crear cuenta para votar. Los votos se vinculan a tu sesión del navegador, no a tu identidad.
-      </p>
-      <p class="mb-3 text-gray-700">
-        Si usás la extensión de navegador, podés mantener tus votos sincronizados entre la extensión y el sitio web. La sesión se guarda localmente en tu navegador.
-      </p>
-      <p>
-        <a href="{% url 'privacidad' %}"
-           class="mono text-sm border border-black px-3 py-2 inline-block hover:bg-black hover:text-white transition-colors">
-          Ver política de privacidad completa →
-        </a>
-      </p>
-    </section>
-
-    <!-- Código abierto -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> Código abierto
-      </h2>
-      <p class="mb-3">
-        El código de memoria.uy es abierto. Podés revisar cómo funciona, proponer mejoras, o usar partes del código para tus propios proyectos.
-      </p>
-      <p class="text-gray-700">
-        El proyecto está construido con Django, Celery, Tailwind CSS, y usa LiteLLM para el procesamiento de lenguaje natural.
-      </p>
-    </section>
-
-    <!-- Limitaciones -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> Limitaciones actuales
-      </h2>
-      <div class="space-y-2 text-gray-700">
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>La votación refleja tu opinión sobre el <strong>contenido/evento</strong> de la noticia, no sobre la calidad del periodismo.</span>
-        </p>
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>El procesamiento con LLMs puede tomar algunos minutos. No siempre es perfecto.</span>
-        </p>
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>Este es un proyecto en desarrollo activo. Algunas funciones pueden cambiar o no funcionar perfectamente.</span>
-        </p>
-      </div>
-    </section>
-
-    <!-- Próximos pasos -->
-    <section>
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> ¿Qué viene?
-      </h2>
-      <p class="mb-3">
-        A medida que se acumulen votos, queremos implementar:
-      </p>
-      <div class="space-y-2 text-gray-700">
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>Métricas de polarización: identificar qué temas dividen más a Uruguay</span>
-        </p>
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>Seguimiento de entidades: ver cómo evoluciona el sentimiento hacia políticos, organizaciones, etc.</span>
-        </p>
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>Bridge-builders: destacar votantes que conectan distintas burbujas</span>
-        </p>
-        <p class="flex items-start">
-          <span class="mr-2">•</span>
-          <span>API pública para investigadores</span>
-        </p>
-      </div>
-    </section>
-
-    <!-- Ayuda y Feedback -->
-    <section class="border-t-2 border-black pt-6 mt-8">
-      <h2 class="text-xl font-bold mono mb-3 flex items-center">
-        <span class="text-gray-400 mr-2">&gt;</span> Ayuda y Feedback
-      </h2>
-      <p class="mb-4 text-gray-700">
-        memoria.uy está en desarrollo activo. Tu feedback es fundamental para mejorar la plataforma.
-      </p>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <a href="https://github.com/raulsperoni/memoria.uy/issues/new?template=bug_report.md"
-           target="_blank"
-           class="border-2 border-black px-4 py-3 hover:bg-black hover:text-white transition-colors text-center">
-          <div class="text-2xl mb-1">🐛</div>
-          <div class="mono text-sm font-semibold">Reportar Error</div>
-        </a>
-        <a href="https://github.com/raulsperoni/memoria.uy/issues/new?template=feature_request.md"
-           target="_blank"
-           class="border-2 border-black px-4 py-3 hover:bg-black hover:text-white transition-colors text-center">
-          <div class="text-2xl mb-1">💡</div>
-          <div class="mono text-sm font-semibold">Sugerir Idea</div>
-        </a>
-        <a href="https://github.com/raulsperoni/memoria.uy/issues"
-           target="_blank"
-           class="border-2 border-black px-4 py-3 hover:bg-black hover:text-white transition-colors text-center">
-          <div class="text-2xl mb-1">📋</div>
-          <div class="mono text-sm font-semibold">Ver Issues</div>
-        </a>
-      </div>
-
-      <p class="text-xs text-gray-600 mb-4">
-        Los issues están en GitHub. Necesitás una cuenta de GitHub para reportar (gratis en <a href="https://github.com/signup" target="_blank" class="underline">github.com/signup</a>).
-      </p>
-
-      <p class="text-gray-700">
-        También podés revisar el código, proponer mejoras o colaborar directamente:
-      </p>
-      <p class="mt-2">
-        <a href="https://github.com/raulsperoni/memoria.uy"
-           target="_blank"
-           class="mono text-sm border border-black px-3 py-2 inline-block hover:bg-black hover:text-white transition-colors">
-          github.com/raulsperoni/memoria.uy
-        </a>
-      </p>
-    </section>
-
-  </div>
-
-  <!-- Back to timeline -->
-  <div class="mt-12 mb-8">
-    <a href="{% url 'timeline' %}"
-       class="mono text-sm border-2 border-black px-4 py-2 inline-block hover:bg-black hover:text-white transition-colors">
-      ← Volver a las noticias
-    </a>
-  </div>
-
 </div>
 {% endblock %}

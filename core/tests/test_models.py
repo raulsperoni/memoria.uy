@@ -50,7 +50,7 @@ class TestAuthentication:
         assert logged_in
         
         # Visit a page that requires authentication
-        response = client.get(reverse('timeline'))
+        response = client.get(reverse('archivo:home'))
         assert response.status_code == 200
         assert '_auth_user_id' in client.session
         assert int(client.session['_auth_user_id']) == user.pk

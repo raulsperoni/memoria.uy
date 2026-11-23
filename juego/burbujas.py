@@ -139,7 +139,7 @@ def ultimo_run():
 def patrones_por_proposicion(run):
     """{prop_id: {burbuja: patron}} sólo con patrones con suficientes opiniones."""
     out = defaultdict(dict)
-    for p in run.patrones.select_related("burbuja", "proposicion__historia"):
+    for p in run.patrones.select_related("burbuja", "proposicion__historia").order_by("burbuja__numero"):
         if p.opinan >= MIN_OPINAN_PATRON:
             out[p.proposicion_id][p.burbuja] = p
     return out

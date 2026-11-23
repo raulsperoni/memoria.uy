@@ -1,28 +1,30 @@
 {% with p=item.proposicion %}
 <form method="post" action="{% url 'juego:votar-item' item.pk %}"
-      hx-post="{% url 'juego:votar-item' item.pk %}" hx-target="#juego-paso" hx-swap="outerHTML"
+      hx-post="{% url 'juego:votar-item' item.pk %}" hx-target="#juego" hx-swap="innerHTML show:top"
+      hx-disabled-elt="find button[type=submit]"
       id="juego-paso" class="space-y-6">
   {% csrf_token %}
   <blockquote class="border-2 border-black p-5 text-xl md:text-2xl font-bold leading-snug">«{{ p.texto }}»</blockquote>
 
   <details class="mono text-xs">
-    <summary class="cursor-pointer underline">¿de qué se trata?</summary>
+    <summary class="cursor-pointer underline py-2 inline-block">¿de qué se trata?</summary>
     <div class="mt-2 p-3 bg-gray-50 border border-gray-300 text-sm font-sans">
       <p class="font-bold">{{ p.historia.titulo }}</p>
       <p class="mt-1">{{ p.historia.resumen }}</p>
-      <a class="underline mono text-xs mt-1 inline-block" href="{% url 'archivo:historia' p.historia.slug %}" target="_blank">hechos y fuentes →</a>
+      <a class="underline mono text-xs mt-1 inline-block py-1" href="{% url 'archivo:historia' p.historia.slug %}" target="_blank" rel="noopener">hechos y fuentes →</a>
     </div>
   </details>
 
+  {% with foco="peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-black" %}
   <fieldset>
     <legend class="mono text-xs uppercase tracking-wide mb-2">1 · ¿Vos qué pensás?</legend>
     <div class="grid grid-cols-3 gap-2">
       <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="acuerdo" class="peer sr-only" required>
-        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100">De acuerdo</span></label>
+        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco }}">De acuerdo</span></label>
       <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="desacuerdo" class="peer sr-only">
-        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100">En desacuerdo</span></label>
+        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco }}">En desacuerdo</span></label>
       <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="nose" class="peer sr-only">
-        <span class="h-full flex items-center justify-center text-center border-2 border-gray-400 text-gray-600 py-3 mono text-sm peer-checked:bg-gray-600 peer-checked:text-white hover:bg-gray-100">No sé</span></label>
+        <span class="h-full flex items-center justify-center text-center border-2 border-gray-400 text-gray-600 py-3 mono text-sm peer-checked:bg-gray-600 peer-checked:text-white hover:bg-gray-100 {{ foco }}">No sé</span></label>
     </div>
   </fieldset>
 
@@ -31,11 +33,30 @@
     <div class="grid grid-cols-5 gap-1">
       {% for valor, etiqueta in buckets %}
       <label class="cursor-pointer"><input type="radio" name="prediccion" value="{{ valor }}" class="peer sr-only" required>
-        <span class="block text-center border-2 border-black py-3 mono text-[11px] sm:text-xs peer-checked:bg-black peer-checked:text-white hover:bg-gray-100">{{ etiqueta }}</span></label>
+        <span class="block text-center border-2 border-black py-3 mono text-[11px] sm:text-xs peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco }}">{{ etiqueta }}</span></label>
       {% endfor %}
     </div>
   </fieldset>
+  {% endwith %}
 
-  <button type="submit" class="w-full bg-black text-white py-3 mono font-bold hover:bg-gray-800">confirmar →</button>
+  <div>
+    <button type="submit" class="w-full bg-black text-white py-3 mono font-bold hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">confirmar →</button>
+    <p class="mono text-[11px] text-gray-600 mt-2 text-center" data-falta>elegí tu opinión y tu predicción</p>
+  </div>
 </form>
+<script>
+  (function () {
+    var f = document.getElementById('juego-paso');
+    if (!f) return;
+    var btn = f.querySelector('button[type=submit]');
+    var falta = f.querySelector('[data-falta]');
+    function listo() {
+      var ok = f.querySelector('input[name=opinion]:checked') && f.querySelector('input[name=prediccion]:checked');
+      btn.disabled = !ok;
+      falta.hidden = !!ok;
+    }
+    f.addEventListener('change', listo);
+    listo();
+  })();
+</script>
 {% endwith %}

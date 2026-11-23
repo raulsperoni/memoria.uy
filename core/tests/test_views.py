@@ -1,7 +1,6 @@
 import pytest
 from django.urls import reverse
 
-from core.models import Noticia, Voto
 
 
 @pytest.mark.django_db
@@ -10,7 +9,7 @@ class TestViews:
 
     def test_homepage_authenticated(self, authenticated_client):
         """Test that authenticated users can access the homepage."""
-        url = reverse('timeline')
+        url = reverse('archivo:home')
         response = authenticated_client.get(url)
         assert response.status_code == 200
 
@@ -28,76 +27,39 @@ class TestViews:
 
 
 @pytest.mark.django_db
-class TestTimelineFeeds:
-    """Test timeline feed modes: confort, puente, avanzado."""
+@pytest.mark.parametrize(
+    "viejo,nuevo",
+    [
+        ("/noticias/", "/"),
+        ("/noticias/alguna-noticia/", "/"),
+        ("/bienvenida/", "/"),
+        ("/mapa/", "/burbujas/"),
+        ("/clusters/report/", "/burbujas/"),
+        ("/clusters/stats/", "/burbujas/"),
+    ],
+)
+def test_paginas_viejas_redirigen(client, viejo, nuevo):
+    r = client.get(viejo)
+    assert r.status_code == 301 and r.url == nuevo
 
-    def test_timeline_no_feed_defaults_to_recientes(self, client):
-        """Without feed param, timeline uses recientes (chronological unvoted)."""
-        response = client.get(reverse('timeline'))
-        assert response.status_code == 200
-        assert 'feed_mode' in response.context
-        assert response.context['feed_mode'] == 'recientes'
 
-    def test_timeline_feed_recientes_returns_200(self, client):
-        """feed=recientes returns 200 (chronological unvoted)."""
-        response = client.get(reverse('timeline'), {'feed': 'recientes'})
-        assert response.status_code == 200
-        assert response.context['feed_mode'] == 'recientes'
-        assert 'feed_algorithm_description' in response.context
+@pytest.mark.django_db
+def test_voto_limitado_por_minuto(client, settings):
+    """El juego limita los votos por IP (django-ratelimit) y responde 429."""
+    from django.core.cache import cache
 
-    def test_timeline_feed_confort_returns_200(self, client):
-        """feed=confort returns 200 (comfort/afín: cluster + entities)."""
-        response = client.get(reverse('timeline'), {'feed': 'confort'})
-        assert response.status_code == 200
-        assert response.context['feed_mode'] == 'confort'
-        assert 'feed_algorithm_description' in response.context
+    from juego.tests.test_juego import _prop
 
-    def test_timeline_feed_recientes_excludes_voted(self, client, user):
-        """Recientes feed excludes noticias the user has already voted on."""
-        noticia = Noticia.objects.create(
-            enlace='https://example.com/feed-recientes-test',
-            meta_titulo='Test',
-        )
-        client.force_login(user)
-        Voto.objects.create(noticia=noticia, usuario=user, opinion='buena')
-        response = client.get(reverse('timeline'), {'feed': 'recientes'})
-        assert response.status_code == 200
-        object_list = list(response.context['noticias'])
-        assert noticia not in object_list
+    cache.clear()
+    p = _prop(1)
+    url = reverse("juego:votar-proposicion", args=[p.pk])
+    codigos = [client.post(url, {"opinion": "acuerdo"}, HTTP_HX_REQUEST="true").status_code for _ in range(61)]
+    assert codigos[-1] == 429
 
-    def test_timeline_feed_puente_returns_200(self, client):
-        """feed=puente returns 200 (may be empty if no cluster run)."""
-        response = client.get(reverse('timeline'), {'feed': 'puente'})
-        assert response.status_code == 200
-        assert response.context['feed_mode'] == 'puente'
-        assert 'feed_algorithm_description' in response.context
 
-    def test_timeline_feed_avanzado_returns_200(self, client):
-        """feed=avanzado with filter returns 200."""
-        response = client.get(
-            reverse('timeline'),
-            {'feed': 'avanzado', 'filter': 'nuevas'},
-        )
-        assert response.status_code == 200
-        assert response.context['feed_mode'] == 'avanzado'
-        assert response.context['current_filter'] == 'nuevas'
-
-    def test_timeline_feed_avanzado_filter_todas(self, client):
-        """feed=avanzado&filter=todas shows all news."""
-        Noticia.objects.create(
-            enlace='https://example.com/feed-avanzado-todas-test',
-            meta_titulo='All news',
-        )
-        response = client.get(
-            reverse('timeline'),
-            {'feed': 'avanzado', 'filter': 'todas'},
-        )
-        assert response.status_code == 200
-        assert response.context['current_filter'] == 'todas'
-        assert len(response.context['noticias']) >= 1
-
-    def test_timeline_invalid_feed_falls_back_to_recientes(self, client):
-        """Unknown feed param is treated as default (recientes)."""
-        response = client.get(reverse('timeline'), {'feed': 'invalid'})
-        assert response.status_code == 200
-        assert response.context['feed_mode'] == 'recientes'
+@pytest.mark.django_db
+def test_acerca_y_privacidad_describen_el_producto_actual(client):
+    for nombre in ("acerca_de", "privacidad"):
+        html = client.get(reverse(nombre)).content.decode()
+        assert "extensión" not in html and "buena noticia" not in html
+        assert "¿Qué piensa Uruguay?" in html or "votos individuales" in html

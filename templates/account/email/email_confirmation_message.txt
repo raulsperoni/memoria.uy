@@ -13,5 +13,5 @@ Si no creaste una cuenta en memoria.uy, podés ignorar este email.
 
 ---
 memoria.uy
-Votá noticias. Descubrí patrones. Salí de tu burbuja.
+Lo que pasó en Uruguay, con fuentes. Y lo que pensamos.
 {% endautoescape %}

@@ -17,52 +17,16 @@ Including another URLconf
 
 from django.conf import settings
 from django.conf.urls.static import static
-
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
-from django.urls import path, include
-from core.sitemaps import (
-    CambioSitemap,
-    EntidadSitemap,
-    HistoriaSitemap,
-    NoticiaSitemap,
-    StaticViewSitemap,
-)
-from core.views import (
-    NewsTimelineView,
-    VoteView,
-    DeleteNoticiaView,
-    AcercaDeView,
-    PrivacidadView,
-    BienvenidaView,
-    NoticiaDetailView,
-    ProfileEditView,
-    EmailAccessProfileView,
-)
-from core.api_clustering import (
-    cluster_data,
-    voter_cluster_membership,
-    cluster_voting_patterns,
-    trigger_clustering,
-)
-from core.views_clustering import (
-    ClusterVisualizationView,
-    ClusterStatsView,
-    ClusterReportView,
-    cluster_data_json,
-    cluster_evolution_json,
-    cluster_og_image,
-    upload_cluster_og_image,
-    consensus_data_json,
-    bridges_data_json,
-    polarization_timeline_json,
-    cluster_stability_json,
-)
-from memoria.views import favicon, health_check, manifest, robots_txt, service_worker
+from django.urls import include, path, re_path
+from django.views.generic import RedirectView
 
-# Sitemap configuration
+from core.sitemaps import CambioSitemap, EntidadSitemap, HistoriaSitemap, StaticViewSitemap
+from core.views import AcercaDeView, PrivacidadView
+from memoria.views import favicon, health_check, manifest, offline, robots_txt, service_worker
+
 sitemaps = {
-    "noticias": NoticiaSitemap,
     "static": StaticViewSitemap,
     "historias": HistoriaSitemap,
     "entidades": EntidadSitemap,
@@ -71,13 +35,22 @@ sitemaps = {
 
 # Custom error handlers
 handler500 = "core.error_handlers.server_error"
-handler429 = "core.error_handlers.ratelimited_error"
+
+# Páginas del producto anterior (votar noticias): redirigen a su equivalente actual.
+redirecciones_viejas = [
+    re_path(r"^noticias/", RedirectView.as_view(url="/", permanent=True)),
+    re_path(r"^bienvenida/$", RedirectView.as_view(url="/", permanent=True)),
+    re_path(r"^mapa/$", RedirectView.as_view(url="/burbujas/", permanent=True)),
+    re_path(r"^clusters/", RedirectView.as_view(url="/burbujas/", permanent=True)),
+    re_path(r"^accounts/profile/$", RedirectView.as_view(url="/", permanent=False)),
+]
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("favicon.ico", favicon, name="favicon"),
     path("robots.txt", robots_txt, name="robots_txt"),
     path("manifest.webmanifest", manifest, name="manifest"),
+    path("offline/", offline, name="offline"),
     path("sw.js", service_worker, name="service_worker"),
     path(
         "sitemap.xml",
@@ -85,105 +58,12 @@ urlpatterns = [
         {"sitemaps": sitemaps},
         name="django.contrib.sitemaps.views.sitemap",
     ),
-    path("noticias/", NewsTimelineView.as_view(), name="timeline"),
     path("acerca-de/", AcercaDeView.as_view(), name="acerca_de"),
     path("privacidad/", PrivacidadView.as_view(), name="privacidad"),
-    path("bienvenida/", BienvenidaView.as_view(), name="bienvenida"),
-    path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
-    path(
-        "noticias/<slug:slug>/",
-        NoticiaDetailView.as_view(),
-        name="noticia-detail",
-    ),
-    path(
-        "noticias/<int:pk>/delete/",
-        DeleteNoticiaView.as_view(),
-        name="noticia-delete",
-    ),
-    # Extension API endpoints
-    # Clustering API endpoints
-    path(
-        "api/clustering/data/",
-        cluster_data,
-        name="api-cluster-data",
-    ),
-    path(
-        "api/clustering/voter/me/",
-        voter_cluster_membership,
-        name="api-voter-cluster",
-    ),
-    path(
-        "api/clustering/clusters/<int:cluster_id>/votes/",
-        cluster_voting_patterns,
-        name="api-cluster-votes",
-    ),
-    path(
-        "api/clustering/trigger/",
-        trigger_clustering,
-        name="api-trigger-clustering",
-    ),
-    path(
-        "api/clustering/data/json/",
-        cluster_data_json,
-        name="api-cluster-data-json",
-    ),
-    path(
-        "api/clustering/evolution/",
-        cluster_evolution_json,
-        name="api-cluster-evolution",
-    ),
-    path(
-        "api/mapa/og-image/",
-        cluster_og_image,
-        name="api-cluster-og-image",
-    ),
-    path(
-        "api/mapa/upload-og-image/",
-        upload_cluster_og_image,
-        name="api-upload-cluster-og-image",
-    ),
-    # New clustering analysis APIs
-    path(
-        "api/clustering/consensus/",
-        consensus_data_json,
-        name="api-consensus-data",
-    ),
-    path(
-        "api/clustering/bridges/",
-        bridges_data_json,
-        name="api-bridges-data",
-    ),
-    path(
-        "api/clustering/polarization-timeline/",
-        polarization_timeline_json,
-        name="api-polarization-timeline",
-    ),
-    path(
-        "api/clustering/stability/",
-        cluster_stability_json,
-        name="api-cluster-stability",
-    ),
-    # Clustering UI endpoint - mapa de burbujas
-    path(
-        "mapa/",
-        ClusterVisualizationView.as_view(),
-        name="mapa",
-    ),
-    path(
-        "clusters/stats/",
-        ClusterStatsView.as_view(),
-        name="cluster-stats",
-    ),
-    path(
-        "clusters/report/",
-        ClusterReportView.as_view(),
-        name="cluster-report",
-    ),
+    *redirecciones_viejas,
     path("", include("juego.urls")),
     path("", include("archivo.urls")),
     path("accounts/", include("allauth.urls")),
-    path("accounts/email-access/", EmailAccessProfileView.as_view(), name="email_access_profile"),
-    path("accounts/profile/", ProfileEditView.as_view(), name="profile"),
     path("__reload__/", include("django_browser_reload.urls")),
     path("health/", health_check, name="health_check"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

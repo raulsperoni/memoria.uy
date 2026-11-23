@@ -113,3 +113,49 @@ def test_datos_abiertos(client, historia):
     contenido = b"".join(client.get("/datos/proposiciones.csv").streaming_content).decode()
     assert p.texto in contenido
     assert client.get("/datos/otra.csv").status_code == 404
+
+
+@pytest.mark.parametrize("url", ["/archivo/1/1/1/", "/archivo/9999/12/31/", "/archivo/2023/12/31/"])
+def test_dia_fuera_de_rango_404(client, db, url):
+    assert client.get(url).status_code == 404
+
+
+def test_dia_futuro_404(client, db):
+    d = timezone.localdate() + timezone.timedelta(days=2)
+    assert client.get(f"/archivo/{d.year}/{d.month}/{d.day}/").status_code == 404
+
+
+def test_404_con_estilo(client, db, settings):
+    settings.DEBUG = False
+    r = client.get("/no-existe/")
+    assert r.status_code == 404 and "Esta página no existe" in r.content.decode()
+
+
+def test_entidad_redirige_a_url_canonica(client, db):
+    from core.models import Entidad
+    from django.utils.text import slugify
+
+    e = Entidad.objects.create(nombre="Intendencia de Montevideo")
+    canonica = reverse("archivo:entidad-slug", args=[e.pk, slugify(e.nombre)])
+    for url in (reverse("archivo:entidad", args=[e.pk]), f"/e/{e.pk}/cualquier-cosa/"):
+        r = client.get(url)
+        assert r.status_code == 301 and r.url == canonica
+    assert client.get(canonica).status_code == 200
+
+
+def test_home_sin_juego_lo_anuncia(client, db):
+    html = client.get(reverse("archivo:home")).content.decode()
+    assert "¿Qué piensa Uruguay?" in html and "05:30" in html
+    assert "Votá noticias anónimamente" not in html
+
+
+def test_offline_y_service_worker(client, db):
+    assert client.get("/offline/").status_code == 200
+    sw = client.get("/sw.js").content.decode()
+    assert "/offline/" in sw and "'/accounts/'" in sw
+
+
+def test_no_invita_a_registrarse_si_esta_cerrado(client, db, settings):
+    settings.ACCOUNT_ALLOW_SIGNUPS = False
+    html = client.get(reverse("account_login")).content.decode()
+    assert "Registrate" not in html and "crear cuenta" not in html
