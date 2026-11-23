@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Perfil · memoria.uy{% endblock %}
 
 {% load i18n %}
 
@@ -23,14 +24,6 @@
           {% for error in field.errors %}
             <p class="text-red-700">{{ field.label }}: {{ error }}</p>
           {% endfor %}
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    {% if messages %}
-      <div class="bg-green-50 border-2 border-green-500 p-4 text-sm">
-        {% for message in messages %}
-          <p class="text-green-700">{{ message }}</p>
         {% endfor %}
       </div>
     {% endif %}

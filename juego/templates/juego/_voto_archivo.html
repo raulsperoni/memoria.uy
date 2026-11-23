@@ -1,6 +1,9 @@
-<div id="prop-{{ p.pk }}" class="mono text-xs mt-1">
+<div id="prop-{{ p.pk }}" class="mono text-xs mt-1" aria-live="polite">
   {% if r.pct_acuerdo is not None %}
-  <div class="h-3 border border-black flex max-w-xs"><div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div></div>
-  <span class="text-gray-600">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · {{ r.opinan }} opinión{{ r.opinan|pluralize:"es" }}{% if voto %} · vos: {{ voto.get_opinion_display|lower }}{% endif %}</span>
+  <div class="h-3 border border-black flex max-w-xs" role="img" aria-label="{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo"><div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div></div>
+  <p class="text-gray-600 mt-1">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · {{ r.opinan }} {{ r.opinan|pluralize:"opinión,opiniones" }}{% if voto %} · vos: {{ voto.get_opinion_display|lower }}{% endif %}</p>
+  {% else %}
+  <p class="text-gray-600">{% if voto %}vos: {{ voto.get_opinion_display|lower }} · {% endif %}todavía no hay otras opiniones</p>
   {% endif %}
+  {% if pats %}<p class="text-[11px] text-gray-600 mt-1">por burbuja: {% for b, pat in pats.items %}<a class="underline" href="{% url 'juego:burbujas' %}">{{ b.letra }}</a> {{ pat.pct_acuerdo|floatformat:0 }} %{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
 </div>

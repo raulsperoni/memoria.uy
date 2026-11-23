@@ -4,9 +4,9 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>{% block title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}</title>
+  <title>{% block title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="{% block meta_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
+  <meta name="description" content="{% block meta_description %}Las noticias uruguayas agrupadas por hecho, con lo que dijo cada medio y las notas que cambiaron. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}">
 
   <!-- Canonical URL -->
   <link rel="canonical" href="{% block canonical_url %}https://memoria.uy{{ request.path }}{% endblock %}">
@@ -14,8 +14,8 @@
   <!-- Open Graph Meta Tags -->
   <meta property="og:site_name" content="memoria.uy">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-  <meta property="og:title" content="{% block og_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Las noticias uruguayas agrupadas por hecho, con lo que dijo cada medio y las notas que cambiaron. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}">
   <meta property="og:url" content="{% block og_url %}https://memoria.uy{{ request.path }}{% endblock %}">
   <meta property="og:image" content="{% block og_image %}https://memoria.uy/og/memoria.png{% endblock %}">
   <meta property="og:image:width" content="1200">
@@ -24,8 +24,8 @@
 
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
-  <meta name="twitter:title" content="{% block twitter_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
-  <meta name="twitter:description" content="{% block twitter_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
+  <meta name="twitter:title" content="{% block twitter_title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Las noticias uruguayas agrupadas por hecho, con lo que dijo cada medio y las notas que cambiaron. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}">
   <meta name="twitter:image" content="{% block twitter_image %}https://memoria.uy/og/memoria.png{% endblock %}">
 
   <!-- Favicon -->
@@ -35,15 +35,17 @@
   <link rel="shortcut icon" href="/favicon.ico">
 
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
   <link rel="apple-touch-icon" href="{% static 'core/icons/icon-256.png' %}">
   {% tailwind_css %}
-  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <style>
-    /* Monospace typography for terminal aesthetic */
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
     body {
       font-family: 'IBM Plex Mono', 'Courier New', monospace;
@@ -66,6 +68,12 @@
       animation: blink 1s infinite;
       margin-left: 2px;
     }
+    @media (prefers-reduced-motion: reduce) {
+      .cursor::after { animation: none; }
+    }
+
+    /* Mensaje cuando un pedido HTMX falla (htmx no reemplaza respuestas de error) */
+    .hx-error { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 4px; }
 
     /* Subtle grid background for nerdy aesthetic */
     .grid-bg {
@@ -138,19 +146,39 @@
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
     }
   </script>
+  <script>
+    document.addEventListener('htmx:responseError', function (e) {
+      var elt = e.detail.elt;
+      var status = e.detail.xhr.status;
+      var msg = status === 429 ? 'Demasiados votos seguidos. Esperá un minuto y probá de nuevo.'
+              : status === 400 ? 'Falta elegir una opción.'
+              : 'No se pudo guardar. Probá de nuevo.';
+      var prev = elt.parentNode && elt.parentNode.querySelector('.hx-error');
+      if (prev) prev.remove();
+      var p = document.createElement('p');
+      p.className = 'hx-error';
+      p.setAttribute('role', 'alert');
+      p.textContent = msg;
+      elt.insertAdjacentElement('afterend', p);
+    });
+    document.addEventListener('htmx:sendError', function (e) {
+      e.detail.elt.insertAdjacentHTML('afterend', '<p class="hx-error" role="alert">Sin conexión. Probá de nuevo.</p>');
+    });
+  </script>
   {% block extra_head %}{% endblock %}
 </head>
 
 <body class="bg-white text-black antialiased grid-bg scanline">
+  <a href="#contenido" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:bg-black focus:text-white focus:px-3 focus:py-2 mono text-sm">ir al contenido</a>
 
   <!-- Minimal Header -->
   <header class="border-b-2 border-black bg-white sticky top-0 z-50">
-    <div class="max-w-5xl mx-auto px-4 py-4">
+    <div class="max-w-5xl mx-auto px-4 py-2 md:py-4">
       <div class="flex justify-between items-center">
         <!-- Logo -->
         <div class="flex items-center gap-3">
           <a href="{% url 'archivo:home' %}" class="hover:opacity-70 transition-opacity">
-            <img src="{% static 'core/logo.svg' %}" alt="memoria.uy" class="h-10 w-10">
+            <img src="{% static 'core/logo.svg' %}" alt="memoria.uy" class="h-8 w-8 md:h-10 md:w-10">
           </a>
           <div>
             <h1 class="text-xl md:text-2xl font-bold mono tracking-tight">
@@ -158,7 +186,7 @@
                 <span class="cursor">memoria.uy</span>
               </a>
             </h1>
-            <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono">
+            <p class="hidden sm:block text-xs mt-1 text-gray-600 mono">
               // Lo que pasó en Uruguay, con fuentes.
             </p>
           </div>
@@ -186,13 +214,15 @@
             </a>
           {% else %}
             <a href="{% url 'account_login' %}"
-               class="border border-black px-3 py-1 hover:bg-black hover:text-white transition-colors mono">
+               class="border border-black px-3 py-2 hover:bg-black hover:text-white transition-colors mono">
               entrar
             </a>
+            {% if signup_abierto %}
             <a href="{% url 'account_signup' %}"
                class="bg-black text-white px-3 py-1 hover:bg-gray-800 transition-colors mono hidden md:inline-block">
               crear cuenta
             </a>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -203,7 +233,14 @@
   {% block sticky_content %}{% endblock %}
 
   <!-- Main Content -->
-  <main class="max-w-5xl mx-auto px-4 py-8 min-h-screen">
+  <main id="contenido" class="max-w-5xl mx-auto px-4 py-6 min-h-screen">
+    {% if messages %}
+    <div class="max-w-3xl mx-auto mb-4 space-y-2" role="status">
+      {% for message in messages %}
+      <p class="mono text-sm border-2 {% if message.tags == 'error' %}border-red-600 text-red-700{% else %}border-black{% endif %} px-3 py-2">{{ message }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 
@@ -215,28 +252,19 @@
           <p class="text-gray-600">
             > memoria.uy — lo que pasó en Uruguay, con fuentes. y lo que pensamos.
           </p>
-          <p class="text-gray-400 mt-1">
-            // sin cuenta. código abierto. uruguay 2026.
+          <p class="text-gray-600 mt-1">
+            // anónimo por defecto. código abierto. uruguay 2026.
           </p>
         </div>
-        <div class="flex space-x-4 text-gray-600">
-          <a href="{% url 'acerca_de' %}" class="hover:text-black hover:underline">acerca</a>
-          <a href="{% url 'privacidad' %}" class="hover:text-black hover:underline">privacidad</a>
-          <a href="{% url 'archivo:datos' %}" class="hover:text-black hover:underline">datos</a>
-          <a href="https://github.com/raulsperoni/memoria.uy" target="_blank" class="hover:text-black hover:underline">código</a>
+        <div class="flex flex-wrap gap-x-4 text-gray-600">
+          <a href="{% url 'acerca_de' %}" class="py-2 hover:text-black hover:underline">acerca</a>
+          <a href="{% url 'privacidad' %}" class="py-2 hover:text-black hover:underline">privacidad</a>
+          <a href="{% url 'archivo:datos' %}" class="py-2 hover:text-black hover:underline">datos</a>
+          <a href="https://github.com/raulsperoni/memoria.uy" target="_blank" rel="noopener" class="py-2 hover:text-black hover:underline">código</a>
         </div>
       </div>
     </div>
   </footer>
-
-  <!-- Staff FAB (only for admins) -->
-  {% if user.is_staff %}
-  <div class="fixed bottom-8 right-8">
-    <button class="bg-black text-white h-12 w-12 border-2 border-black hover:bg-white hover:text-black transition-colors flex items-center justify-center mono text-xl shadow-lg">
-      +
-    </button>
-  </div>
-  {% endif %}
 
   <!-- Placeholder for signup prompt (populated via HTMX out-of-band swap) -->
   <div id="signup-prompt-banner"></div>

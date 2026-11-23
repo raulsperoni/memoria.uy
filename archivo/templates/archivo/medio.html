@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ medio.nombre }} · archivo · memoria.uy{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-6">
+<div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <h2 class="text-3xl font-bold">{{ medio.nombre }}</h2>
   <p class="mono text-xs text-gray-600 mb-6">{{ medio.dominio }} · {{ n_fuentes }} notas archivadas · {{ n_cambios }} cambio{{ n_cambios|pluralize }} detectado{{ n_cambios|pluralize }}</p>

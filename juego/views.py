@@ -5,6 +5,7 @@ from urllib.parse import quote
 from django.db import IntegrityError
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django_ratelimit.decorators import ratelimit
@@ -34,6 +35,23 @@ def _guardar_voto(voter, proposicion, opinion, prediccion=None, jornada=None):
         return VotoProposicion.objects.get(filtro, proposicion=proposicion), False
 
 
+def _ctx_resultado_item(voter, item, items):
+    voto = VotoProposicion.objects.get(logica.filtro_votante(voter), proposicion=item.proposicion)
+    r = logica.resultado(item.proposicion)
+    otros = logica.resultado(item.proposicion, excluir=logica.filtro_votante(voter))
+    return {
+        "jornada": item.jornada,
+        "item": item,
+        "voto": voto,
+        "r": r,
+        "acierto": (voto.prediccion == otros.bucket) if otros.bucket is not None and voto.prediccion is not None else None,
+        "bucket_label": dict(BUCKETS),
+        "hay_mas": not logica.completa(voter, item.jornada),
+        "n": items.index(item) + 1,
+        "total": len(items),
+    }
+
+
 class HoyView(View):
     """Juego del día: muestra la próxima proposición sin votar, o el resultado."""
 
@@ -44,6 +62,13 @@ class HoyView(View):
         voter = votante(request)
         votos = logica.votos_de(voter, jornada)
         items = list(jornada.items_ordenados())
+        # ?ver=<item>: el resultado de una frase ya votada (recargar o volver atrás no la pierde)
+        ver = request.GET.get("ver")
+        if ver and ver.isdigit():
+            item = next((it for it in items if it.pk == int(ver)), None)
+            if item and item.proposicion_id in votos:
+                ctx = _ctx_resultado_item(voter, item, items)
+                return render(request, "juego/resultado_item_page.html", ctx)
         pendiente = next((it for it in items if it.proposicion_id not in votos), None)
         if pendiente is None:
             return redirect("juego:resultado")
@@ -77,19 +102,14 @@ class VotarItemView(View):
         except (TypeError, ValueError, AssertionError):
             return HttpResponseBadRequest("predicción inválida")
         voter = votante(request)
-        voto, _ = _guardar_voto(voter, item.proposicion, opinion, prediccion, item.jornada)
-        r = logica.resultado(item.proposicion)
-        otros = logica.resultado(item.proposicion, excluir=logica.filtro_votante(voter))
-        ctx = {
-            "item": item,
-            "voto": voto,
-            "r": r,
-            "acierto": (voto.prediccion == otros.bucket) if otros.bucket is not None and voto.prediccion is not None else None,
-            "bucket_label": dict(BUCKETS),
-            "hay_mas": not logica.completa(voter, item.jornada),
-        }
-        plantilla = "juego/_resultado_item.html" if request.headers.get("HX-Request") else "juego/resultado_item_page.html"
-        return render(request, plantilla, ctx)
+        _guardar_voto(voter, item.proposicion, opinion, prediccion, item.jornada)
+        url = f"{reverse('juego:hoy')}?ver={item.pk}"
+        if not request.headers.get("HX-Request"):
+            return redirect(url)
+        ctx = _ctx_resultado_item(voter, item, list(item.jornada.items_ordenados()))
+        resp = render(request, "juego/_paso_resultado.html", ctx)
+        resp["HX-Push-Url"] = url
+        return resp
 
 
 class ResultadoView(View):
@@ -130,7 +150,15 @@ class VotarProposicionView(View):
         voto, _ = _guardar_voto(votante(request), prop, opinion)
         if not request.headers.get("HX-Request"):
             return redirect("archivo:historia", slug=prop.historia.slug)
-        return render(request, "juego/_voto_archivo.html", {"p": prop, "voto": voto, "r": logica.resultado(prop)})
+        from .burbujas import patrones_por_proposicion, ultimo_run
+
+        run = ultimo_run()
+        pats = patrones_por_proposicion(run).get(prop.pk, {}) if run else {}
+        return render(
+            request,
+            "juego/_voto_archivo.html",
+            {"p": prop, "voto": voto, "r": logica.resultado(prop), "pats": pats},
+        )
 
 
 class BurbujasView(View):

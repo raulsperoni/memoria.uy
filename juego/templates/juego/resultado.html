@@ -4,7 +4,8 @@
 {% block og_image %}https://memoria.uy/og/hoy.png{% endblock %}
 {% block twitter_image %}https://memoria.uy/og/hoy.png{% endblock %}
 {% block content %}
-<div class="max-w-xl mx-auto px-4 py-6">
+<div class="max-w-xl mx-auto py-2">
+  {% include "archivo/_nav.html" %}
   {% include "juego/_cabecera.html" %}
   <div class="border-2 border-black p-5 mb-6 text-center">
     <p class="mono text-sm">Leíste a Uruguay</p>
@@ -18,8 +19,17 @@
 
   <div class="space-y-2 mb-6">
     <a href="{{ whatsapp }}" target="_blank" rel="noopener" class="block w-full text-center bg-black text-white py-3 mono font-bold hover:bg-gray-800">compartir por WhatsApp</a>
-    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('tarjeta').textContent).then(()=>{this.textContent='copiado ✓'})"
+    <button type="button" id="copiar"
             class="block w-full text-center border-2 border-black py-3 mono hover:bg-black hover:text-white">copiar resultado</button>
+    <script>
+      document.getElementById('copiar').addEventListener('click', function () {
+        var b = this, texto = document.getElementById('tarjeta').textContent;
+        function avisar(t) { b.textContent = t; setTimeout(function () { b.textContent = 'copiar resultado'; }, 2500); }
+        if (!navigator.clipboard) { avisar('no se pudo copiar: seleccioná el texto de abajo'); return; }
+        navigator.clipboard.writeText(texto).then(function () { avisar('copiado ✓'); },
+          function () { avisar('no se pudo copiar: seleccioná el texto de abajo'); });
+      });
+    </script>
     <pre id="tarjeta" class="mono text-xs bg-gray-50 border border-gray-300 p-3 whitespace-pre-wrap">{{ tarjeta }}</pre>
   </div>
 

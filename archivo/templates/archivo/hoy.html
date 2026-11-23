@@ -1,16 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Lo que pasó hoy · archivo · memoria.uy{% endblock %}
 {% block meta_description %}Las noticias uruguayas del día, agrupadas por hecho, con lo que dijo cada medio y las notas que cambiaron después de publicadas.{% endblock %}
+{% block canonical_url %}https://memoria.uy/{% endblock %}
+{% block og_url %}https://memoria.uy/{% endblock %}
+{% block og_title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}
+{% block og_description %}Las noticias uruguayas del día, agrupadas por hecho, con lo que dijo cada medio. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}
+{% block twitter_title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}
+{% block twitter_description %}Las noticias uruguayas del día, agrupadas por hecho, con lo que dijo cada medio. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-6">
+<div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   {% if jornada %}
   <a href="{% if jornada_completa %}{% url 'juego:resultado' %}{% else %}{% url 'juego:hoy' %}{% endif %}"
      class="block border-2 border-black bg-black text-white p-5 mb-8 hover:bg-gray-900">
-    <p class="mono text-xs opacity-75">{{ jornada.fecha|date:"d/m" }} · 5 frases · 1 minuto</p>
+    {% with n=jornada.items.count %}<p class="mono text-xs opacity-75">{{ jornada.fecha|date:"d/m" }} · {{ n }} frase{{ n|pluralize }} · 1 minuto</p>{% endwith %}
     <p class="text-2xl font-bold">¿Qué piensa Uruguay?</p>
     <p class="mono text-sm mt-1">{% if jornada_completa %}ver mi resultado →{% else %}jugar la de hoy →{% endif %}</p>
   </a>
+  {% else %}
+  <div class="border-2 border-black p-5 mb-8">
+    <p class="text-xl font-bold">¿Qué piensa Uruguay?</p>
+    <p class="mono text-sm mt-1">Un juego diario: frases de las noticias del día. ¿Estás de acuerdo? ¿Y adivinás qué piensa el resto?</p>
+    <p class="mono text-xs text-gray-600 mt-2">// La de hoy todavía no está lista. Sale cada mañana a las 05:30.</p>
+  </div>
   {% endif %}
 
   <h2 class="mono text-2xl font-bold mb-1">Lo que pasó</h2>

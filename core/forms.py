@@ -77,8 +77,12 @@ class ProfileEditForm(forms.ModelForm):
             'weekly_email_enabled': 'Recibir email semanal con nuevas noticias',
             'reengagement_email_enabled': 'Recibir correos cuando hace tiempo que no entrás',
         }
+        # El modelo trae help_text en inglés; acá la etiqueta ya lo dice.
         help_texts = {
             'alias': 'Nombre que aparecerá en el mapa de opiniones',
+            'show_alias_on_map': '',
+            'weekly_email_enabled': '',
+            'reengagement_email_enabled': '',
         }
         widgets = {
             'alias': forms.TextInput(

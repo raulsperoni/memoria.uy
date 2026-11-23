@@ -2,15 +2,15 @@
 {% block title %}{{ entidad.nombre }} · archivo · memoria.uy{% endblock %}
 {% block meta_description %}Todo lo que pasó con {{ entidad.nombre }} en las noticias uruguayas, con fuentes.{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-6">
+<div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <p class="mono text-xs text-gray-600">{{ entidad.get_tipo_display }}</p>
   <h2 class="text-3xl font-bold mb-6">{{ entidad.nombre }}</h2>
 
   {% if proposiciones %}
   <section class="mb-8 border-2 border-black p-4">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">Para opinar</h3>
-    <ul class="space-y-1">{% for p in proposiciones %}<li>«{{ p.texto }}» <a class="mono text-[11px] underline" href="{% url 'archivo:historia' p.historia.slug %}">contexto</a></li>{% endfor %}</ul>
+    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">Frases para opinar</h3>
+    <ul class="space-y-2">{% for p in proposiciones %}<li>«{{ p.texto }}» <a class="mono text-[11px] underline whitespace-nowrap inline-block py-1" href="{% url 'archivo:historia' p.historia.slug %}#opinar">opiná en la historia →</a></li>{% endfor %}</ul>
     {% if props_burbujas %}
     <h4 class="mono font-bold text-xs uppercase tracking-wide mt-4 mb-1">Cómo lo ve cada burbuja</h4>
     <ul class="mono text-[11px] space-y-1">{% for p, pats in props_burbujas %}<li>«{{ p.texto|truncatechars:80 }}»: {% for b, pat in pats.items %}{{ b.letra }} {{ pat.pct_acuerdo|floatformat:0 }} %{% if not forloop.last %} · {% endif %}{% endfor %}</li>{% endfor %}</ul>

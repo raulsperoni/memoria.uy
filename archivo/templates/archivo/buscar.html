@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 {% block title %}{% if q %}«{{ q }}» · {% endif %}buscar · archivo · memoria.uy{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-6">
+<div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   {% if q %}
+    <h2 class="mono text-2xl font-bold mb-1">«{{ q }}»</h2>
+    <p class="mono text-xs text-gray-600 mb-4">{% with n=paginator.count|default:0 %}{{ n }} historia{{ n|pluralize }}{% endwith %}</p>
     {% if entidades %}
-    <div class="flex flex-wrap gap-2 mb-6">
-      {% for e in entidades %}<a href="{% url 'archivo:entidad-slug' e.pk e.nombre|slugify %}" class="mono text-xs border border-black px-2 py-1 hover:bg-black hover:text-white">{{ e.nombre }} ({{ e.n }})</a>{% endfor %}
+    <div class="mb-6">
+      <p class="mono text-[11px] text-gray-600 mb-1">Personas y organizaciones (historias en las que aparecen):</p>
+      <div class="flex flex-wrap gap-2">
+      {% for e in entidades %}<a href="{% url 'archivo:entidad' e.pk %}" class="mono text-xs border border-black px-3 py-2 hover:bg-black hover:text-white">{{ e.nombre }} ({{ e.n }})</a>{% endfor %}
+      </div>
     </div>
     {% endif %}
     <div class="space-y-4">
       {% for h in historias %}{% include "archivo/_historia_item.html" %}
-      {% empty %}<p class="mono text-sm text-gray-600">Sin resultados para «{{ q }}».</p>{% endfor %}
+      {% empty %}<p class="mono text-sm text-gray-600">Sin resultados para «{{ q }}». Probá con menos palabras, o con el nombre de una persona, institución o lugar.</p>{% endfor %}
     </div>
     {% include "archivo/_paginacion.html" %}
   {% else %}

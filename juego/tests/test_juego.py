@@ -164,3 +164,47 @@ def test_voto_propio_no_cuenta_para_la_prediccion(client, props):
     _jugar(client, j, opinion="acuerdo", pred=4)  # único votante: no hay con qué comparar
     r = client.get(reverse("juego:resultado"))
     assert "Leí a Uruguay 0/5" in r.content.decode()
+
+
+def test_nose_sin_opiniones_confirma_el_voto(client, props):
+    p = props[0]
+    r = client.post(reverse("juego:votar-proposicion", args=[p.pk]), {"opinion": "nose"}, HTTP_HX_REQUEST="true")
+    html = r.content.decode()
+    assert "vos: no sé" in html and "todavía no hay otras opiniones" in html
+
+
+def test_plural_opiniones(client, props):
+    p = props[0]
+    for i in range(2):
+        VotoProposicion.objects.create(proposicion=p, opinion="acuerdo", session_key=f"otro{i}")
+    r = client.post(reverse("juego:votar-proposicion", args=[p.pk]), {"opinion": "acuerdo"}, HTTP_HX_REQUEST="true")
+    html = r.content.decode()
+    assert "3 opiniones" in html and "opiniónes" not in html
+
+
+def test_cada_paso_del_juego_tiene_url(client, props):
+    j = logica.armar_jornada()
+    it = j.items_ordenados()[0]
+    r = client.post(reverse("juego:votar-item", args=[it.pk]), {"opinion": "acuerdo", "prediccion": 2}, HTTP_HX_REQUEST="true")
+    url = f"{reverse('juego:hoy')}?ver={it.pk}"
+    assert r["HX-Push-Url"] == url
+    assert "1/5" in r.content.decode()  # la cabecera viaja con el resultado
+    # Recargar esa URL muestra el mismo resultado, no la siguiente frase
+    html = client.get(url).content.decode()
+    assert it.proposicion.texto in html and "siguiente" in html
+    # Sin HTMX: POST → redirect a la misma URL
+    it2 = j.items_ordenados()[1]
+    r = client.post(reverse("juego:votar-item", args=[it2.pk]), {"opinion": "acuerdo", "prediccion": 2})
+    assert r.status_code == 302 and r.url == f"{reverse('juego:hoy')}?ver={it2.pk}"
+
+
+def test_ver_item_no_votado_muestra_la_pregunta(client, props):
+    j = logica.armar_jornada()
+    it = j.items_ordenados()[2]
+    r = client.get(f"{reverse('juego:hoy')}?ver={it.pk}")
+    assert "1/5" in r.content.decode() and "confirmar" in r.content.decode()
+
+
+def test_sin_jornada(client, db):
+    html = client.get(reverse("juego:hoy")).content.decode()
+    assert "05:30" in html and "Vuelve" not in html
