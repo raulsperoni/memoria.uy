@@ -21,12 +21,16 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
-from core.sitemaps import NoticiaSitemap, StaticViewSitemap
+from core.sitemaps import (
+    CambioSitemap,
+    EntidadSitemap,
+    HistoriaSitemap,
+    NoticiaSitemap,
+    StaticViewSitemap,
+)
 from core.views import (
     NewsTimelineView,
     VoteView,
-    NoticiaCreateView,
-    RefreshNoticiaView,
     DeleteNoticiaView,
     AcercaDeView,
     PrivacidadView,
@@ -34,10 +38,6 @@ from core.views import (
     NoticiaDetailView,
     ProfileEditView,
     EmailAccessProfileView,
-)
-from core.api_views import (
-    SubmitFromExtensionView,
-    CheckVoteView,
 )
 from core.api_clustering import (
     cluster_data,
@@ -58,12 +58,15 @@ from core.views_clustering import (
     polarization_timeline_json,
     cluster_stability_json,
 )
-from memoria.views import health_check, robots_txt, favicon
+from memoria.views import favicon, health_check, manifest, robots_txt, service_worker
 
 # Sitemap configuration
 sitemaps = {
     "noticias": NoticiaSitemap,
     "static": StaticViewSitemap,
+    "historias": HistoriaSitemap,
+    "entidades": EntidadSitemap,
+    "cambios": CambioSitemap,
 }
 
 # Custom error handlers
@@ -74,27 +77,23 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("favicon.ico", favicon, name="favicon"),
     path("robots.txt", robots_txt, name="robots_txt"),
+    path("manifest.webmanifest", manifest, name="manifest"),
+    path("sw.js", service_worker, name="service_worker"),
     path(
         "sitemap.xml",
         sitemap,
         {"sitemaps": sitemaps},
         name="django.contrib.sitemaps.views.sitemap",
     ),
-    path("", NewsTimelineView.as_view(), name="timeline"),
+    path("noticias/", NewsTimelineView.as_view(), name="timeline"),
     path("acerca-de/", AcercaDeView.as_view(), name="acerca_de"),
     path("privacidad/", PrivacidadView.as_view(), name="privacidad"),
     path("bienvenida/", BienvenidaView.as_view(), name="bienvenida"),
     path("vote/<int:pk>/", VoteView.as_view(), name="vote"),
-    path("noticias/new/", NoticiaCreateView.as_view(), name="noticia-create"),
     path(
         "noticias/<slug:slug>/",
         NoticiaDetailView.as_view(),
         name="noticia-detail",
-    ),
-    path(
-        "noticias/<int:pk>/refresh/",
-        RefreshNoticiaView.as_view(),
-        name="noticia-refresh",
     ),
     path(
         "noticias/<int:pk>/delete/",
@@ -102,16 +101,6 @@ urlpatterns = [
         name="noticia-delete",
     ),
     # Extension API endpoints
-    path(
-        "api/submit-from-extension/",
-        SubmitFromExtensionView.as_view(),
-        name="api-submit-extension",
-    ),
-    path(
-        "api/check-vote/",
-        CheckVoteView.as_view(),
-        name="api-check-vote",
-    ),
     # Clustering API endpoints
     path(
         "api/clustering/data/",
@@ -190,6 +179,8 @@ urlpatterns = [
         ClusterReportView.as_view(),
         name="cluster-report",
     ),
+    path("", include("juego.urls")),
+    path("", include("archivo.urls")),
     path("accounts/", include("allauth.urls")),
     path("accounts/email-access/", EmailAccessProfileView.as_view(), name="email_access_profile"),
     path("accounts/profile/", ProfileEditView.as_view(), name="profile"),

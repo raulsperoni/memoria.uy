@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ historia.titulo }} · memoria.uy{% endblock %}
+{% block meta_description %}{{ historia.resumen|truncatechars:155 }}{% endblock %}
+{% block og_title %}{{ historia.titulo }}{% endblock %}
+{% block og_description %}{{ historia.resumen|truncatechars:155 }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}https://memoria.uy{% url 'archivo:og-historia' historia.slug %}{% endblock %}
+{% block twitter_image %}https://memoria.uy{% url 'archivo:og-historia' historia.slug %}{% endblock %}
+{% block extra_head %}
+<script type="application/ld+json">{{ jsonld|safe }}</script>
+{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+  {% include "archivo/_nav.html" %}
+
+  <div class="mono text-xs text-gray-600 mb-2 flex flex-wrap gap-x-3">
+    <a class="underline" href="{% url 'archivo:dia' y=historia.primera_fuente_en.year m=historia.primera_fuente_en.month d=historia.primera_fuente_en.day %}">{{ historia.primera_fuente_en|date:"d/m/Y" }}</a>
+    {% if historia.categoria %}<span>#{{ historia.categoria }}</span>{% endif %}
+    <span>{{ historia.n_medios }} medio{{ historia.n_medios|pluralize }}</span>
+  </div>
+  <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">{{ historia.titulo }}</h2>
+  <p class="text-base text-gray-800 mb-6">{{ historia.resumen }}</p>
+
+  <section class="mb-8">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Hechos</h3>
+    <ol class="space-y-4">
+      {% for hecho in historia.hechos.all %}
+      <li>
+        <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-[11px] border border-black px-1 ml-1">las fuentes difieren</span>{% endif %}</p>
+        <div class="flex flex-wrap gap-2 mt-1">
+          {% for hf in hecho.respaldos %}
+          <details class="mono text-[11px]">
+            <summary class="cursor-pointer border border-black px-2 py-0.5 inline-block hover:bg-black hover:text-white list-none">{{ hf.fuente.medio.nombre }}</summary>
+            <div class="mt-1 p-2 bg-gray-50 border border-gray-300 max-w-prose">
+              {% if hf.cita %}<p class="italic">«{{ hf.cita }}»</p>{% endif %}
+              <p class="mt-1"><a href="{{ hf.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline">{{ hf.fuente.titulo|truncatechars:90 }}</a></p>
+              {% if hf.fuente.ultimo_snapshot %}<p class="text-gray-500 mt-1">capturado {{ hf.fuente.ultimo_snapshot.capturado_en|date:"d/m/Y H:i" }} · sha256 {{ hf.fuente.ultimo_snapshot.contenido_hash|slice:":12" }}…</p>{% endif %}
+            </div>
+          </details>
+          {% endfor %}
+        </div>
+      </li>
+      {% empty %}<li class="mono text-sm text-gray-600">Sin hechos verificados.</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  {% if props_votos %}
+  <section class="mb-8 border-2 border-black p-4">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">¿Qué pensás?</h3>
+    <ul class="space-y-4">
+      {% for p, voto, r, pats in props_votos %}
+      <li>
+        <p class="text-base">«{{ p.texto }}»</p>
+        {% if voto %}{% include "juego/_voto_archivo.html" %}
+          {% if pats %}<div class="mono text-[11px] text-gray-600 mt-1">por burbuja: {% for b, pat in pats.items %}<a class="underline" href="{% url 'juego:burbujas' %}">{{ b.letra }}</a> {{ pat.pct_acuerdo|floatformat:0 }} %{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        {% else %}{% include "juego/_votar_archivo.html" %}{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if cambios %}
+  <section class="mb-8">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios detectados</h3>
+    <ul class="space-y-2">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  <section class="mb-8">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué publicó cada medio</h3>
+    <ul class="space-y-2 text-sm">
+      {% for f in fuentes %}
+      <li><span class="mono text-[11px] text-gray-600">{{ f.publicada_en|date:"d/m H:i" }} · <a class="underline" href="{% url 'archivo:medio' f.medio.slug %}">{{ f.medio.nombre }}</a>{% if f.medio.tipo == 'oficial' %} (oficial){% endif %}{% if f.estado == 'despublicada' %} · despublicada{% endif %}</span><br>
+        <a href="{{ f.url }}" rel="nofollow noopener" target="_blank" class="hover:underline">{{ f.titulo }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if entidades %}
+  <section class="mb-8">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Quiénes aparecen</h3>
+    <div class="flex flex-wrap gap-2">
+      {% for e in entidades %}<a href="{% url 'archivo:entidad-slug' e.pk e.nombre|slugify %}" class="mono text-xs border border-black px-2 py-1 hover:bg-black hover:text-white">{{ e.nombre }}</a>{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <p class="mono text-[11px] text-gray-500 border-t border-gray-300 pt-3">
+    // Hechos redactados por memoria.uy a partir de las fuentes citadas, verificados automáticamente. Las notas originales pertenecen a sus medios. ¿Error? Escribinos.
+  </p>
+</div>
+{% endblock %}

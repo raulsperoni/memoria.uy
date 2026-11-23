@@ -17,7 +17,7 @@
   <meta property="og:title" content="{% block og_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
   <meta property="og:description" content="{% block og_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
   <meta property="og:url" content="{% block og_url %}https://memoria.uy{{ request.path }}{% endblock %}">
-  <meta property="og:image" content="{% block og_image %}{% static 'core/logo.svg' %}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://memoria.uy/og/memoria.png{% endblock %}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="es_UY">
@@ -26,7 +26,7 @@
   <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
   <meta name="twitter:title" content="{% block twitter_title %}memoria.uy - ¿Qué piensan realmente los uruguayos sobre las noticias?{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}Votá noticias anónimamente. Mirá patrones. Sin seguimiento.{% endblock %}">
-  <meta name="twitter:image" content="{% block twitter_image %}{% static 'core/logo.svg' %}{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}https://memoria.uy/og/memoria.png{% endblock %}">
 
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -34,6 +34,9 @@
   <link rel="icon" type="image/png" sizes="16x16" href="{% static 'core/favicon-16x16.png' %}">
   <link rel="shortcut icon" href="/favicon.ico">
 
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <link rel="apple-touch-icon" href="{% static 'core/icons/icon-256.png' %}">
   {% tailwind_css %}
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js" defer></script>
@@ -130,6 +133,11 @@
     });
   </script>
 
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+  </script>
   {% block extra_head %}{% endblock %}
 </head>
 
@@ -141,17 +149,17 @@
       <div class="flex justify-between items-center">
         <!-- Logo -->
         <div class="flex items-center gap-3">
-          <a href="{% url 'timeline' %}" class="hover:opacity-70 transition-opacity">
+          <a href="{% url 'archivo:home' %}" class="hover:opacity-70 transition-opacity">
             <img src="{% static 'core/logo.svg' %}" alt="memoria.uy" class="h-10 w-10">
           </a>
           <div>
             <h1 class="text-xl md:text-2xl font-bold mono tracking-tight">
-              <a href="{% url 'timeline' %}" class="hover:bg-black hover:text-white px-2 py-1 transition-colors">
+              <a href="{% url 'archivo:home' %}" class="hover:bg-black hover:text-white px-2 py-1 transition-colors">
                 <span class="cursor">memoria.uy</span>
               </a>
             </h1>
             <p class="text-[10px] md:text-xs mt-1 text-gray-600 mono">
-              // Votá noticias. Salí de tu burbuja.
+              // Lo que pasó en Uruguay, con fuentes.
             </p>
           </div>
         </div>
@@ -205,15 +213,16 @@
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center text-xs mono">
         <div class="mb-4 md:mb-0">
           <p class="text-gray-600">
-            > memoria.uy — archivá noticias. votá anónimamente. descubrí patrones.
+            > memoria.uy — lo que pasó en Uruguay, con fuentes. y lo que pensamos.
           </p>
           <p class="text-gray-400 mt-1">
-            // privacidad primero. código abierto. uruguay 2025.
+            // sin cuenta. código abierto. uruguay 2026.
           </p>
         </div>
         <div class="flex space-x-4 text-gray-600">
           <a href="{% url 'acerca_de' %}" class="hover:text-black hover:underline">acerca</a>
           <a href="{% url 'privacidad' %}" class="hover:text-black hover:underline">privacidad</a>
+          <a href="{% url 'archivo:datos' %}" class="hover:text-black hover:underline">datos</a>
           <a href="https://github.com/raulsperoni/memoria.uy" target="_blank" class="hover:text-black hover:underline">código</a>
         </div>
       </div>

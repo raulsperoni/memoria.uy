@@ -4,9 +4,12 @@ from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "memoria.settings")
 
-# Use Redis as broker and result backend
-broker_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-result_backend = os.getenv("REDIS_URL", "redis://redis:6379/0")
+# Redis opcional: sin REDIS_URL las tasks corren en línea (CELERY_TASK_ALWAYS_EAGER
+# en settings) y las periódicas las dispara `manage.py tick` (ver
+# core/management/commands/tick.py). El beat_schedule de abajo solo se usa
+# si se corre Celery beat con Redis.
+broker_url = os.getenv("REDIS_URL") or "memory://"
+result_backend = os.getenv("REDIS_URL") or "cache+memory://"
 
 app = Celery(
     "memoria",
@@ -41,6 +44,30 @@ app.conf.beat_schedule = {
     "generate-cluster-report-snapshot": {
         "task": "core.tasks.generate_cluster_report_snapshot",
         "schedule": crontab(minute=0),  # Run every hour at minute 0
+    },
+    "archivo-ciclo-ingesta": {
+        "task": "archivo.tasks.ciclo_ingesta",
+        "schedule": crontab(minute="*/30"),
+    },
+    "archivo-procesar-historias": {
+        "task": "archivo.tasks.procesar_historias",
+        "schedule": crontab(minute="*/15"),
+    },
+    "archivo-recrawls": {
+        "task": "archivo.tasks.recrawls_pendientes",
+        "schedule": crontab(minute=40),
+    },
+    "juego-burbujas": {
+        "task": "juego.tasks.calcular_burbujas_diario",
+        "schedule": crontab(hour=2, minute=15),
+    },
+    "juego-armar-jornada": {
+        "task": "juego.tasks.armar_jornada_del_dia",
+        "schedule": crontab(hour=5, minute=30),
+    },
+    "archivo-cerrar-historias": {
+        "task": "archivo.tasks.cerrar_historias",
+        "schedule": crontab(minute=5),
     },
 }
 

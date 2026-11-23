@@ -1,0 +1,7 @@
+{% if is_paginated %}
+<nav class="mono text-xs flex justify-between mt-6">
+  {% if page_obj.has_previous %}<a class="underline" href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">← anteriores</a>{% else %}<span></span>{% endif %}
+  <span>{{ page_obj.number }} / {{ paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="underline" href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">siguientes →</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ cambio.get_tipo_display }}: {{ cambio.fuente.titulo|truncatechars:70 }} · memoria.uy{% endblock %}
+{% block meta_description %}{{ cambio.resumen }}{% endblock %}
+{% block og_image %}https://memoria.uy{% url 'archivo:og-cambio' cambio.pk %}{% endblock %}
+{% block twitter_image %}https://memoria.uy{% url 'archivo:og-cambio' cambio.pk %}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+  {% include "archivo/_nav.html" %}
+  <p class="mono text-xs text-gray-600">{{ cambio.fuente.medio.nombre }} · detectado {{ cambio.detectado_en|date:"d/m/Y H:i" }}</p>
+  <h2 class="text-2xl font-bold mb-2">{{ cambio.get_tipo_display }}</h2>
+  {% if cambio.cambia_sentido >= 0.5 %}<p class="mono text-xs bg-black text-white inline-block px-2 py-1 mb-3">el cambio altera el sentido de la nota</p>{% endif %}
+  <p class="mb-4"><a href="{{ cambio.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline">{{ cambio.fuente.url|truncatechars:80 }}</a>
+  {% if cambio.fuente.historia.slug %} · <a class="underline" href="{% url 'archivo:historia' cambio.fuente.historia.slug %}">ver historia</a>{% endif %}</p>
+
+  <p class="mono text-[11px] bg-gray-900 text-white px-2 py-1 mb-3">Lo eliminado se muestra en rojo tachado, y en verde lo agregado</p>
+
+  {% if cambio.tipo == "despublicada" %}
+    <p>La nota «{{ cambio.titulo_antes }}» ya no está disponible en el sitio del medio. Última captura: {{ cambio.antes.capturado_en|date:"d/m/Y H:i" }} (sha256 {{ cambio.antes.contenido_hash|slice:":16" }}…).</p>
+  {% else %}
+    {% if cambio.titulo_antes != cambio.titulo_despues %}
+    <h3 class="text-xl font-bold mb-4 leading-snug">
+      <del class="bg-red-100 text-red-900">{{ cambio.titulo_antes }}</del><br>
+      <ins class="bg-green-100 text-green-900 no-underline">{{ cambio.titulo_despues }}</ins>
+    </h3>
+    {% endif %}
+    {% if cambio.tipo == "cuerpo" %}
+    <div class="leading-relaxed text-[15px]">
+      {% for op in cambio.diff %}{% if op.0 == "=" %}<span class="text-gray-500">{{ op.1|truncatewords:40 }}</span> {% elif op.0 == "-" %}<del class="bg-red-100 text-red-900">{{ op.1 }}</del> {% else %}<ins class="bg-green-100 text-green-900 no-underline underline-offset-2">{{ op.1 }}</ins> {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    <p class="mono text-[11px] text-gray-500 mt-6">antes: {{ cambio.antes.capturado_en|date:"d/m/Y H:i" }} · sha256 {{ cambio.antes.contenido_hash|slice:":16" }}…<br>
+    después: {{ cambio.despues.capturado_en|date:"d/m/Y H:i" }} · sha256 {{ cambio.despues.contenido_hash|slice:":16" }}…</p>
+  {% endif %}
+</div>
+{% endblock %}

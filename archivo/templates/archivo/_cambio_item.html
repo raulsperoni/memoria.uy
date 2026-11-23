@@ -1,0 +1,7 @@
+<li class="border-l-4 {% if c.tipo == 'despublicada' or c.cambia_sentido >= 0.5 %}border-black{% else %}border-gray-300{% endif %} pl-3 py-1">
+  <div class="mono text-[11px] text-gray-600">
+    {{ c.detectado_en|date:"d/m/Y H:i" }} · {{ c.fuente.medio.nombre }} · {{ c.get_tipo_display }}
+    {% if c.cambia_sentido >= 0.5 %}· <strong class="text-black">cambia el sentido</strong>{% endif %}
+  </div>
+  <a href="{% url 'archivo:cambio' c.pk %}" class="text-sm hover:underline">{{ c.resumen|default:c.fuente.titulo }}</a>
+</li>

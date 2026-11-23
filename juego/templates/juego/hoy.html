@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}¿Qué piensa Uruguay? · {{ jornada.fecha|date:"d/m" }} · memoria.uy{% endblock %}
+{% block meta_description %}5 frases de las noticias de hoy. ¿Estás de acuerdo? ¿Y adivinás qué piensa el resto de Uruguay?{% endblock %}
+{% block og_title %}¿Qué piensa Uruguay? · {{ jornada.fecha|date:"d/m" }}{% endblock %}
+{% block og_image %}https://memoria.uy/og/hoy.png{% endblock %}
+{% block twitter_image %}https://memoria.uy/og/hoy.png{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-6" id="juego">
+  {% include "juego/_cabecera.html" %}
+  {% include "juego/_item.html" %}
+</div>
+{% endblock %}

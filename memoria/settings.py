@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sitemaps",
-    "corsheaders",
     "django_browser_reload",
     "allauth",
     "allauth.account",
@@ -46,12 +45,13 @@ INSTALLED_APPS = [
     "tailwind",
     "theme",
     "core",
+    "archivo",
+    "juego",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -193,17 +193,26 @@ LOGGING = {
     },
 }
 
-# Cache configuration for task locking, rate limiting, and report snapshots
-# Using Redis for persistence and sharing across workers
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": redis_url,
-        "KEY_PREFIX": "memoria_cache",
-        "TIMEOUT": 3600,  # Default timeout 1 hour
+# Cache: Redis si hay REDIS_URL; si no, tabla en la base (setup barato en
+# Railway sin Redis: correr `manage.py createcachetable`).
+redis_url = os.getenv("REDIS_URL")
+if redis_url:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": redis_url,
+            "KEY_PREFIX": "memoria_cache",
+            "TIMEOUT": 3600,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "memoria_cache",
+            "TIMEOUT": 3600,
+        }
+    }
 
 # Rate limiting configuration
 RATELIMIT_ENABLE = os.getenv("RATELIMIT_ENABLE", "True") == "True"
@@ -268,33 +277,14 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 # Celery Configuration
 # Using Redis as broker and result backend
-CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://redis:6379/0")
+# Sin Redis no hay worker: las tasks corren en línea (las periódicas las
+# dispara `manage.py tick` desde un cron service).
+CELERY_BROKER_URL = redis_url or "memory://"
+CELERY_RESULT_BACKEND = redis_url or "cache+memory://"
+CELERY_TASK_ALWAYS_EAGER = not redis_url
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# CORS Configuration for Browser Extension
-# Allow extensions to communicate with API
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-cors_allowed = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:8000,https://memoria.uy"
-).split(",")
-if railway_domain:
-    cors_allowed.append(f"https://{railway_domain}")
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_allowed]
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-    "x-extension-session",
-]

@@ -4,7 +4,7 @@
 
 # Memoria.uy
 
-Agregador de noticias uruguayo con votación anónima y clustering de opinión.
+Archivo de noticias uruguayas con fuentes, juego diario «¿Qué piensa Uruguay?» y burbujas de opinión.
 
 ## Documentación
 
@@ -25,51 +25,23 @@ poetry run python manage.py runserver
 
 ## Stack
 
-- **Backend**: Django 5.1, Python 3.11, Celery + Redis
-- **Frontend**: HTMX, Tailwind CSS, Plotly.js
-- **AI**: LiteLLM (Gemini Flash, O3-mini fallback)
-- **Math**: NumPy, SciPy, scikit-learn
+- **Backend**: Django 5.1, Python 3.11+, Celery + Redis
+- **Frontend**: HTMX, Tailwind CSS (monocromo)
+- **Ingesta**: RSS/sitemaps + Cloudflare Browser Rendering + trafilatura; snapshots en R2
+- **IA**: Claude Haiku 5.5 vía OpenRouter (historias), Jev (decisiones tipadas), Workers AI bge-m3 (embeddings)
+- **Math**: NumPy, SciPy, scikit-learn (clustering estilo Polis)
 - **DB**: SQLite (dev), PostgreSQL (prod)
 
 ## Estructura
 
 ```
-core/                 # App principal Django
-├── models.py         # Noticia, Voto, Entidad, Clustering
-├── views.py          # Timeline, votación, filtros
-├── api_views.py      # API para extensión
-├── tasks.py          # Celery (enriquecimiento, clustering)
-├── parse.py          # LLM parsing
-├── clustering/       # Motor matemático Polis-style
-│   ├── matrix_builder.py
-│   ├── pca.py
-│   ├── kmeans.py
-│   ├── hierarchical.py
-│   └── metrics.py
-└── templates/
-
-browser-extension/    # Chrome/Firefox Manifest V3
-memoria/              # Django settings
-theme/                # Tailwind CSS
-memoria-uy-brand/     # Assets de marca
-docs/                 # Documentación científica
+archivo/   # Ingesta, historias, hechos, proposiciones, notas editadas
+juego/     # Juego diario y burbujas
+core/      # Usuarios, entidades, motor de clustering, emails (y sistema viejo)
+memoria/   # Settings, urls, celery
+theme/     # Tailwind
+docs/      # Propuesta, plan, ciencia
 ```
-
-## Features
-
-### Signup Prompt (Anónimo → Registrado)
-
-El sistema invita a crear cuenta después del 3er voto o al agotar noticias disponibles.
-
-**Beneficios ofrecidos:**
-- Guardar votos entre dispositivos (claim de votos anónimos)
-- Alias opcional en mapa de clustering
-- Email semanal con noticias relevantes
-
-**Modelo:** `UserProfile` (alias, show_alias_on_map, weekly_email_enabled)  
-**Form:** `CustomSignupForm` extiende allauth con campo alias  
-**Triggers:** 3er voto + estado vacío ("votaste todas las noticias")  
-**Email verification:** Mandatory (se envía email de confirmación al registrarse)
 
 ## Comandos
 
@@ -89,8 +61,10 @@ poetry run pytest core/tests/test_security.py -v
 # Celery (requiere Redis)
 poetry run celery -A memoria worker --loglevel=info
 
-# Clustering manual
-poetry run python manage.py cluster_voters --days 30 --min-voters 50
+# Archivo y juego
+poetry run python manage.py cargar_medios
+poetry run python manage.py detectar_feeds
+poetry run python manage.py armar_jornada
 
 # Tailwind
 poetry run python manage.py tailwind start
@@ -104,16 +78,6 @@ docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py createsuperuser
 ```
 
-## Extensión de navegador
-
-**Chrome:**
-1. `chrome://extensions/` → Developer mode
-2. Load unpacked → `browser-extension/`
-
-**Firefox:**
-1. `about:debugging#/runtime/this-firefox`
-2. Load Temporary Add-on → `browser-extension/manifest.json`
-
 ## Variables de entorno
 
 ```bash
@@ -121,9 +85,15 @@ SECRET_KEY=...
 DEBUG=False
 DATABASE_URL=postgresql://...
 
-# LLM
-GOOGLE_API_KEY=...
-OPENROUTER_API_KEY=...  # fallback
+# IA y crawl (ver archivo/README.md para la lista completa)
+OPENROUTER_API_KEY=...
+TYPESAFE_API_KEY=...            # o la key de OpenRouter con TYPESAFE_BASE_URL
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
+EXTRACTOR=cloudflare
+SNAPSHOT_STORAGE=r2
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
 
 # Celery
 REDIS_URL=redis://localhost:6379/0

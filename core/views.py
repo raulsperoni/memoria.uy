@@ -23,11 +23,10 @@ from core.models import (
     VoterClusterMembership,
 )
 from core.utils import normalize_url, get_user_from_reengagement_token
-import validators
 from urllib.parse import urlparse
 
 
-from core.forms import NoticiaForm, ProfileEditForm
+from core.forms import ProfileEditForm
 from django.urls import reverse_lazy
 from django.db.models import Count, Q, F, Case, When
 import logging
@@ -45,106 +44,17 @@ from core.feeds import (
 
 logger = logging.getLogger(__name__)
 
-# Blacklist de dominios conocidos por spam/malware
-BLACKLISTED_DOMAINS = [
-    'spam.com',
-    'malware.net',
-    'example-spam.org',
-]
-
-# TLDs sospechosos
-SUSPICIOUS_TLDS = [
-    '.ru', '.cn', '.tk', '.ml', '.ga', '.cf', '.gq',
-]
-
-
-def validate_noticia_url(url):
-    """
-    Valida que la URL sea legítima y segura.
-    
-    Raises:
-        ValidationError: Si la URL no es válida
-    
-    Returns:
-        bool: True si la URL es válida
-    """
-    if not validators.url(url):
-        raise ValidationError("URL inválida")
-    
-    if not url.startswith('https://'):
-        raise ValidationError("Solo se permiten URLs HTTPS")
-    
-    try:
-        domain = urlparse(url).netloc.lower()
-    except Exception:
-        raise ValidationError("Dominio inválido")
-    
-    if any(blacklisted in domain for blacklisted in BLACKLISTED_DOMAINS):
-        raise ValidationError("Este dominio no está permitido")
-    
-    if any(url.lower().endswith(tld) for tld in SUSPICIOUS_TLDS):
-        logger.warning(f"Suspicious TLD in URL: {url}")
-    
-    if len(url) > 2000:
-        raise ValidationError("URL demasiado larga")
-    
-    return True
-
-
 def get_voter_identifier(request):
     """
-    Get identifier for current voter (user or session).
-    Returns dict with either 'usuario' or 'session_key' key.
-    Prioritizes extension session if available for consistency.
+    Identificador del votante actual: usuario autenticado o sesión de Django.
+    Devuelve (voter_data, lookup_data).
     """
-    logger.info("=" * 60)
-    logger.info("[Session Debug] get_voter_identifier called")
-    logger.info(f"[Session Debug] Path: {request.path}")
-    logger.info(f"[Session Debug] Method: {request.method}")
-
     if request.user.is_authenticated:
-        logger.info(f"[Session Debug] ✓ Authenticated user: {request.user.username}")
         return {"usuario": request.user}, {"usuario": request.user}
-    else:
-        # Check for extension session first (for consistency)
-        # Try header first (for HTMX requests), then cookie (for initial page load)
-        extension_session = request.headers.get("X-Extension-Session")
-
-        if not extension_session:
-            extension_session = request.COOKIES.get("memoria_extension_session")
-            logger.info(
-                f"[Session Debug] Extension session from cookie: {extension_session}"
-            )
-        else:
-            logger.info(
-                f"[Session Debug] Extension session from header: {extension_session}"
-            )
-
-        if extension_session:
-            logger.info(
-                f"[Session Debug] ✓ Using extension session: {extension_session}"
-            )
-            return (
-                {"session_key": extension_session},
-                {"session_key": extension_session},
-            )
-
-        # Fall back to Django session for web users
-        django_session = request.session.session_key
-        logger.info(f"[Session Debug] Django session key: {django_session}")
-
-        if not django_session:
-            request.session.create()
-            django_session = request.session.session_key
-            logger.info(
-                f"[Session Debug] ✓ Created new Django session: {django_session}"
-            )
-        else:
-            logger.info(
-                f"[Session Debug] ✓ Using existing Django session: {django_session}"
-            )
-
-        return {"session_key": django_session}, {"session_key": django_session}
+    if not request.session.session_key:
+        request.session.create()
+    key = request.session.session_key
+    return {"session_key": key}, {"session_key": key}
 
 
 class NewsTimelineView(ListView):
@@ -580,10 +490,6 @@ class NewsTimelineView(ListView):
         # Get voter identifier (handles extension session priority)
         voter_data, lookup_data = get_voter_identifier(self.request)
 
-        # Only include the form in the initial full-page load
-        if not self.request.headers.get("HX-Request"):
-            context["form"] = NoticiaForm()
-
         # Feed mode and algorithmic transparency
         context["feed_mode"] = self.get_feed_mode()
         context["feed_algorithm_description"] = self.get_feed_algorithm_description()
@@ -886,159 +792,6 @@ class VoteView(View):  # NO LoginRequiredMixin - allow anonymous
 
 
 @method_decorator(ratelimit(key='ip', rate='10/h', method='POST'), name='dispatch')
-class NoticiaCreateView(FormView):  # NO LoginRequiredMixin - allow anonymous
-    template_name = "noticias/timeline_fragment.html"
-    form_class = NoticiaForm
-    success_url = reverse_lazy("timeline")
-
-    def form_valid(self, form):
-        vote_opinion = form.cleaned_data.get("opinion")
-        enlace = form.cleaned_data.get("enlace")
-
-        # Validate URL
-        try:
-            validate_noticia_url(enlace)
-        except ValidationError as e:
-            logger.warning(f"[NoticiaCreate] Invalid URL rejected: {enlace} - {str(e)}")
-            form.add_error('enlace', str(e))
-            return self.form_invalid(form)
-        
-        # Normalize URL (strip tracking params and fragments)
-        enlace = normalize_url(enlace)
-        logger.info(f"[NoticiaCreate] Normalized URL: {enlace}")
-
-        # Get or create noticia
-        noticia, created = Noticia.objects.get_or_create(
-            enlace=enlace,
-            defaults={
-                "agregado_por": self.request.user
-                if self.request.user.is_authenticated
-                else None
-            },
-        )
-
-        # Try to capture full HTML for better parsing
-        html_captured = False
-        if created and not noticia.captured_html:
-            from core import url_requests
-            from core.tasks import enrich_from_captured_html
-
-            try:
-                response = url_requests.get(enlace, timeout=10)
-                if response.status_code == 200:
-                    noticia.captured_html = response.text
-                    noticia.save()
-                    html_captured = True
-                    logger.info(
-                        f"Captured HTML for noticia {noticia.id} from web"
-                    )
-                    # Trigger async enrichment with LLM
-                    enrich_from_captured_html.delay(noticia.id)
-                else:
-                    logger.warning(
-                        f"Failed to capture HTML for {enlace}: "
-                        f"HTTP {response.status_code}"
-                    )
-            except Exception as e:
-                logger.warning(
-                    f"Could not capture HTML for {enlace}: {e}"
-                )
-
-        # Fallback: fetch basic metadata if HTML capture failed
-        if not html_captured and (created or not noticia.meta_titulo):
-            try:
-                noticia.update_meta_from_url()
-            except Exception as e:
-                logger.warning(f"Could not fetch metadata for {enlace}: {e}")
-
-        # Get voter identifier (user or session)
-        voter_data, lookup_data = get_voter_identifier(self.request)
-
-        # Create or update vote
-        Voto.objects.update_or_create(
-            noticia=noticia,
-            **lookup_data,
-            defaults={**voter_data, "opinion": vote_opinion},
-        )
-
-        # For HTMX requests, re-render the entire timeline fragment
-        if self.request.headers.get("HX-Request"):
-            noticias = Noticia.objects.all().order_by("-fecha_agregado")
-            response = render(
-                self.request,
-                "noticias/timeline_fragment.html",
-                {
-                    "noticias": noticias,
-                    "form": self.get_form_class()(),
-                    "filter_description": "Estás viendo todas las noticias",
-                    "voter_user": self.request.user
-                    if self.request.user.is_authenticated
-                    else None,
-                    "voter_session": lookup_data.get("session_key")
-                    if not self.request.user.is_authenticated
-                    else None,
-                },
-            )
-            # Add HTMX response headers
-            response["HX-Trigger"] = (
-                '{"noticiaCreated": {"message": "Noticia guardada exitosamente"}}'
-            )
-            return response
-
-        return redirect(self.success_url)
-
-    def form_invalid(self, form):
-        # For HTMX requests, return the form with errors
-        if self.request.headers.get("HX-Request"):
-            errors = form.errors
-            error_message = (
-                next(iter(errors.values()))[0]
-                if errors
-                else "Ha ocurrido un error al procesar el formulario"
-            )
-
-            logger.error(f"Form validation error: {errors}")
-
-            # Get voter identifier (handles extension session priority)
-            voter_data, lookup_data = get_voter_identifier(self.request)
-
-            response = render(
-                self.request,
-                self.template_name,
-                {
-                    "form": form,
-                    "filter_description": "Estás viendo todas las noticias",
-                    "noticias": Noticia.objects.all().order_by("-fecha_agregado"),
-                    "voter_user": self.request.user
-                    if self.request.user.is_authenticated
-                    else None,
-                    "voter_session": lookup_data.get("session_key")
-                    if not self.request.user.is_authenticated
-                    else None,
-                },
-            )
-
-            response["HX-Trigger"] = (
-                f'{{"noticiaError": {{"message": "{error_message}"}}}}'
-            )
-            return response
-
-        return super().form_invalid(form)
-
-
-# Admin-only views (keep login required)
-class RefreshNoticiaView(LoginRequiredMixin, View):
-    """Admin only - refresh metadata for a news article."""
-
-    def post(self, request, pk):
-        noticia = get_object_or_404(Noticia, pk=pk)
-        try:
-            noticia.update_meta_from_url()
-        except Exception as e:
-            logger.error(f"Error refreshing noticia {pk}: {e}")
-        return render(request, "noticias/timeline_item.html", {"noticia": noticia})
-
-
 class DeleteNoticiaView(LoginRequiredMixin, View):
     """Admin only - delete a news article."""
 

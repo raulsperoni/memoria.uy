@@ -23,12 +23,7 @@ def reclaim_session_votes(sender, request, user, **kwargs):
     logger.info("=" * 60)
     logger.info(f"[Vote Reclaim] User logged in: {user.username}")
 
-    # Get session key from extension or Django session
-    extension_session = request.headers.get("X-Extension-Session")
-    if not extension_session:
-        extension_session = request.COOKIES.get("memoria_extension_session")
-
-    session_key = extension_session or request.session.session_key
+    session_key = request.session.session_key
 
     if not session_key:
         logger.info("[Vote Reclaim] No session key found, nothing to reclaim")

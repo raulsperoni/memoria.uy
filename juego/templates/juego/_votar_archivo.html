@@ -1,0 +1,8 @@
+<form id="prop-{{ p.pk }}" method="post" action="{% url 'juego:votar-proposicion' p.pk %}"
+      hx-post="{% url 'juego:votar-proposicion' p.pk %}" hx-target="this" hx-swap="outerHTML"
+      class="flex flex-wrap gap-2 mt-1 mono text-xs">
+  {% csrf_token %}
+  <button name="opinion" value="acuerdo" class="border border-black px-2 py-1 hover:bg-black hover:text-white">de acuerdo</button>
+  <button name="opinion" value="desacuerdo" class="border border-black px-2 py-1 hover:bg-black hover:text-white">en desacuerdo</button>
+  <button name="opinion" value="nose" class="border border-gray-400 text-gray-600 px-2 py-1 hover:bg-gray-600 hover:text-white">no sé</button>
+</form>

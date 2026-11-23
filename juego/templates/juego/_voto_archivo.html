@@ -1,0 +1,6 @@
+<div id="prop-{{ p.pk }}" class="mono text-xs mt-1">
+  {% if r.pct_acuerdo is not None %}
+  <div class="h-3 border border-black flex max-w-xs"><div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div></div>
+  <span class="text-gray-600">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · {{ r.opinan }} opinión{{ r.opinan|pluralize:"es" }}{% if voto %} · vos: {{ voto.get_opinion_display|lower }}{% endif %}</span>
+  {% endif %}
+</div>

@@ -29,16 +29,4 @@
   </form>
 </div>
 
-<script>
-  // Clean up extension session on logout
-  document.getElementById('logout-form').addEventListener('submit', function() {
-    // Clear extension session cookie
-    document.cookie = 'memoria_extension_session=; path=/; max-age=0; SameSite=Lax';
-
-    // Clear extension session from localStorage
-    localStorage.removeItem('memoria_extension_session');
-
-    console.log('[Memoria Logout] Cleared extension session cookie and localStorage');
-  });
-</script>
 {% endblock %}
