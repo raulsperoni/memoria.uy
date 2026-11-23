@@ -3,7 +3,7 @@
 from urllib.parse import quote
 
 from django.db import IntegrityError
-from django.http import Http404, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -35,59 +35,49 @@ def _guardar_voto(voter, proposicion, opinion, prediccion=None, jornada=None):
         return VotoProposicion.objects.get(filtro, proposicion=proposicion), False
 
 
-def _ctx_resultado_item(voter, item, items):
-    voto = VotoProposicion.objects.get(logica.filtro_votante(voter), proposicion=item.proposicion)
-    r = logica.resultado(item.proposicion)
-    otros = logica.resultado(item.proposicion, excluir=logica.filtro_votante(voter))
-    return {
-        "jornada": item.jornada,
-        "item": item,
-        "voto": voto,
-        "r": r,
-        "acierto": (voto.prediccion == otros.bucket) if otros.bucket is not None and voto.prediccion is not None else None,
-        "bucket_label": dict(BUCKETS),
-        "hay_mas": not logica.completa(voter, item.jornada),
-        "n": items.index(item) + 1,
-        "total": len(items),
-    }
+def _ctx_paso(voter, jornada, items=None):
+    """Contexto de un paso: la frase pendiente y, arriba, el resultado de la
+    anterior. None si ya no quedan frases."""
+    items = items if items is not None else list(jornada.items_ordenados())
+    votos = logica.votos_de(voter, jornada)
+    i = next((i for i, it in enumerate(items) if it.proposicion_id not in votos), None)
+    if i is None:
+        return None
+    ctx = {"jornada": jornada, "item": items[i], "n": i + 1, "total": len(items), "buckets": BUCKETS}
+    if i > 0:
+        previo = items[i - 1]
+        voto = votos[previo.proposicion_id]
+        otros = logica.resultado(previo.proposicion, excluir=logica.filtro_votante(voter))
+        ctx["anterior"] = {
+            "item": previo,
+            "n": i,
+            "voto": voto,
+            "r": logica.resultado(previo.proposicion),
+            "acierto": (voto.prediccion == otros.bucket)
+            if otros.bucket is not None and voto.prediccion is not None
+            else None,
+        }
+    return ctx
 
 
 class HoyView(View):
-    """Juego del día: muestra la próxima proposición sin votar, o el resultado."""
+    """Juego del día: la próxima frase sin votar (con el resultado de la
+    anterior arriba), o el resultado final."""
 
     def get(self, request):
         jornada = logica.jornada_de_hoy()
         if not jornada:
             return render(request, "juego/sin_jornada.html")
-        voter = votante(request)
-        votos = logica.votos_de(voter, jornada)
-        items = list(jornada.items_ordenados())
-        # ?ver=<item>: el resultado de una frase ya votada (recargar o volver atrás no la pierde)
-        ver = request.GET.get("ver")
-        if ver and ver.isdigit():
-            item = next((it for it in items if it.pk == int(ver)), None)
-            if item and item.proposicion_id in votos:
-                ctx = _ctx_resultado_item(voter, item, items)
-                return render(request, "juego/resultado_item_page.html", ctx)
-        pendiente = next((it for it in items if it.proposicion_id not in votos), None)
-        if pendiente is None:
+        ctx = _ctx_paso(votante(request), jornada)
+        if ctx is None:
             return redirect("juego:resultado")
-        return render(
-            request,
-            "juego/hoy.html",
-            {
-                "jornada": jornada,
-                "item": pendiente,
-                "n": items.index(pendiente) + 1,
-                "total": len(items),
-                "buckets": BUCKETS,
-            },
-        )
+        return render(request, "juego/hoy.html", ctx)
 
 
 @method_decorator(ratelimit(key="ip", rate="60/m", method="POST", block=True), name="post")
 class VotarItemView(View):
-    """POST de opinión + predicción para un ítem de la jornada."""
+    """POST de un ítem de la jornada: opinión + predicción, o «no sé» sin
+    predicción (pasa la frase; no suma puntaje)."""
 
     def post(self, request, item_id):
         item = get_object_or_404(JornadaItem.objects.select_related("jornada", "proposicion__historia"), pk=item_id)
@@ -96,20 +86,29 @@ class VotarItemView(View):
         opinion = request.POST.get("opinion")
         if opinion not in OPINIONES:
             return HttpResponseBadRequest("opinión inválida")
-        try:
-            prediccion = int(request.POST.get("prediccion"))
-            assert 0 <= prediccion <= 4
-        except (TypeError, ValueError, AssertionError):
-            return HttpResponseBadRequest("predicción inválida")
+        cruda = request.POST.get("prediccion")
+        if cruda in (None, "") and opinion == "nose":
+            prediccion = None
+        else:
+            try:
+                prediccion = int(cruda)
+                assert 0 <= prediccion <= 4
+            except (TypeError, ValueError, AssertionError):
+                return HttpResponseBadRequest("predicción inválida")
         voter = votante(request)
         _guardar_voto(voter, item.proposicion, opinion, prediccion, item.jornada)
-        url = f"{reverse('juego:hoy')}?ver={item.pk}"
-        if not request.headers.get("HX-Request"):
-            return redirect(url)
-        ctx = _ctx_resultado_item(voter, item, list(item.jornada.items_ordenados()))
-        resp = render(request, "juego/_paso_resultado.html", ctx)
-        resp["HX-Push-Url"] = url
-        return resp
+        ctx = _ctx_paso(voter, item.jornada)
+        htmx = request.headers.get("HX-Request")
+        if ctx is None:
+            if not htmx:
+                return redirect("juego:resultado")
+            resp = HttpResponse(status=204)
+            resp["HX-Redirect"] = reverse("juego:resultado")
+            return resp
+        if not htmx:
+            return redirect("juego:hoy")
+        ctx["foco"] = True
+        return render(request, "juego/_paso.html", ctx)
 
 
 class ResultadoView(View):
@@ -133,7 +132,6 @@ class ResultadoView(View):
                 "mi_burbuja": burbuja_de(voter),
                 "tarjeta": texto,
                 "whatsapp": "https://wa.me/?text=" + quote(texto),
-                "bucket_label": dict(BUCKETS),
             },
         )
 
@@ -201,7 +199,6 @@ class BurbujasView(View):
         return render(request, "juego/burbujas.html", ctx)
 
 
-from django.http import HttpResponse  # noqa: E402
 from django.utils import timezone  # noqa: E402
 from django.views.decorators.cache import cache_page  # noqa: E402
 

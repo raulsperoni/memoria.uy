@@ -70,6 +70,10 @@ cuando exportemos los datos viejos (fase 4).
 - Puntaje contra el resultado al cierre del día; racha; tarjeta estilo Wordle
   para WhatsApp / copiar.
 - No se puede cambiar el voto.
+- **Menos toques (23/11)**: de 4 por frase (opinión, predicción, confirmar,
+  siguiente) a 2. El rango de predicción es el botón que guarda; el resultado
+  de la frase aparece arriba de la siguiente. **«No sé» pasa la frase** con un
+  toque, sin predicción: cuenta para la jornada y la racha, no suma puntaje.
 - Votante anónimo = id en los *datos* de la sesión (Django rota la
   session_key al loguearse); al iniciar sesión los votos pasan a la cuenta.
 - También se vota desde la página de cada historia (no suma puntaje).

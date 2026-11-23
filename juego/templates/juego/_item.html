@@ -1,7 +1,7 @@
 {% with p=item.proposicion %}
 <form method="post" action="{% url 'juego:votar-item' item.pk %}"
       hx-post="{% url 'juego:votar-item' item.pk %}" hx-target="#juego" hx-swap="innerHTML show:top"
-      hx-disabled-elt="find button[type=submit]"
+      hx-disabled-elt="#juego-paso button"
       id="juego-paso" class="space-y-6">
   {% csrf_token %}
   <blockquote class="border-2 border-black p-5 text-xl md:text-2xl font-bold leading-snug">«{{ p.texto }}»</blockquote>
@@ -15,16 +15,17 @@
     </div>
   </details>
 
-  {% with foco="peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-black" %}
+  {% with foco_css="peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-black" %}
   <fieldset>
     <legend class="mono text-xs uppercase tracking-wide mb-2">1 · ¿Vos qué pensás?</legend>
     <div class="grid grid-cols-3 gap-2">
-      <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="acuerdo" class="peer sr-only" required>
-        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco }}">De acuerdo</span></label>
+      <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="acuerdo" class="peer sr-only" required{% if foco %} autofocus{% endif %}>
+        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco_css }}">De acuerdo</span></label>
       <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="desacuerdo" class="peer sr-only">
-        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco }}">En desacuerdo</span></label>
-      <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="nose" class="peer sr-only">
-        <span class="h-full flex items-center justify-center text-center border-2 border-gray-400 text-gray-600 py-3 mono text-sm peer-checked:bg-gray-600 peer-checked:text-white hover:bg-gray-100 {{ foco }}">No sé</span></label>
+        <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco_css }}">En desacuerdo</span></label>
+      {# «No sé» envía solo: pasa la frase sin predicción (formnovalidate saltea el required de la opinión) #}
+      <button type="submit" name="opinion" value="nose" formnovalidate
+              class="h-full border-2 border-gray-400 text-gray-600 py-2 px-1 mono text-sm hover:bg-gray-100 disabled:opacity-40">No sé<span class="block text-[11px]">paso →</span></button>
     </div>
   </fieldset>
 
@@ -32,28 +33,27 @@
     <legend class="mono text-xs uppercase tracking-wide mb-2">2 · ¿Qué % de Uruguay está de acuerdo?</legend>
     <div class="grid grid-cols-5 gap-1">
       {% for valor, etiqueta in buckets %}
-      <label class="cursor-pointer"><input type="radio" name="prediccion" value="{{ valor }}" class="peer sr-only" required>
-        <span class="block text-center border-2 border-black py-3 mono text-[11px] sm:text-xs peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco }}">{{ etiqueta }}</span></label>
+      <button type="submit" name="prediccion" value="{{ valor }}" data-prediccion
+              class="border-2 border-black py-3 mono text-[11px] sm:text-xs hover:bg-black hover:text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black">{{ etiqueta }}</button>
       {% endfor %}
     </div>
+    <p class="mono text-[11px] text-gray-600 mt-2" data-ayuda>Al tocar el rango se guarda y pasás a la siguiente. No se puede cambiar.</p>
   </fieldset>
   {% endwith %}
-
-  <div>
-    <button type="submit" class="w-full bg-black text-white py-3 mono font-bold hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">confirmar →</button>
-    <p class="mono text-[11px] text-gray-600 mt-2 text-center" data-falta>elegí tu opinión y tu predicción</p>
-  </div>
 </form>
 <script>
+  // Los rangos quedan apagados hasta elegir opinión. Sin JS igual funciona: el
+  // navegador exige la opinión (required) al tocar un rango.
   (function () {
     var f = document.getElementById('juego-paso');
     if (!f) return;
-    var btn = f.querySelector('button[type=submit]');
-    var falta = f.querySelector('[data-falta]');
+    var rangos = f.querySelectorAll('[data-prediccion]');
+    var ayuda = f.querySelector('[data-ayuda]');
+    var texto = ayuda.textContent;
     function listo() {
-      var ok = f.querySelector('input[name=opinion]:checked') && f.querySelector('input[name=prediccion]:checked');
-      btn.disabled = !ok;
-      falta.hidden = !!ok;
+      var ok = !!f.querySelector('input[name=opinion]:checked');
+      rangos.forEach(function (b) { b.disabled = !ok; });
+      ayuda.textContent = ok ? texto : 'Primero elegí tu opinión. Si no sabés, «No sé» pasa la frase.';
     }
     f.addEventListener('change', listo);
     listo();
