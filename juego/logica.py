@@ -199,7 +199,8 @@ def puntaje(voter, jornada):
     """Lista de (item, voto, resultado, acierto) y total de aciertos.
     El acierto se evalúa contra el resultado al cierre del día (provisorio
     antes), sin contar el voto propio (si no, con pocos votantes, alcanzaría
-    con predecir la propia opinión)."""
+    con predecir la propia opinión). Una frase pasada («no sé», sin
+    predicción) cuenta como jugada pero no suma: acierto None."""
     hasta = fin_de(jornada.fecha) if jornada.fecha < timezone.localdate() else None
     votos = votos_de(voter, jornada)
     filas, aciertos = [], 0
@@ -239,9 +240,12 @@ def racha(voter, hoy=None) -> int:
 
 
 def tarjeta(voter, jornada) -> str:
-    """Texto compartible estilo Wordle."""
+    """Texto compartible estilo Wordle. ➖ = frase pasada (sin predicción)."""
     filas, aciertos = puntaje(voter, jornada)
-    cuadros = "".join("🟩" if a else ("⬜" if a is False else "🔲") for _, _, _, a in filas)
+    cuadros = "".join(
+        "➖" if not v or v.prediccion is None else "🟩" if a else "⬜" if a is False else "🔲"
+        for _, v, _, a in filas
+    )
     r = racha(voter)
     lineas = [
         f"memoria.uy · {jornada.fecha:%d/%m}",

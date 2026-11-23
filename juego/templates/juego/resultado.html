@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load vote_extras %}
 {% block title %}Mi resultado · ¿Qué piensa Uruguay? · memoria.uy{% endblock %}
 {% block og_image %}https://memoria.uy/og/hoy.png{% endblock %}
 {% block twitter_image %}https://memoria.uy/og/hoy.png{% endblock %}
@@ -40,7 +39,7 @@
       <p class="font-medium">«{{ item.proposicion.texto }}»</p>
       {% if r.pct_acuerdo is not None %}
       <div class="h-3 border border-black flex mt-1"><div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div></div>
-      <p class="mono text-[11px] text-gray-600">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · vos: {{ voto.get_opinion_display|lower }}, predijiste {{ bucket_label|get_item:voto.prediccion }} {% if acierto %}✓{% elif acierto is False %}✗{% endif %}
+      <p class="mono text-[11px] text-gray-600">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · vos: {{ voto.get_opinion_display|lower }}, {% if voto.prediccion is None %}sin predicción{% else %}predijiste {{ voto.get_prediccion_display }} {% if acierto %}✓{% elif acierto is False %}✗{% endif %}{% endif %}
         · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>
       {% else %}
       <p class="mono text-[11px] text-gray-600">todavía sin opiniones · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>

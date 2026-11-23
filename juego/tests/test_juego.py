@@ -64,8 +64,9 @@ def test_recurrente(props):
 
 def _jugar(client, j, opinion="acuerdo", pred=4):
     for it in j.items_ordenados():
-        r = client.post(reverse("juego:votar-item", args=[it.pk]), {"opinion": opinion, "prediccion": pred}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
+        datos = {"opinion": opinion} if pred is None else {"opinion": opinion, "prediccion": pred}
+        r = client.post(reverse("juego:votar-item", args=[it.pk]), datos, HTTP_HX_REQUEST="true")
+        assert r.status_code in (200, 204)
 
 
 def test_flujo_completo(client, props):
@@ -182,27 +183,88 @@ def test_plural_opiniones(client, props):
     assert "3 opiniones" in html and "opiniónes" not in html
 
 
-def test_cada_paso_del_juego_tiene_url(client, props):
+def test_votar_muestra_el_resultado_y_la_siguiente_frase(client, props):
     j = logica.armar_jornada()
-    it = j.items_ordenados()[0]
-    r = client.post(reverse("juego:votar-item", args=[it.pk]), {"opinion": "acuerdo", "prediccion": 2}, HTTP_HX_REQUEST="true")
-    url = f"{reverse('juego:hoy')}?ver={it.pk}"
-    assert r["HX-Push-Url"] == url
-    assert "1/5" in r.content.decode()  # la cabecera viaja con el resultado
-    # Recargar esa URL muestra el mismo resultado, no la siguiente frase
-    html = client.get(url).content.decode()
-    assert it.proposicion.texto in html and "siguiente" in html
-    # Sin HTMX: POST → redirect a la misma URL
-    it2 = j.items_ordenados()[1]
-    r = client.post(reverse("juego:votar-item", args=[it2.pk]), {"opinion": "acuerdo", "prediccion": 2})
-    assert r.status_code == 302 and r.url == f"{reverse('juego:hoy')}?ver={it2.pk}"
+    items = list(j.items_ordenados())
+    VotoProposicion.objects.create(proposicion=items[0].proposicion, opinion="acuerdo", session_key="otro", jornada=j)
+    r = client.post(reverse("juego:votar-item", args=[items[0].pk]), {"opinion": "acuerdo", "prediccion": 4}, HTTP_HX_REQUEST="true")
+    html = r.content.decode()
+    # Un solo paso: resultado de la frase 1 + pregunta de la frase 2, sin «siguiente»
+    assert "2/5" in html and items[1].proposicion.texto in html
+    assert items[0].proposicion.texto in html and "acertaste" in html and "predijiste 80–100" in html
+    assert "siguiente →" not in html and "confirmar" not in html
+    # Recargar /hoy/ muestra lo mismo
+    html = client.get(reverse("juego:hoy")).content.decode()
+    assert "2/5" in html and "acertaste" in html
+    # Sin HTMX: POST → redirect a /hoy/
+    r = client.post(reverse("juego:votar-item", args=[items[1].pk]), {"opinion": "acuerdo", "prediccion": 2})
+    assert r.status_code == 302 and r.url == reverse("juego:hoy")
 
 
-def test_ver_item_no_votado_muestra_la_pregunta(client, props):
+def test_la_ultima_frase_lleva_al_resultado(client, props):
+    j = logica.armar_jornada()
+    items = list(j.items_ordenados())
+    for it in items[:-1]:
+        client.post(reverse("juego:votar-item", args=[it.pk]), {"opinion": "acuerdo", "prediccion": 2})
+    url = reverse("juego:votar-item", args=[items[-1].pk])
+    r = client.post(url, {"opinion": "desacuerdo", "prediccion": 0}, HTTP_HX_REQUEST="true")
+    assert r.status_code == 204 and r["HX-Redirect"] == reverse("juego:resultado")
+    # Repetir el POST sin HTMX no cambia el voto y también lleva al resultado
+    r = client.post(url, {"opinion": "acuerdo", "prediccion": 4})
+    assert r.status_code == 302 and r.url == reverse("juego:resultado")
+
+
+def test_nose_pasa_la_frase_sin_prediccion(client, props):
+    j = logica.armar_jornada()
+    items = list(j.items_ordenados())
+    r = client.post(reverse("juego:votar-item", args=[items[0].pk]), {"opinion": "nose"}, HTTP_HX_REQUEST="true")
+    html = r.content.decode()
+    v = VotoProposicion.objects.get()
+    assert v.opinion == "nose" and v.prediccion is None and v.jornada == j
+    assert "2/5" in html and "sin predicción" in html
+    # «No sé» gana aunque haya una opinión marcada (el botón va después del radio)
+    r = client.post(
+        reverse("juego:votar-item", args=[items[1].pk]) , "opinion=acuerdo&opinion=nose",
+        content_type="application/x-www-form-urlencoded", HTTP_HX_REQUEST="true",
+    )
+    assert VotoProposicion.objects.get(proposicion=items[1].proposicion).opinion == "nose"
+    # Con opinión, la predicción sigue siendo obligatoria
+    assert client.post(reverse("juego:votar-item", args=[items[2].pk]), {"opinion": "acuerdo"}).status_code == 400
+
+
+def test_frases_pasadas_no_rompen_puntaje_racha_ni_tarjeta(client, props):
+    j = logica.armar_jornada()
+    items = list(j.items_ordenados())
+    for it in items:
+        VotoProposicion.objects.create(proposicion=it.proposicion, opinion="acuerdo", session_key="otro", jornada=j)
+    # Pasa dos, acierta dos, erra una
+    jugadas = [("nose", None), ("acuerdo", 4), ("nose", None), ("desacuerdo", 4), ("acuerdo", 0)]
+    for it, (op, pred) in zip(items, jugadas):
+        datos = {"opinion": op} if pred is None else {"opinion": op, "prediccion": pred}
+        client.post(reverse("juego:votar-item", args=[it.pk]), datos, HTTP_HX_REQUEST="true")
+    voter = {"session_key": VotoProposicion.objects.exclude(session_key="otro").first().session_key}
+    assert logica.completa(voter, j)
+    filas, aciertos = logica.puntaje(voter, j)
+    assert aciertos == 2 and [f[3] for f in filas] == [None, True, None, True, False]
+    assert logica.racha(voter) == 1
+    assert "Leí a Uruguay 2/5\n➖🟩➖🟩⬜" in logica.tarjeta(voter, j)
+    html = client.get(reverse("juego:resultado")).content.decode()
+    assert "2/5" in html and "vos: no sé, sin predicción" in html and "None" not in html
+
+
+def test_pasar_todo_completa_la_jornada(client, props):
+    j = logica.armar_jornada()
+    _jugar(client, j, opinion="nose", pred=None)
+    html = client.get(reverse("juego:resultado")).content.decode()
+    assert "Leí a Uruguay 0/5" in html and "➖➖➖➖➖" in html
+
+
+def test_ver_viejo_muestra_la_frase_pendiente(client, props):
+    """Los links /hoy/?ver=<item> de antes caen en el paso actual."""
     j = logica.armar_jornada()
     it = j.items_ordenados()[2]
-    r = client.get(f"{reverse('juego:hoy')}?ver={it.pk}")
-    assert "1/5" in r.content.decode() and "confirmar" in r.content.decode()
+    html = client.get(f"{reverse('juego:hoy')}?ver={it.pk}").content.decode()
+    assert "1/5" in html and "No sé" in html
 
 
 def test_sin_jornada(client, db):
