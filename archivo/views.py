@@ -143,6 +143,10 @@ class EntidadView(DetailView):
             .order_by("-primera_fuente_en")[:100]
         )
         ctx["historias"] = historias
+        if ent.tipo == "persona":
+            from .tonos import resumen_por_medio
+
+            ctx["tonos_medios"] = resumen_por_medio(ent, _historias_publicas())
         ctx["proposiciones"] = ent.proposiciones.filter(estado="publicada").select_related("historia")[:30]
         from juego.burbujas import patrones_por_proposicion, ultimo_run
 

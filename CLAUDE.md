@@ -31,6 +31,7 @@ poetry run python manage.py cargar_medios
 poetry run python manage.py detectar_feeds
 poetry run python manage.py probar_archivo URL [URL ...]
 poetry run python manage.py armar_jornada
+poetry run python manage.py tonos_backfill --contar
 
 # Tailwind
 poetry run python manage.py tailwind start
@@ -55,8 +56,9 @@ Ver [docs/PROPUESTA_2027.md](docs/PROPUESTA_2027.md) (por qué) y
 4. **Agrupar**: embeddings (Workers AI bge-m3) → `Historia`
 5. **Procesar**: LLM (Claude Haiku 5.5 vía OpenRouter) → `Hecho` + `Proposicion` + `Entidad`
 6. **Verificar**: Jev chequea cada hecho contra cada fuente, el resumen y la calidad de proposiciones
-7. **Recrawl** de historias top a 24 h / 7 días → `Cambio` (diff, ¿cambia el sentido?)
-8. **Jornada** diaria 05:30 → juego; **burbujas** diarias 02:15 (todo vía `manage.py tick`)
+7. **Tono**: LLM por nota → `Tono` (−2..2, con cita) hacia cada persona que nombra; Jev verifica la cita. Cupo `MAX_TONOS_DIA` (500)
+8. **Recrawl** de historias top a 24 h / 7 días → `Cambio` (diff, ¿cambia el sentido?)
+9. **Jornada** diaria 05:30 → juego; **burbujas** diarias 02:15 (todo vía `manage.py tick`)
 
 ### Proveedores intercambiables (`archivo/providers/`)
 
@@ -120,6 +122,7 @@ docker-compose up -d --build
 |---------|-----------|
 | `archivo/pipeline.py` | Pipeline de ingesta (testeable, sin Celery) |
 | `archivo/llm.py` | Prompt y esquema de historias |
+| `archivo/tonos.py` | Tono de cada nota hacia las personas (página de entidad) |
 | `archivo/providers/` | Cloudflare, Jev, embeddings, R2 |
 | `juego/logica.py` | Armado de jornada, puntaje, racha |
 | `juego/burbujas.py` | Burbujas sobre proposiciones |

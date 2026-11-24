@@ -18,6 +18,41 @@
   </section>
   {% endif %}
 
+  {% if tonos_medios %}
+  <section class="mb-8" id="tono">
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-2">Cómo la deja cada medio</h3>
+    <p class="text-xs text-gray-600 mb-3">Promedio de cómo queda parada en las notas de cada medio, de −2 (muy mal) a +2 (muy bien). Cuenta lo que la nota cuenta, no solo cómo lo cuenta: una mala noticia baja aunque la nota sea neutral. Lo calcula un modelo y lo verifica otro; cada nota trae la cita que lo justifica.</p>
+    <ul class="space-y-3">
+      {% for m in tonos_medios %}
+      <li>
+        <details>
+          <summary class="cursor-pointer list-none">
+            <div class="flex items-baseline justify-between mono text-xs">
+              <span class="font-bold">{{ m.medio.nombre }}</span>
+              <span>{{ m.promedio|floatformat:1 }} · {{ m.n }} nota{{ m.n|pluralize }}{% if m.pocas %} <span class="text-gray-500">(pocas)</span>{% endif %}</span>
+            </div>
+            <div class="relative h-3 border-2 border-black mt-1 bg-gradient-to-r from-red-200 via-white to-green-200" role="img" aria-label="{{ m.medio.nombre }}: {{ m.promedio|floatformat:1 }} de −2 a +2">
+              <span class="absolute top-0 bottom-0 left-1/2 border-l border-gray-400"></span>
+              <span class="absolute -top-[3px] w-2 h-[14px] bg-black" style="left: calc({{ m.pos|floatformat:0 }}% - 4px)"></span>
+            </div>
+          </summary>
+          <ul class="mt-2 ml-2 space-y-2 text-sm">
+            {% for t in m.tonos %}
+            <li>
+              <span class="mono text-[11px] font-bold">{% if t.valencia > 0 %}+{% endif %}{{ t.valencia }}</span>
+              «{{ t.cita|truncatechars:200 }}»
+              <a class="mono text-[11px] underline whitespace-nowrap" href="{{ t.fuente.url }}" rel="nofollow noopener" target="_blank">nota</a>{% if t.fuente.historia.slug %} · <a class="mono text-[11px] underline whitespace-nowrap" href="{% url 'archivo:historia' t.fuente.historia.slug %}">historia</a>{% endif %}
+              {% if t.razon %}<p class="text-xs text-gray-600">{{ t.razon }}</p>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
   <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Línea de tiempo</h3>
   <ol class="relative border-l-2 border-black ml-2 space-y-5">
     {% for h in historias %}

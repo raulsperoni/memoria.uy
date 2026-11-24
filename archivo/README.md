@@ -48,6 +48,9 @@ línea.
 | `SNAPSHOT_STORAGE` | `local` | `r2` en producción |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | — / — / `memoria-snapshots` | Credenciales R2 |
 | `MAX_EXTRACCIONES_DIA` | `150` | Cupo diario de extracciones |
+| `MAX_TONOS_DIA` | `500` | Cupo diario de llamadas para el tono hacia personas (`archivo/tonos.py`) |
+| `UMBRAL_TONO` | `0.5` | Mínimo de Jev para aceptar un tono |
+| `TONOS_LLM_MODELS` | (los de `ARCHIVO_LLM_MODELS`) | Modelos para el tono |
 | `RECRAWL_OFFSETS_HORAS` | `24,168` | Cuándo re-capturar notas top |
 | `UMBRAL_INTERES` | `0.6` | Filtro 1 (antes de extraer) |
 | `UMBRAL_VALE_HISTORIA` | `0.34` | Filtro 2 (historias de un solo medio) |

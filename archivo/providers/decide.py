@@ -99,6 +99,16 @@ PREGUNTAS = {
             "Responder no si son correcciones de estilo, erratas o agregados menores."
         ),
     },
+    "tono_respaldado": {
+        "tipo": "noul",
+        "instrucciones": (
+            "¿La cita, tomada de la nota, respalda que la nota deja a la persona "
+            "con la valencia indicada (muy mal, mal, neutra, bien o muy bien "
+            "parada)? Cuenta lo que la nota relata o lo que otros dicen de ella, "
+            "aunque el tono sea neutral. Responder no si la cita no habla de la "
+            "persona o apunta en la dirección contraria."
+        ),
+    },
     "divisividad": {
         "tipo": "score",
         "instrucciones": (
