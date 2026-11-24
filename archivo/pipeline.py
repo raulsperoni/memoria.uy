@@ -59,6 +59,7 @@ UMBRAL_INTERES = lambda: env_float("UMBRAL_INTERES", 0.6)  # noqa: E731
 UMBRAL_VALE_HISTORIA = lambda: env_float("UMBRAL_VALE_HISTORIA", 0.34)  # noqa: E731
 UMBRAL_FIEL = lambda: env_float("UMBRAL_FIEL", 0.5)  # noqa: E731
 UMBRAL_CALIDAD = lambda: env_float("UMBRAL_CALIDAD", 0.6)  # noqa: E731
+UMBRAL_MISMA_PROPOSICION = lambda: env_float("UMBRAL_MISMA_PROPOSICION", 0.5)  # noqa: E731
 SIM_MISMA = lambda: env_float("SIM_MISMA_HISTORIA", 0.75)  # noqa: E731
 SIM_DUDA = lambda: env_float("SIM_DUDA_HISTORIA", 0.40)  # noqa: E731
 MAX_CANDIDATAS_DUDA = 3
@@ -414,12 +415,15 @@ def procesar_historia(historia: Historia) -> bool:
         .values_list("tema", flat=True)
         .distinct()[:50]
     )
-    salida = get_procesador().procesar(elegidas, temas)
+    # Las proposiciones con votos o en una jornada se quedan; el resto se
+    # reemplaza en cada reproceso (antes se acumulaban: ver docs/decisiones/0011).
+    fijas = list(proposiciones_fijas(historia).filter(estado="publicada").values_list("texto", flat=True))
+    salida = get_procesador().procesar(elegidas, temas, proposiciones_existentes=fijas)
     registrar_uso("llm", "historia")
 
     with transaction.atomic():
         historia.hechos.all().delete()
-        historia.proposiciones.filter(estado="candidata").delete()
+        historia.proposiciones.exclude(pk__in=proposiciones_fijas(historia)).delete()
 
         historia.titulo = salida.titulo[:300]
         historia.resumen = salida.resumen
@@ -512,12 +516,51 @@ def verificar_historia(historia: Historia):
             historia.resumen = " ".join(h.texto for h in hechos[:3])
             historia.save(update_fields=["resumen"])
 
-    for prop in historia.proposiciones.filter(estado="candidata"):
+    for prop in historia.proposiciones.filter(estado="candidata").order_by("pk"):
+        repetida = proposicion_repetida(prop)
+        if repetida:
+            logger.info("Proposición %s repite a %s; descartada", prop.pk, repetida.pk)
+            prop.estado = "descartada"
+            prop.save(update_fields=["estado"])
+            continue
         estado = {"proposicion": prop.texto, "contexto": historia.resumen}
         prop.calidad = decidir("calidad_proposicion", estado)
         prop.divisividad = decidir("divisividad", estado)
         prop.estado = "publicada" if prop.calidad >= UMBRAL_CALIDAD() else "descartada"
         prop.save(update_fields=["calidad", "divisividad", "estado"])
+
+
+MAX_COMPARACIONES_PROPOSICION = 12
+
+
+def proposiciones_fijas(historia):
+    """Proposiciones que no se pueden reemplazar: tienen votos o están en una jornada."""
+    return historia.proposiciones.filter(
+        Q(votos__isnull=False) | Q(jornadas__isnull=False)
+    ).distinct()
+
+
+def proposicion_repetida(prop: Proposicion) -> Proposicion | None:
+    """Devuelve una proposición publicada que plantea la misma discusión, o None.
+
+    Compara con las publicadas de la misma historia y con las de otras
+    historias recientes del mismo tema. Jev decide; la caché es simétrica."""
+    misma = Proposicion.objects.filter(historia=prop.historia, estado="publicada")
+    otras = Proposicion.objects.none()
+    if prop.tema:
+        otras = Proposicion.objects.filter(
+            estado="publicada",
+            tema=prop.tema,
+            creada_en__gte=timezone.now() - timedelta(days=14),
+        ).exclude(historia=prop.historia)
+    candidatas = list(misma.exclude(pk=prop.pk).order_by("pk")) + list(
+        otras.order_by("-creada_en")[:MAX_COMPARACIONES_PROPOSICION]
+    )
+    for otra in candidatas:
+        a, b = sorted([prop.texto, otra.texto])
+        if decidir("misma_proposicion", {"A": a, "B": b}) >= UMBRAL_MISMA_PROPOSICION():
+            return otra
+    return None
 
 
 # ---------------------------------------------------------------------------

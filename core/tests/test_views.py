@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from django.urls import reverse
 
@@ -61,5 +63,28 @@ def test_voto_limitado_por_minuto(client, settings):
 def test_acerca_y_privacidad_describen_el_producto_actual(client):
     for nombre in ("acerca_de", "privacidad"):
         html = client.get(reverse(nombre)).content.decode()
+        # La línea de tiempo cuenta el producto viejo a propósito.
+        html = re.sub(r'<section id="decisiones">.*?</section>', "", html, flags=re.S)
         assert "extensión" not in html and "buena noticia" not in html
         assert "¿Qué piensa Uruguay?" in html or "votos individuales" in html
+
+
+def test_todas_las_decisiones_se_leen():
+    from core.decisiones import todas
+
+    todas.cache_clear()
+    ds = todas()
+    assert len(ds) >= 11
+    assert [d.numero for d in ds] == sorted(d.numero for d in ds)
+    for d in ds:
+        assert d.titulo and d.resumen and d.commits, d.archivo
+        assert all(re.fullmatch(r"[0-9a-f]{7,40}", c) for c in d.commits), d.archivo
+
+
+@pytest.mark.django_db
+def test_acerca_muestra_la_linea_de_tiempo(client):
+    r = client.get(reverse("acerca_de"))
+    html = r.content.decode()
+    assert "Cómo llegamos acá" in html
+    assert "/commit/2f686c2" in html
+    assert html.index("decisión 0011") < html.index("decisión 0001")

@@ -5,6 +5,7 @@ Guía técnica para Claude Code cuando trabaja con este repositorio.
 Ver también:
 - [VISION.md](VISION.md) - Visión de producto y estado actual
 - [docs/SCIENTIFIC.md](docs/SCIENTIFIC.md) - Algoritmos y referencias científicas
+- [docs/decisiones/](docs/decisiones/README.md) - Registro de decisiones. Una decisión que el código no explica lleva un registro nuevo (`NNNN-titulo.md`, en español, con la línea de Fecha/Estado/Commits); nunca se reescribe uno. Aparecen en la línea de tiempo de «Acerca de»
 
 ## Comandos de desarrollo
 

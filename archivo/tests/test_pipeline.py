@@ -297,3 +297,73 @@ def test_no_fusiona_si_hay_votos(fakes, medios):
     Historia.objects.filter(pk=h2.pk).update(centroide=h1.centroide)
     dec.respuestas["mismo_hecho"] = 0.9
     assert pipeline.fusionar_duplicadas() == 0
+
+
+def _historia_procesada(ext, medios):
+    a, b = medios
+    f1 = _extraida(ext, a, "/p/1", "Sánchez se reunió con ediles por Praxis", TEXTO_PRAXIS)
+    f2 = _extraida(ext, b, "/p/2", "Sánchez y ediles hablaron de Praxis", TEXTO_PRAXIS)
+    h = pipeline.agrupar(f1)
+    pipeline.agrupar(f2)
+    h.refresh_from_db()
+    assert pipeline.procesar_historia(h)
+    return h
+
+
+def test_reprocesar_no_acumula_proposiciones(fakes, medios):
+    ext, dec = fakes
+    h = _historia_procesada(ext, medios)
+    for _ in range(3):
+        h.fuentes.update(estado="extraida")
+        pipeline.procesar_historia(h)
+    assert h.proposiciones.count() == 1
+
+
+def test_reprocesar_conserva_proposiciones_votadas_y_las_pasa_al_llm(fakes, medios):
+    from juego.models import VotoProposicion
+
+    ext, dec = fakes
+    h = _historia_procesada(ext, medios)
+    votada = h.proposiciones.get()
+    VotoProposicion.objects.create(proposicion=votada, opinion="acuerdo", session_key="x")
+    dec.respuestas["misma_proposicion"] = 0.1
+    h.fuentes.update(estado="extraida")
+    pipeline.procesar_historia(h)
+    assert Proposicion.objects.filter(pk=votada.pk, estado="publicada").exists()
+    assert h.proposiciones.count() == 2
+    from archivo.llm import get_procesador
+
+    assert get_procesador().proposiciones_existentes == [votada.texto]
+
+
+def test_jev_descarta_proposicion_repetida(fakes, medios):
+    from juego.models import VotoProposicion
+
+    ext, dec = fakes
+    h = _historia_procesada(ext, medios)
+    VotoProposicion.objects.create(proposicion=h.proposiciones.get(), opinion="acuerdo", session_key="x")
+    dec.respuestas["misma_proposicion"] = 0.9
+    h.fuentes.update(estado="extraida")
+    pipeline.procesar_historia(h)
+    assert h.proposiciones.filter(estado="publicada").count() == 1
+    assert h.proposiciones.filter(estado="descartada").count() == 1
+
+
+def test_limpiar_proposiciones(fakes, medios):
+    from django.core.management import call_command
+    from juego.models import VotoProposicion
+
+    ext, dec = fakes
+    h = _historia_procesada(ext, medios)
+    votada = h.proposiciones.get()
+    viejas = [
+        Proposicion.objects.create(historia=h, texto=f"Variante {i}", estado="publicada")
+        for i in range(2)
+    ]
+    VotoProposicion.objects.create(proposicion=votada, opinion="acuerdo", session_key="x")
+    dec.respuestas["misma_proposicion"] = 0.9
+    call_command("limpiar_proposiciones")
+    assert h.proposiciones.filter(estado="publicada").count() == 3
+    call_command("limpiar_proposiciones", "--aplicar")
+    assert list(h.proposiciones.filter(estado="publicada")) == [votada]
+    assert all(Proposicion.objects.get(pk=p.pk).estado == "descartada" for p in viejas)

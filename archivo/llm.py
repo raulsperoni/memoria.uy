@@ -107,7 +107,7 @@ Reglas:
 """
 
 
-def construir_entrada(fuentes, temas_existentes=()):
+def construir_entrada(fuentes, temas_existentes=(), proposiciones_existentes=()):
     partes = []
     for i, f in enumerate(fuentes[:MAX_FUENTES]):
         cabecera = f"[{i}] {f.medio.nombre} — {f.titulo}\n"
@@ -115,11 +115,19 @@ def construir_entrada(fuentes, temas_existentes=()):
             cabecera += f"Fecha: {f.publicada_en:%Y-%m-%d}\n"
         partes.append(cabecera + (f.texto or f.bajada)[:MAX_CHARS_FUENTE])
     temas = ", ".join(temas_existentes) or "(ninguno todavía)"
-    return f"Temas existentes: {temas}\n\nNotas:\n\n" + "\n\n---\n\n".join(partes)
+    cabecera = f"Temas existentes: {temas}\n\n"
+    if proposiciones_existentes:
+        lista = "\n".join(f"- {t}" for t in proposiciones_existentes)
+        cabecera += (
+            "Proposiciones que esta historia ya tiene (no las repitas ni las "
+            "reformules; agregá solo proposiciones sobre otra discusión, o "
+            f"ninguna):\n{lista}\n\n"
+        )
+    return cabecera + "Notas:\n\n" + "\n\n---\n\n".join(partes)
 
 
 class Procesador:
-    def procesar(self, fuentes, temas_existentes=()) -> HistoriaOut:
+    def procesar(self, fuentes, temas_existentes=(), proposiciones_existentes=()) -> HistoriaOut:
         raise NotImplementedError
 
 
@@ -128,10 +136,10 @@ class LLMProcesador(Procesador):
         env = os.environ.get("ARCHIVO_LLM_MODELS")
         self.modelos = modelos or (env.split(",") if env else DEFAULT_MODELS)
 
-    def procesar(self, fuentes, temas_existentes=()):
+    def procesar(self, fuentes, temas_existentes=(), proposiciones_existentes=()):
         from litellm import completion
 
-        entrada = construir_entrada(fuentes, temas_existentes)
+        entrada = construir_entrada(fuentes, temas_existentes, proposiciones_existentes)
         ultimo_error = None
         for modelo in self.modelos:
             try:
@@ -160,7 +168,8 @@ class FakeProcesador(Procesador):
     def __init__(self, salida: HistoriaOut | dict | None = None):
         self.salida = salida
 
-    def procesar(self, fuentes, temas_existentes=()):
+    def procesar(self, fuentes, temas_existentes=(), proposiciones_existentes=()):
+        self.proposiciones_existentes = list(proposiciones_existentes)
         if self.salida is not None:
             if isinstance(self.salida, dict):
                 return HistoriaOut.model_validate(self.salida)
