@@ -16,6 +16,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
+import time
 
 from django.db.models import F, Q
 from django.utils import timezone
@@ -32,6 +34,10 @@ logger = logging.getLogger(__name__)
 MAX_CHARS = 6000
 MAX_TONOS_DIA = lambda: int(os.environ.get("MAX_TONOS_DIA", 500))  # noqa: E731
 UMBRAL_TONO = lambda: float(os.environ.get("UMBRAL_TONO", 0.5))  # noqa: E731
+# Por corrida del tick: pocas notas y poco tiempo, para no frenar al resto de las tareas.
+TONOS_POR_CORRIDA = lambda: int(os.environ.get("TONOS_POR_CORRIDA", 30))  # noqa: E731
+SEGUNDOS_POR_CORRIDA = lambda: int(os.environ.get("TONOS_SEGUNDOS_POR_CORRIDA", 600))  # noqa: E731
+MIN_PALABRAS_CITA = 3
 
 ETIQUETAS = dict(Tono.VALENCIAS)
 
@@ -45,6 +51,20 @@ class TonoOut(BaseModel):
 
 class TonosOut(BaseModel):
     tonos: list[TonoOut] = Field(default_factory=list)
+
+    @classmethod
+    def desde(cls, data):
+        """Valida ítem por ítem: un tono mal formado no tira los demás."""
+        items = data.get("tonos") if isinstance(data, dict) else None
+        if not isinstance(items, list):
+            raise ValueError("falta la lista 'tonos'")
+        tonos = []
+        for item in items:
+            try:
+                tonos.append(TonoOut.model_validate(item))
+            except ValidationError as e:
+                logger.warning("Tono descartado por formato: %s", e)
+        return cls(tonos=tonos)
 
 
 SYSTEM = """Leés una nota de un medio uruguayo y, para cada persona de la lista,
@@ -88,13 +108,16 @@ class LLMTonador(Tonador):
         env = os.environ.get("TONOS_LLM_MODELS") or os.environ.get("ARCHIVO_LLM_MODELS")
         self.modelos = modelos or (env.split(",") if env else DEFAULT_MODELS)
         self.nombre = self.modelos[0]
+        self.intentos = 0
 
     def tonos(self, fuente, personas):
         from litellm import completion
 
         entrada = construir_entrada(fuente, personas)
         ultimo_error = None
+        self.intentos = 0
         for modelo in self.modelos:
+            self.intentos += 1
             try:
                 resp = completion(
                     model=modelo,
@@ -109,7 +132,7 @@ class LLMTonador(Tonador):
                 texto = resp.choices[0].message.content or ""
                 data = json.loads(texto[texto.find("{") : texto.rfind("}") + 1])
                 self.nombre = modelo
-                return TonosOut.model_validate(data)
+                return TonosOut.desde(data)
             except (ValidationError, json.JSONDecodeError, Exception) as e:  # noqa: B014
                 logger.warning("Modelo %s falló calculando tonos: %s", modelo, e)
                 ultimo_error = e
@@ -129,7 +152,7 @@ class FakeTonador(Tonador):
         self.llamadas.append((fuente.pk, [p.nombre for p in personas]))
         if self.salida is not None:
             s = self.salida(fuente, personas) if callable(self.salida) else self.salida
-            return TonosOut.model_validate(s) if isinstance(s, dict) else s
+            return TonosOut.desde(s) if isinstance(s, dict) else s
         cita = (fuente.texto or fuente.titulo)[:150]
         return TonosOut(tonos=[TonoOut(persona=p.nombre, valencia=0, cita=cita) for p in personas])
 
@@ -150,18 +173,31 @@ def get_tonador() -> Tonador:
 
 
 def _norm(texto):
-    return " ".join(normalize_entity_name(texto).split())
+    """Minúsculas, sin tildes ni puntuación, espacios simples."""
+    return " ".join(re.sub(r"[^\w\s]", " ", normalize_entity_name(texto)).split())
 
 
 def nombrada(persona, texto_norm):
-    """¿La nota nombra a la persona? Nombre completo o apellido (≥ 4 letras)."""
+    """¿La nota nombra a la persona? Nombre completo o apellido: el último
+    (≥ 4 letras) o los dos últimos si es compuesto («Lacalle Pou»)."""
     nombre = _norm(persona.nombre)
     if not nombre:
         return False
-    if nombre in texto_norm:
+    texto = f" {texto_norm} "
+    if f" {nombre} " in texto:
         return True
-    apellido = nombre.split()[-1]
-    return len(nombre.split()) > 1 and len(apellido) >= 4 and f" {apellido} " in f" {texto_norm} "
+    partes = nombre.split()
+    apellidos = []
+    if len(partes) >= 3:
+        apellidos.append(" ".join(partes[-2:]))
+    if len(partes) >= 2 and len(partes[-1]) >= 4:
+        apellidos.append(partes[-1])
+    return any(f" {a} " in texto for a in apellidos)
+
+
+def texto_de_referencia(fuente):
+    """Lo que el LLM ve de la nota: título y cuerpo recortado. Las citas se buscan acá."""
+    return f"{fuente.titulo}\n\n{(fuente.texto or fuente.bajada)[:MAX_CHARS]}"
 
 
 def personas_de_fuente(fuente):
@@ -206,24 +242,29 @@ def tonos_de_fuente(fuente) -> int:
         return 0
 
     tonador = get_tonador()
-    salida = tonador.tonos(fuente, personas)
-    registrar_uso("llm", "tono")
+    try:
+        salida = tonador.tonos(fuente, personas)
+    finally:
+        # Cada modelo intentado es una llamada paga, aunque falle.
+        registrar_uso("llm", "tono", cantidad=getattr(tonador, "intentos", 0) or 1)
 
     por_nombre = {_norm(p.nombre): p for p in personas}
-    texto_norm = _norm(texto)
+    referencia = texto_de_referencia(fuente)
+    texto_norm = _norm(referencia)
     guardados = 0
     for t in salida.tonos:
         persona = por_nombre.get(_norm(t.persona))
         cita = t.cita.strip().strip("«»\"“”")
-        if not persona or not cita or _norm(cita) not in texto_norm:
-            continue  # persona inventada o cita que no está en la nota
+        cita_norm = _norm(cita)
+        if not persona or len(cita_norm.split()) < MIN_PALABRAS_CITA or cita_norm not in texto_norm:
+            continue  # persona inventada, cita muy corta o que no está en la nota
         verificado = decidir(
             "tono_respaldado",
             {
                 "persona": persona.nombre,
                 "valencia": ETIQUETAS[t.valencia],
                 "cita": cita,
-                "nota": texto[:4000],
+                "nota": referencia,
             },
         )
         if verificado < UMBRAL_TONO():
@@ -244,13 +285,26 @@ def tonos_de_fuente(fuente) -> int:
     return guardados
 
 
-def calcular_tonos(limite=None, desde=None) -> str:
+def tomar(fuente) -> bool:
+    """Marca la nota como en curso si nadie la tomó desde que se leyó la cola.
+    Evita que dos corridas superpuestas paguen dos veces la misma nota."""
+    qs = Fuente.objects.filter(pk=fuente.pk)
+    qs = qs.filter(tonos_en__isnull=True) if fuente.tonos_en is None else qs.filter(tonos_en=fuente.tonos_en)
+    return qs.update(tonos_en=timezone.now()) == 1
+
+
+def calcular_tonos(limite=None, desde=None, segundos=None) -> str:
     """Procesa notas pendientes, nuevas primero, hasta el cupo diario
-    (MAX_TONOS_DIA llamadas al LLM) o `limite` llamadas en esta corrida."""
+    (MAX_TONOS_DIA llamadas al LLM), `limite` llamadas o `segundos` en esta corrida."""
     llamadas = guardados = 0
+    fin = time.monotonic() + segundos if segundos else None
     for f in tonos_pendientes(desde).iterator():
         if tonos_hoy() >= MAX_TONOS_DIA() or (limite is not None and llamadas >= limite):
             break
+        if fin is not None and time.monotonic() >= fin:
+            break
+        if not tomar(f):
+            continue
         antes = tonos_hoy()
         try:
             guardados += tonos_de_fuente(f)

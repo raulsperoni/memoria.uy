@@ -101,7 +101,8 @@ TAREAS = {
     "resumen_staff": (_resumen_staff, None, os.environ.get("DAILY_SUMMARY_HORA", "09:00")),
 }
 # Orden de ejecución: primero lo que alimenta a lo siguiente.
-ORDEN = ["medios", "ciclo_ingesta", "procesar_historias", "tonos", "recrawls", "cerrar_historias", "burbujas", "jornada", "resumen_staff"]
+# Tonos va al final: es la más lenta y no alimenta a ninguna otra.
+ORDEN = ["medios", "ciclo_ingesta", "procesar_historias", "recrawls", "cerrar_historias", "burbujas", "jornada", "resumen_staff", "tonos"]
 
 CLAVE = "tick:ultima:{}"
 

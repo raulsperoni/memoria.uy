@@ -96,3 +96,73 @@ def test_pagina_de_persona_muestra_tono(client, fakes, nota):
     assert "Cómo la deja cada medio" in html
     assert "Diario A" in html and ("-1,0" in html or "-1.0" in html)
     assert "(pocas)" in html and "La Fiscalía lo cita" in html
+
+
+def test_nombrada_con_puntuacion_y_apellido_compuesto():
+    sanchez = Entidad(nombre="Alejandro Sánchez", tipo="persona")
+    assert tonos.nombrada(sanchez, tonos._norm("La oposición criticó a Sánchez, que no respondió."))
+    assert tonos.nombrada(sanchez, tonos._norm("(Sánchez)"))
+    lacalle = Entidad(nombre="Luis Lacalle Pou", tipo="persona")
+    assert tonos.nombrada(lacalle, tonos._norm("Lacalle Pou, en cambio, habló."))
+
+
+def test_cita_del_titulo_vale_y_cita_corta_no(fakes, nota):
+    tonador, dec = fakes
+    f, sanchez, _ = nota
+    tonador.salida = {"tonos": [{"persona": "Alejandro Sánchez", "valencia": -1, "cita": "Sánchez"}]}
+    assert tonos_de_fuente(f) == 0  # una sola palabra no justifica nada
+    assert dec.llamadas == []
+
+    Fuente.objects.filter(pk=f.pk).update(tonos_en=None)
+    tonador.salida = {"tonos": [{"persona": "Alejandro Sánchez", "valencia": -1, "cita": "Citan a Sánchez"}]}
+    assert tonos_de_fuente(f) == 1
+    assert dec.llamadas[0][1]["nota"].startswith("Citan a Sánchez")
+
+
+def test_un_tono_mal_formado_no_tira_los_demas(fakes, nota):
+    tonador, _ = fakes
+    f, *_ = nota
+    tonador.salida = {
+        "tonos": [
+            {"persona": "Yamandú Orsi", "valencia": 3, "cita": "x"},
+            {"persona": "Alejandro Sánchez", "valencia": -2, "cita": "«mintió al Parlamento»"},
+        ]
+    }
+    assert tonos_de_fuente(f) == 1
+    assert Tono.objects.get().valencia == -2
+
+
+def test_llamadas_fallidas_cuentan_para_el_cupo(fakes, nota):
+    tonador, _ = fakes
+    f, *_ = nota
+
+    def falla(fuente, personas):
+        tonador.intentos = 3
+        raise RuntimeError("todos los modelos fallaron")
+
+    tonador.salida = falla
+    assert "llamadas=3 tonos=0" in calcular_tonos()
+    assert UsoProveedor.objects.get(operacion="tono").cantidad == 3
+
+
+def test_no_toma_una_nota_que_ya_tomo_otra_corrida(fakes, nota):
+    tonador, _ = fakes
+    f, *_ = nota
+    assert tonos.tomar(f)
+    assert not tonos.tomar(f)  # el objeto en memoria quedó viejo: otra corrida ya la tomó
+    f.refresh_from_db()
+    assert "llamadas=0" in calcular_tonos()  # ya no figura como pendiente
+    assert tonador.llamadas == []
+
+
+def test_corrida_del_tick_limitada(fakes, nota, monkeypatch):
+    f, *_ = nota
+    f2 = Fuente.objects.create(
+        medio=f.medio, url="https://a.uy/2", titulo="Otra sobre Sánchez", texto=TEXTO,
+        estado="procesada", historia=f.historia, publicada_en=timezone.now(),
+    )
+    monkeypatch.setenv("TONOS_POR_CORRIDA", "1")
+    from archivo.tasks import tonos_pendientes
+
+    assert "llamadas=1" in tonos_pendientes()
+    assert Fuente.objects.filter(pk__in=[f.pk, f2.pk], tonos_en__isnull=True).count() == 1

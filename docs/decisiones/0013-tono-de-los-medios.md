@@ -31,7 +31,8 @@ de las otras notas.
 
 - `archivo/tonos.py` (`LLMTonador` / `FakeTonador`), modelo `archivo.Tono`.
 - Tarea `tonos` del tick cada 30 min, notas nuevas primero, con cupo de 500
-  llamadas por día (`MAX_TONOS_DIA`). La misma cola vacía las notas viejas;
+  llamadas por día (`MAX_TONOS_DIA`) y a lo sumo 30 notas o 10 minutos por
+  corrida, al final del tick. La misma cola vacía las notas viejas;
   `manage.py tonos_backfill` empuja a mano o cuenta lo pendiente.
 - Una historia reprocesada vuelve a la cola, pero solo se calculan las
   personas que falten.
