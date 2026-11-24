@@ -25,6 +25,7 @@ agrega, nunca se reescribe.
 | [0009](0009-borrar-el-producto-anterior.md) | Se borra el producto anterior |
 | [0010](0010-dos-toques-por-frase.md) | Juego: dos toques por frase, y «no sé» pasa |
 | [0011](0011-proposiciones-sin-repetir.md) | Las proposiciones no se acumulan y Jev descarta las repetidas |
+| [0012](0012-notas-editadas-sin-ruido.md) | Una nota editada es un cambio en el texto, no en la captura |
 
 El registro de la noche del 21 al 22/11/2026
 ([DECISIONES_2026-11-22.md](../DECISIONES_2026-11-22.md)) queda como estaba;
