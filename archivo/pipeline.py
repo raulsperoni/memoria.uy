@@ -416,7 +416,7 @@ def procesar_historia(historia: Historia) -> bool:
         .distinct()[:50]
     )
     # Las proposiciones con votos o en una jornada se quedan; el resto se
-    # reemplaza en cada reproceso (antes se acumulaban: ver decisión 0004).
+    # reemplaza en cada reproceso (antes se acumulaban: ver docs/decisiones/0011).
     fijas = list(proposiciones_fijas(historia).filter(estado="publicada").values_list("texto", flat=True))
     salida = get_procesador().procesar(elegidas, temas, proposiciones_existentes=fijas)
     registrar_uso("llm", "historia")

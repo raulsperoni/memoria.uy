@@ -58,6 +58,27 @@
       </ul>
     </section>
 
+    {% if decisiones %}
+    <section id="decisiones">
+      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo llegamos acá</h3>
+      <p class="mb-4 text-gray-700">Las decisiones que dieron forma al sitio, de la más nueva a la más vieja. Cada una enlaza al registro completo y a los cambios en el código.</p>
+      <ol class="border-l-2 border-black ml-1">
+        {% for d in decisiones %}
+        <li class="relative pl-5 pb-6 last:pb-0">
+          <span class="absolute -left-[7px] top-1.5 w-3 h-3 border-2 border-black {% if d.vigente %}bg-black{% else %}bg-white{% endif %}" aria-hidden="true"></span>
+          <p class="mono text-xs text-gray-600"><time datetime="{{ d.fecha|date:'Y-m-d' }}">{{ d.fecha|date:"d/m/Y" }}</time> · {{ d.estado }}</p>
+          <p class="font-bold leading-snug mt-0.5">{{ d.titulo }}</p>
+          {% if d.resumen %}<p class="text-sm text-gray-800 mt-1">{{ d.resumen }}</p>{% endif %}
+          <p class="mono text-xs mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+            <a class="underline" href="{{ d.url }}" target="_blank" rel="noopener">decisión {{ d.numero }} →</a>
+            {% for sha, url in d.commit_urls %}<a class="underline text-gray-600" href="{{ url }}" target="_blank" rel="noopener">{{ sha }}</a>{% endfor %}
+          </p>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
+
     <section>
       <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Errores, ideas, código</h3>
       <p class="mb-3">Si encontrás un error en un hecho o en el sitio, o tenés una idea, abrí un issue en GitHub. El código está en el mismo lugar.</p>
