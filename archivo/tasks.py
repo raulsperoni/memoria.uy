@@ -95,3 +95,14 @@ def recrawls_pendientes():
 @shared_task
 def cerrar_historias():
     return pipeline.cerrar_historias()
+
+
+@shared_task
+@task_lock(timeout=60 * 25)
+def tonos_pendientes():
+    """Tono de cada nota hacia las personas que nombra. Cada 30 min, con cupo diario."""
+    if not ingesta_activa():
+        return "ingesta desactivada"
+    from .tonos import SEGUNDOS_POR_CORRIDA, TONOS_POR_CORRIDA, calcular_tonos
+
+    return calcular_tonos(limite=TONOS_POR_CORRIDA(), segundos=SEGUNDOS_POR_CORRIDA())

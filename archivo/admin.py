@@ -10,6 +10,7 @@ from .models import (
     Medio,
     Proposicion,
     Snapshot,
+    Tono,
     UsoProveedor,
 )
 
@@ -96,3 +97,11 @@ class DecisionAdmin(admin.ModelAdmin):
 class UsoProveedorAdmin(admin.ModelAdmin):
     list_display = ("fecha", "proveedor", "operacion", "cantidad", "costo_usd")
     list_filter = ("proveedor", "operacion")
+
+
+@admin.register(Tono)
+class TonoAdmin(admin.ModelAdmin):
+    list_display = ("entidad", "valencia", "fuente", "verificado", "creado_en")
+    list_filter = ("valencia", "fuente__medio")
+    search_fields = ("entidad__nombre", "cita")
+    raw_id_fields = ("fuente", "entidad")

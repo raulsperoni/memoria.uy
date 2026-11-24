@@ -26,6 +26,7 @@ agrega, nunca se reescribe.
 | [0010](0010-dos-toques-por-frase.md) | Juego: dos toques por frase, y «no sé» pasa |
 | [0011](0011-proposiciones-sin-repetir.md) | Las proposiciones no se acumulan y Jev descarta las repetidas |
 | [0012](0012-notas-editadas-sin-ruido.md) | Una nota editada es un cambio en el texto, no en la captura |
+| [0013](0013-tono-de-los-medios.md) | El tono de los medios mide cómo queda parada la persona |
 
 El registro de la noche del 21 al 22/11/2026
 ([DECISIONES_2026-11-22.md](../DECISIONES_2026-11-22.md)) queda como estaba;

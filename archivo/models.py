@@ -141,6 +141,9 @@ class Fuente(models.Model):
     proximo_recrawl = models.DateTimeField(null=True, blank=True, db_index=True)
     recrawls_hechos = models.PositiveSmallIntegerField(default=0)
     intentos = models.PositiveSmallIntegerField(default=0)
+    tonos_en = models.DateTimeField(
+        null=True, blank=True, help_text="Última vez que se calculó el tono hacia las personas"
+    )
 
     class Meta:
         ordering = ["-publicada_en"]
@@ -263,6 +266,41 @@ class Proposicion(models.Model):
 
     def __str__(self):
         return self.texto
+
+
+class Tono(models.Model):
+    """Cómo deja una nota a una persona: valencia de -2 (muy mal) a 2 (muy bien).
+
+    Mide la valencia de la nota, no el encuadre del medio: una noticia mala
+    para la persona cuenta como negativa aunque esté contada con neutralidad
+    (docs/decisiones/0013-tono-de-los-medios.md).
+    """
+
+    VALENCIAS = [
+        (-2, "Muy mal parada"),
+        (-1, "Mal parada"),
+        (0, "Neutra"),
+        (1, "Bien parada"),
+        (2, "Muy bien parada"),
+    ]
+
+    fuente = models.ForeignKey(Fuente, on_delete=models.CASCADE, related_name="tonos")
+    entidad = models.ForeignKey("core.Entidad", on_delete=models.CASCADE, related_name="tonos")
+    valencia = models.SmallIntegerField(choices=VALENCIAS)
+    cita = models.CharField(max_length=400)
+    razon = models.CharField(max_length=300, blank=True)
+    verificado = models.FloatField(
+        null=True, blank=True, help_text="Probabilidad (Jev) de que la cita respalde la valencia"
+    )
+    modelo = models.CharField(max_length=80, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("fuente", "entidad")
+        ordering = ["-fuente__publicada_en"]
+
+    def __str__(self):
+        return f"{self.entidad} en {self.fuente_id}: {self.valencia:+d}"
 
 
 class Decision(models.Model):
