@@ -59,6 +59,7 @@ UMBRAL_INTERES = lambda: env_float("UMBRAL_INTERES", 0.6)  # noqa: E731
 UMBRAL_VALE_HISTORIA = lambda: env_float("UMBRAL_VALE_HISTORIA", 0.34)  # noqa: E731
 UMBRAL_FIEL = lambda: env_float("UMBRAL_FIEL", 0.5)  # noqa: E731
 UMBRAL_CALIDAD = lambda: env_float("UMBRAL_CALIDAD", 0.6)  # noqa: E731
+RATIO_RECORTE = lambda: env_float("RATIO_RECORTE", 0.6)  # noqa: E731
 UMBRAL_MISMA_PROPOSICION = lambda: env_float("UMBRAL_MISMA_PROPOSICION", 0.5)  # noqa: E731
 SIM_MISMA = lambda: env_float("SIM_MISMA_HISTORIA", 0.75)  # noqa: E731
 SIM_DUDA = lambda: env_float("SIM_DUDA_HISTORIA", 0.40)  # noqa: E731
@@ -615,6 +616,76 @@ def _diff(a: str, b: str):
     return ops
 
 
+def _tokens(texto: str) -> list[str]:
+    return re.findall(r"\w+", texto.lower())
+
+
+def _hunks(ops):
+    """Agrupa las operaciones del diff en bloques de cambio. Un tramo igual de
+    hasta 3 palabras entre dos cambios queda dentro del bloque (difflib parte
+    un titular reemplazado por otro en las palabras que comparten)."""
+    hunks, actual = [], None
+    for i, (op, texto) in enumerate(ops):
+        if op == "=":
+            sigue = i + 1 < len(ops) and ops[i + 1][0] != "="
+            if actual and sigue and len(texto.split()) <= 3:
+                actual["-"].append(texto)
+                actual["+"].append(texto)
+                continue
+            if actual:
+                hunks.append(actual)
+                actual = None
+            continue
+        actual = actual or {"-": [], "+": []}
+        actual[op].append(texto)
+    if actual:
+        hunks.append(actual)
+    return [{k: " ".join(v) for k, v in h.items()} for h in hunks]
+
+
+def _es_titular(texto: str, titulares: list[set]) -> bool:
+    toks = _tokens(texto)
+    if not toks:
+        return True
+    if len(toks) < 4:
+        return False
+    return any(sum(t in tit for t in toks) / len(toks) >= 0.85 for tit in titulares)
+
+
+def titulares_del_medio(fuente, dias=7) -> list[set]:
+    """Titulares de otras notas del mismo medio en esos días: los sitios los
+    muestran en bloques de «últimas noticias» que el extractor a veces incluye."""
+    desde = (fuente.publicada_en or fuente.descubierta_en or timezone.now()) - timedelta(days=dias)
+    titulos = (
+        Fuente.objects.filter(medio_id=fuente.medio_id, descubierta_en__gte=desde)
+        .exclude(pk=fuente.pk)
+        .exclude(titulo="")
+        .values_list("titulo", flat=True)
+    )
+    return [set(_tokens(t)) for t in titulos]
+
+
+def clasificar_cambio_cuerpo(antes: str, despues: str, fuente) -> str:
+    """«igual», «recorte» (la nueva captura es mucho más corta: muro de pago o
+    captura parcial), «completa» (la anterior era la recortada), «ruido» (solo
+    cambian titulares de otras notas del medio) o «real»."""
+    if " ".join(antes.split()) == " ".join(despues.split()):
+        return "igual"
+    ratio = len(despues) / max(1, len(antes))
+    if ratio < RATIO_RECORTE():
+        return "recorte"
+    if ratio > 1 / RATIO_RECORTE():
+        return "completa"
+    hunks = _hunks(_diff(antes, despues))
+    # Muro de pago: el texto se corta en una palabra seguida de «…».
+    if ratio < 0.9 and any(re.search(r"\w…", h["+"]) and not re.search(r"\w…", h["-"]) for h in hunks):
+        return "recorte"
+    titulares = titulares_del_medio(fuente)
+    if hunks and all(_es_titular(h["-"], titulares) and _es_titular(h["+"], titulares) for h in hunks):
+        return "ruido"
+    return "real"
+
+
 def _siguiente_recrawl(fuente):
     offsets = RECRAWL_OFFSETS_HORAS()
     fuente.recrawls_hechos += 1
@@ -657,10 +728,22 @@ def recrawl(fuente: Fuente) -> Cambio | None:
         return None
     registrar_uso(extractor.nombre, "recrawl")
 
-    if sha256(res.texto) != anterior.contenido_hash or res.titulo != anterior.titulo:
+    cambio_titulo = res.titulo != anterior.titulo
+    clase = "igual"
+    if sha256(res.texto) != anterior.contenido_hash:
+        clase = clasificar_cambio_cuerpo(fuente.texto, res.texto, fuente)
+    if clase == "completa" and not cambio_titulo:
+        # La captura anterior era la recortada: guardamos la completa sin
+        # registrar un cambio.
+        nuevo = guardar_snapshot(fuente, res)
+        fuente.ultimo_snapshot = nuevo
+        fuente.texto = res.texto
+    elif clase in ("recorte", "ruido") and not cambio_titulo:
+        logger.info("Recrawl %s: captura %s, no es un cambio", fuente.url, clase)
+    elif cambio_titulo or clase == "real":
         nuevo = guardar_snapshot(fuente, res)
         texto_antes = fuente.texto
-        tipo = "titulo" if res.titulo != anterior.titulo else "cuerpo"
+        tipo = "titulo" if cambio_titulo else "cuerpo"
         cambio = Cambio.objects.create(
             fuente=fuente,
             antes=anterior,
@@ -670,8 +753,9 @@ def recrawl(fuente: Fuente) -> Cambio | None:
             titulo_despues=res.titulo,
             diff=_diff(texto_antes, res.texto) if tipo == "cuerpo" else _diff(anterior.titulo, res.titulo),
         )
-        fuente.ultimo_snapshot = nuevo
-        fuente.texto = res.texto
+        if clase != "recorte":
+            fuente.ultimo_snapshot = nuevo
+            fuente.texto = res.texto
         analizar_cambio(cambio, texto_antes)
 
     _siguiente_recrawl(fuente)

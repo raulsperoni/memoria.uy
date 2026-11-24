@@ -52,6 +52,7 @@ línea.
 | `UMBRAL_INTERES` | `0.6` | Filtro 1 (antes de extraer) |
 | `UMBRAL_VALE_HISTORIA` | `0.34` | Filtro 2 (historias de un solo medio) |
 | `UMBRAL_FIEL` / `UMBRAL_CALIDAD` | `0.5` / `0.6` | Verificación de hechos / proposiciones |
+| `RATIO_RECORTE` | `0.6` | Una recaptura más corta que esto (o más larga que su inverso) es una captura recortada, no una edición |
 | `UMBRAL_MISMA_PROPOSICION` | `0.5` | Jev: una proposición nueva que repite otra (misma historia, o mismo tema en 14 días) se descarta |
 | `SIM_MISMA_HISTORIA` / `SIM_DUDA_HISTORIA` | `0.75` / `0.40` | Agrupamiento: ≥ misma → misma historia; entre ambos decide Jev (hasta 3 candidatas) |
 

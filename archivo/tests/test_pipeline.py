@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from archivo import pipeline
 from archivo.llm import FakeProcesador, set_procesador
-from archivo.models import Cambio, Decision, Fuente, Hecho, Historia, Medio, Proposicion
+from archivo.models import Cambio, Decision, Fuente, Hecho, Historia, Medio, Proposicion, Snapshot
 from archivo.providers.decide import FakeDecider, set_decider
 from archivo.providers.embed import FakeEmbedder, set_embedder
 from archivo.providers.extract import FakeExtractor, set_extractor
@@ -367,3 +367,82 @@ def test_limpiar_proposiciones(fakes, medios):
     call_command("limpiar_proposiciones", "--aplicar")
     assert list(h.proposiciones.filter(estado="publicada")) == [votada]
     assert all(Proposicion.objects.get(pk=p.pk).estado == "descartada" for p in viejas)
+
+
+TEXTO_LARGO = " ".join(
+    f"Párrafo {i}: el Ministerio de Ambiente recibió el informe técnico sobre el aeropuerto de Rocha." for i in range(30)
+)
+
+
+def test_recrawl_recortado_por_muro_de_pago_no_es_cambio(fakes, medios):
+    ext, _ = fakes
+    a, _ = medios
+    f = _extraida(ext, a, "/p/1", "Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO)
+    texto = f.texto
+    ext.paginas[f.url] = (200, html("Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO[:300] + "…"))
+    assert pipeline.recrawl(f) is None
+    assert not Cambio.objects.exists()
+    f.refresh_from_db()
+    assert f.texto == texto and f.snapshots.count() == 1
+
+
+def test_recrawl_que_completa_una_captura_recortada_no_es_cambio(fakes, medios):
+    ext, _ = fakes
+    a, _ = medios
+    f = _extraida(ext, a, "/p/1", "Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO[:400])
+    ext.paginas[f.url] = (200, html("Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO))
+    assert pipeline.recrawl(f) is None
+    f.refresh_from_db()
+    assert len(f.texto) > 1000 and f.snapshots.count() == 2
+
+
+def test_recrawl_que_solo_cambia_titulares_de_otras_notas_no_es_cambio(fakes, medios):
+    ext, _ = fakes
+    a, _ = medios
+    otra1 = "El PIT-CNT reconoce la derrota en el BPS y la enmarca en una campaña de deslegitimación"
+    otra2 = "Intendente de Montevideo defendió decisión de mantener el valor de patentes"
+    for i, t in enumerate((otra1, otra2)):
+        Fuente.objects.create(medio=a, url=f"https://a.uy/otra/{i}", titulo=t)
+    f = _extraida(ext, a, "/p/1", "Ministro de Turismo destacó la conectividad aérea", TEXTO_PRAXIS + " " + otra1[:60])
+    ext.paginas[f.url] = (200, html("Ministro de Turismo destacó la conectividad aérea", TEXTO_PRAXIS + " " + otra2))
+    assert pipeline.recrawl(f) is None
+    assert not Cambio.objects.exists()
+
+
+def test_recrawl_detecta_edicion_real_del_cuerpo(fakes, medios):
+    ext, dec = fakes
+    a, _ = medios
+    f = _extraida(ext, a, "/p/1", "Sánchez se reunió con ediles", TEXTO_PRAXIS)
+    ext.paginas[f.url] = (200, html("Sánchez se reunió con ediles", TEXTO_PRAXIS.replace("Colonia del Sacramento", "Nueva Helvecia y Carmelo")))
+    cambio = pipeline.recrawl(f)
+    assert cambio is not None and cambio.tipo == "cuerpo"
+
+
+def test_revisar_cambios_borra_recortes_y_restaura_el_texto(fakes, medios):
+    from django.core.management import call_command
+
+    ext, _ = fakes
+    a, _ = medios
+    f = _extraida(ext, a, "/p/1", "Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO)
+    antes = f.ultimo_snapshot
+    despues = Snapshot.objects.create(fuente=f, storage_key="x", contenido_hash="x", proveedor="fake")
+    corto = TEXTO_LARGO[:300] + "…"
+    c = Cambio.objects.create(
+        fuente=f, antes=antes, despues=despues, tipo="cuerpo", diff=pipeline._diff(TEXTO_LARGO, corto)
+    )
+    Fuente.objects.filter(pk=f.pk).update(texto=corto, ultimo_snapshot=despues)
+    call_command("revisar_cambios")
+    assert Cambio.objects.filter(pk=c.pk).exists()
+    call_command("revisar_cambios", "--aplicar")
+    assert not Cambio.objects.filter(pk=c.pk).exists()
+    f.refresh_from_db()
+    assert f.ultimo_snapshot_id == antes.pk and len(f.texto) > 1000
+
+
+def test_recrawl_cortado_con_puntos_suspensivos_es_recorte(fakes, medios):
+    ext, _ = fakes
+    a, _ = medios
+    f = _extraida(ext, a, "/p/1", "Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO)
+    ext.paginas[f.url] = (200, html("Advertencias sobre el aeropuerto en Rocha", TEXTO_LARGO[: int(len(TEXTO_LARGO) * 0.7)] + "…"))
+    assert pipeline.recrawl(f) is None
+    assert not Cambio.objects.exists()
