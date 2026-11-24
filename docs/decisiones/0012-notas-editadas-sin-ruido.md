@@ -1,6 +1,6 @@
 # 0012 — Una nota editada es un cambio en el texto, no en la captura
 
-*Fecha: 2026-11-24 · Estado: vigente · Commits: PENDIENTE*
+*Fecha: 2026-11-24 · Estado: vigente · Commits: f0592b5*
 
 ## Decisión
 
