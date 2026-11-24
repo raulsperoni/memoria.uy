@@ -66,6 +66,15 @@ PREGUNTAS = {
             "concreto? Responder no si solo comparten tema general."
         ),
     },
+    "misma_proposicion": {
+        "tipo": "noul",
+        "instrucciones": (
+            "¿Las proposiciones A y B plantean la misma discusión, de modo que "
+            "votar una equivale a votar la otra? Responder sí aunque cambie la "
+            "redacción o un matiz menor. Responder no si opinan sobre cosas "
+            "distintas, aunque compartan tema."
+        ),
+    },
     "fuente_respalda": {
         "tipo": "noul",
         "instrucciones": (
