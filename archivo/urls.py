@@ -15,6 +15,7 @@ urlpatterns = [
     path("cambios/<int:pk>/", views.CambioView.as_view(), name="cambio"),
     path("medios/<slug:slug>/", views.MedioView.as_view(), name="medio"),
     path("og/h/<slug:slug>.png", views.og_historia, name="og-historia"),
+    path("og/e/<int:pk>.png", views.og_entidad, name="og-entidad"),
     path("og/cambios/<int:pk>.png", views.og_cambio, name="og-cambio"),
     path("datos/", datos.datos, name="datos"),
     path("datos/<slug:nombre>.csv", datos.export, name="export"),

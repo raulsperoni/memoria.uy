@@ -93,7 +93,8 @@ def test_pagina_de_persona_muestra_tono(client, fakes, nota):
     tonos_de_fuente(f)
     Tono.objects.update(valencia=-1, razon="La Fiscalía lo cita")
     html = client.get(reverse("archivo:entidad-slug", args=[sanchez.pk, "alejandro-sanchez"])).content.decode()
-    assert "Cómo la deja cada medio" in html
+    assert "Cómo queda en cada medio" in html
+    assert "la deja" not in html
     assert "Diario A" in html and ("-1,0" in html or "-1.0" in html)
     assert "(pocas)" in html and "La Fiscalía lo cita" in html
 
@@ -166,3 +167,25 @@ def test_corrida_del_tick_limitada(fakes, nota, monkeypatch):
 
     assert "llamadas=1" in tonos_pendientes()
     assert Fuente.objects.filter(pk__in=[f.pk, f2.pk], tonos_en__isnull=True).count() == 1
+
+
+def test_og_de_la_persona(client, fakes, nota):
+    f, sanchez, _ = nota
+    tonos_de_fuente(f)
+    url = reverse("archivo:entidad-slug", args=[sanchez.pk, "alejandro-sanchez"])
+    html = client.get(url).content.decode()
+    assert f'<meta property="og:image" content="https://memoria.uy/og/e/{sanchez.pk}.png">' in html
+    assert '<meta property="og:title" content="Alejandro Sánchez en las noticias uruguayas">' in html
+    assert "Cómo queda en cada medio y qué se dijo de Alejandro Sánchez" in html
+    assert 'id="compartir"' in html
+
+
+def test_imagen_og_de_la_persona(client, fakes, nota):
+    f, sanchez, _ = nota
+    tonos_de_fuente(f)
+    r = client.get(f"/og/e/{sanchez.pk}.png")
+    assert r.status_code == 200 and r["Content-Type"] == "image/png" and r.content[:4] == b"\x89PNG"
+    # una organización y una persona sin tonos también tienen imagen
+    org = Entidad.objects.get(nombre="Fiscalía")
+    assert client.get(f"/og/e/{org.pk}.png").status_code == 200
+    assert client.get("/og/e/999999.png").status_code == 404
