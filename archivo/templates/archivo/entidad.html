@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 {% block title %}{{ entidad.nombre }} · archivo · memoria.uy{% endblock %}
 {% block meta_description %}Todo lo que pasó con {{ entidad.nombre }} en las noticias uruguayas, con fuentes.{% endblock %}
+{% block og_title %}{{ entidad.nombre }} en las noticias uruguayas{% endblock %}
+{% block og_description %}{% if tonos_medios %}Cómo queda en cada medio y qué se dijo de {{ entidad.nombre }}, con fuentes.{% else %}Todo lo que pasó con {{ entidad.nombre }} en las noticias uruguayas, con fuentes.{% endif %}{% endblock %}
+{% block og_image %}https://memoria.uy{% url 'archivo:og-entidad' entidad.pk %}{% endblock %}
+{% block twitter_title %}{{ entidad.nombre }} en las noticias uruguayas{% endblock %}
+{% block twitter_image %}https://memoria.uy{% url 'archivo:og-entidad' entidad.pk %}{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <p class="mono text-xs text-gray-600">{{ entidad.get_tipo_display }}</p>
-  <h2 class="text-3xl font-bold mb-6">{{ entidad.nombre }}</h2>
+  <div class="flex items-start justify-between gap-3 mb-6">
+    <h2 class="text-3xl font-bold">{{ entidad.nombre }}</h2>
+    <button type="button" id="compartir" data-titulo="{{ entidad.nombre }} en memoria.uy" class="mono text-xs font-bold border-2 border-black px-3 py-2 whitespace-nowrap hover:bg-black hover:text-white">compartir</button>
+  </div>
 
   {% if proposiciones %}
   <section class="mb-8 border-2 border-black p-4">
@@ -20,8 +28,8 @@
 
   {% if tonos_medios %}
   <section class="mb-8" id="tono">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-2">Cómo la deja cada medio</h3>
-    <p class="text-xs text-gray-600 mb-3">Promedio de cómo queda parada en las notas de cada medio, de −2 (muy mal) a +2 (muy bien). Cuenta lo que la nota cuenta, no solo cómo lo cuenta: una mala noticia baja aunque la nota sea neutral. Lo calcula un modelo y lo verifica otro; cada nota trae la cita que lo justifica.</p>
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-2">Cómo queda en cada medio</h3>
+    <p class="text-xs text-gray-600 mb-3">Promedio de cómo queda en las notas de cada medio, de −2 (muy mal) a +2 (muy bien). Cuenta lo que la nota cuenta, no solo cómo lo cuenta: una mala noticia baja aunque la nota sea neutral. Lo calcula un modelo y lo verifica otro; cada nota trae la cita que lo justifica.</p>
     <ul class="space-y-3">
       {% for m in tonos_medios %}
       <li>
@@ -66,4 +74,21 @@
     {% endfor %}
   </ol>
 </div>
+<script>
+  (function () {
+    var b = document.getElementById('compartir');
+    if (!b) return;
+    function avisar(t) { var o = b.textContent; b.textContent = t; setTimeout(function () { b.textContent = o; }, 2000); }
+    b.addEventListener('click', function () {
+      var url = location.origin + location.pathname;
+      if (navigator.share) {
+        navigator.share({ title: b.dataset.titulo, url: url }).catch(function () {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function () { avisar('link copiado ✓'); }, function () { avisar('copiá el link de la barra'); });
+      } else {
+        avisar('copiá el link de la barra');
+      }
+    });
+  })();
+</script>
 {% endblock %}

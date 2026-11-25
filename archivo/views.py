@@ -279,7 +279,7 @@ class BuscarView(ListView):
 from django.http import HttpResponse  # noqa: E402
 from django.views.decorators.cache import cache_page  # noqa: E402
 
-from .og import imagen  # noqa: E402
+from .og import imagen, imagen_entidad  # noqa: E402
 
 
 @cache_page(60 * 60 * 6)
@@ -290,6 +290,21 @@ def og_historia(request, slug):
     arriba = f"{h.primera_fuente_en:%d/%m/%Y}" + (f" · #{h.categoria}" if h.categoria else "")
     abajo = f"{h.n_medios} medio{'s' if h.n_medios != 1 else ''} · hechos con fuentes"
     return HttpResponse(imagen(h.titulo, arriba, abajo), content_type="image/png")
+
+
+@cache_page(60 * 60 * 6)
+def og_entidad(request, pk):
+    ent = Entidad.objects.filter(pk=pk).first()
+    if not ent:
+        raise Http404
+    filas = []
+    if ent.tipo == "persona":
+        from .tonos import resumen_por_medio
+
+        filas = resumen_por_medio(ent, _historias_publicas())
+    n = _historias_publicas().filter(hechos__entidades=ent).distinct().count()
+    abajo = f"{n} historia{'s' if n != 1 else ''}"
+    return HttpResponse(imagen_entidad(ent.nombre, filas, abajo), content_type="image/png")
 
 
 @cache_page(60 * 60 * 6)
