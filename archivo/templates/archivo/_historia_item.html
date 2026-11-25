@@ -1,6 +1,6 @@
 <article class="border-2 border-black p-4 hover:bg-gray-50">
   <div class="mono text-[11px] text-gray-600 flex flex-wrap gap-x-3 mb-1">
-    <span>{{ h.primera_fuente_en|date:"d/m/Y H:i" }}</span>
+    <span>{{ h.primera_fuente_en|date:"d/m/Y H:i" }}{% if h.ultima_fuente_en|date:"Ymd" != h.primera_fuente_en|date:"Ymd" %} · última nota {{ h.ultima_fuente_en|date:"d/m H:i" }}{% endif %}</span>
     {% if h.categoria %}<span>#{{ h.categoria }}</span>{% endif %}
     <span>{{ h.n_medios }} medio{{ h.n_medios|pluralize }}</span>
   </div>

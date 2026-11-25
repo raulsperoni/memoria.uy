@@ -205,6 +205,36 @@ class Cambio(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()}: {self.fuente}"
 
+    def extracto(self, max_bloques=2, contexto=4, max_palabras=25):
+        """Los primeros bloques del diff, con unas palabras de contexto a cada
+        lado, para mostrar qué cambió sin abrir la nota."""
+        ops = self.diff or []
+        bloques, i = [], 0
+        while i < len(ops) and len(bloques) < max_bloques:
+            if ops[i][0] == "=":
+                i += 1
+                continue
+            j = i
+            quitado, agregado = [], []
+            while j < len(ops) and ops[j][0] != "=":
+                (quitado if ops[j][0] == "-" else agregado).append(ops[j][1])
+                j += 1
+            previo = ops[i - 1][1].split()[-contexto:] if i and ops[i - 1][0] == "=" else []
+            siguiente = ops[j][1].split()[:contexto] if j < len(ops) else []
+
+            def corto(textos):
+                palabras = " ".join(textos).split()
+                return " ".join(palabras[:max_palabras]) + (" …" if len(palabras) > max_palabras else "")
+
+            bloques.append({
+                "antes": " ".join(previo),
+                "quitado": corto(quitado),
+                "agregado": corto(agregado),
+                "despues": " ".join(siguiente),
+            })
+            i = j
+        return bloques
+
 
 class Hecho(models.Model):
     historia = models.ForeignKey(
