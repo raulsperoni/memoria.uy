@@ -5,7 +5,7 @@
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <h2 class="mono text-2xl font-bold mb-1">Notas editadas</h2>
-  <p class="mono text-xs text-gray-600 mb-4">// Re-capturamos las notas de las historias más importantes a las 24 h y a los 7 días y comparamos.</p>
+  <p class="text-[13px] text-gray-800 mb-4">Notas que un medio cambió después de publicarlas. Volvemos a capturar las notas de las historias más importantes a las 24 horas y a los 7 días, comparamos y guardamos la versión original.</p>
   <form method="get" class="mono text-xs flex flex-wrap gap-3 items-center mb-6"
         onsubmit="this.querySelectorAll('select, input').forEach(function (i) { if (!i.value || (i.type === 'checkbox' && !i.checked)) i.disabled = true; })">
     <label class="flex items-center gap-1"><input type="checkbox" name="sentido" value="1" {% if request.GET.sentido %}checked{% endif %} onchange="this.form.requestSubmit()"> solo las que cambian el sentido</label>
@@ -16,7 +16,7 @@
   </form>
   <ul class="space-y-3">
     {% for c in cambios %}{% include "archivo/_cambio_item.html" %}
-    {% empty %}<li class="mono text-sm text-gray-600">Ningún cambio detectado todavía.</li>{% endfor %}
+    {% empty %}<li class="mono text-sm text-gray-700">Ningún cambio detectado todavía.</li>{% endfor %}
   </ul>
   {% include "archivo/_paginacion.html" %}
 </div>

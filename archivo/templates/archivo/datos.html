@@ -5,15 +5,15 @@
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <h2 class="mono text-2xl font-bold mb-1">Datos abiertos</h2>
-  <p class="mono text-xs text-gray-600 mb-6">// CSV en UTF-8, se actualizan cada hora. Usalos libremente citando a memoria.uy. Nunca publicamos votos individuales: solo totales.</p>
+  <p class="mono text-xs text-gray-700 mb-6">CSV en UTF-8, se actualizan cada hora. Usalos libremente citando a memoria.uy. Nunca publicamos votos individuales: solo totales.</p>
   <ul class="space-y-4">
     {% for nombre, def in exports.items %}
     <li class="border-2 border-black p-4">
       <a href="{% url 'archivo:export' nombre %}" class="font-bold underline mono">{{ nombre }}.csv</a>
-      <p class="mono text-[11px] text-gray-600 mt-1">columnas: {{ def.0|join:", " }}</p>
+      <p class="mono text-xs text-gray-700 mt-1">columnas: {{ def.0|join:", " }}</p>
     </li>
     {% endfor %}
   </ul>
-  <p class="mono text-[11px] text-gray-500 mt-6">// Los hechos son redacción de memoria.uy a partir de las notas citadas; los textos originales pertenecen a sus medios. Código: <a class="underline" href="https://github.com/raulsperoni/memoria.uy">github.com/raulsperoni/memoria.uy</a>.</p>
+  <p class="mono text-xs text-gray-600 mt-6">Los hechos son redacción de memoria.uy a partir de las notas citadas; los textos originales pertenecen a sus medios. Código: <a class="underline" href="https://github.com/raulsperoni/memoria.uy">github.com/raulsperoni/memoria.uy</a>.</p>
 </div>
 {% endblock %}

@@ -205,6 +205,39 @@ class Cambio(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()}: {self.fuente}"
 
+    @property
+    def frase(self) -> str:
+        """Qué pasó, en una frase, con lo que ya sabemos (medio, tipo y cuándo
+        lo vimos). No es cuándo editó el medio: solo sabemos que fue entre dos
+        capturas."""
+        medio = self.fuente.medio.nombre
+        if self.tipo == "titulo":
+            que = "cambió el titular"
+        elif self.tipo == "despublicada":
+            que = "borró la nota"
+        else:
+            ops = {op[0] for op in self.diff or []}
+            if "-" in ops and "+" not in ops:
+                que = "sacó texto de la nota"
+            elif "+" in ops and "-" not in ops:
+                que = "agregó texto a la nota"
+            else:
+                que = "cambió el texto de la nota"
+        frase = f"{medio} {que}"
+        if publicada := self.fuente.publicada_en:
+            horas = (self.detectado_en - publicada).total_seconds() / 3600
+            if horas >= 0:
+                if horas < 1:
+                    cuando = "menos de una hora"
+                elif horas < 36:
+                    n = round(horas)
+                    cuando = f"{n} hora{'s' if n != 1 else ''}"
+                else:
+                    n = round(horas / 24)
+                    cuando = f"{n} días"
+                frase += f". Lo vimos {cuando} después de publicada"
+        return frase + "."
+
     def extracto(self, max_bloques=2, contexto=4, max_palabras=25):
         """Los primeros bloques del diff, con unas palabras de contexto a cada
         lado, para mostrar qué cambió sin abrir la nota."""

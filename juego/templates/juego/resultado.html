@@ -10,7 +10,7 @@
     <p class="mono text-sm">Leíste a Uruguay</p>
     <p class="text-5xl font-bold my-2">{{ aciertos }}/{{ filas|length }}</p>
     {% if racha > 1 %}<p class="mono text-sm">racha 🔥 {{ racha }} días</p>{% endif %}
-    <p class="mono text-[11px] text-gray-500 mt-2">// provisorio hasta las 23:59</p>
+    <p class="mono text-xs text-gray-600 mt-2">provisorio hasta las 23:59</p>
   </div>
   <a href="{% url 'juego:burbujas' %}" class="block border-2 border-black p-3 mb-6 mono text-sm hover:bg-gray-50">
     {% if mi_burbuja %}Estás en la burbuja <strong>{{ mi_burbuja.letra }}{% if mi_burbuja.nombre %} · {{ mi_burbuja.nombre }}{% endif %}</strong> →{% else %}¿En qué burbuja estás? Votá unos días más y aparecés en el mapa →{% endif %}
@@ -39,10 +39,10 @@
       <p class="font-medium">«{{ item.proposicion.texto }}»</p>
       {% if r.pct_acuerdo is not None %}
       <div class="h-3 border border-black flex mt-1"><div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div></div>
-      <p class="mono text-[11px] text-gray-600">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · vos: {{ voto.get_opinion_display|lower }}, {% if voto.prediccion is None %}sin predicción{% else %}predijiste {{ voto.get_prediccion_display }} {% if acierto %}✓{% elif acierto is False %}✗{% endif %}{% endif %}
+      <p class="mono text-xs text-gray-700">{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo · vos: {{ voto.get_opinion_display|lower }}, {% if voto.prediccion is None %}sin predicción{% else %}predijiste {{ voto.get_prediccion_display }} {% if acierto %}✓{% elif acierto is False %}✗{% endif %}{% endif %}
         · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>
       {% else %}
-      <p class="mono text-[11px] text-gray-600">todavía sin opiniones · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>
+      <p class="mono text-xs text-gray-700">todavía sin opiniones · <a class="underline" href="{% url 'archivo:historia' item.proposicion.historia.slug %}">contexto</a></p>
       {% endif %}
     </li>
     {% endfor %}

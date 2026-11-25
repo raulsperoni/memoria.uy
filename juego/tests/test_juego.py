@@ -270,3 +270,16 @@ def test_ver_viejo_muestra_la_frase_pendiente(client, props):
 def test_sin_jornada(client, db):
     html = client.get(reverse("juego:hoy")).content.decode()
     assert "05:30" in html and "Vuelve" not in html
+
+
+def test_contexto_trae_hechos(client, props):
+    from archivo.models import Hecho
+
+    j = logica.armar_jornada()
+    primera = j.items_ordenados()[0].proposicion.historia
+    Hecho.objects.create(historia=primera, texto="Un hecho verificado", orden=0)
+    Hecho.objects.create(historia=primera, texto="Un hecho oculto", orden=1, oculto=True)
+    html = client.get(reverse("juego:hoy")).content.decode()
+    assert "Un hecho verificado" in html
+    assert "Un hecho oculto" not in html
+    assert "Ahora adiviná" in html

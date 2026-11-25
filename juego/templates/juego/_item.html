@@ -6,18 +6,22 @@
   {% csrf_token %}
   <blockquote class="border-2 border-black p-5 text-xl md:text-2xl font-bold leading-snug">«{{ p.texto }}»</blockquote>
 
-  <details class="mono text-xs">
-    <summary class="cursor-pointer underline py-2 inline-block">¿de qué se trata?</summary>
-    <div class="mt-2 p-3 bg-gray-50 border border-gray-300 text-sm font-sans">
-      <p class="font-bold">{{ p.historia.titulo }}</p>
-      <p class="mt-1">{{ p.historia.resumen }}</p>
-      <a class="underline mono text-xs mt-1 inline-block py-1" href="{% url 'archivo:historia' p.historia.slug %}" target="_blank" rel="noopener">hechos y fuentes →</a>
+  <details class="text-sm" open data-contexto>
+    <summary class="mono text-[13px] cursor-pointer underline py-1 inline-block">¿de qué se trata?</summary>
+    <div class="mt-2 p-3 bg-gray-50 border border-gray-300">
+      <p class="font-bold leading-snug">{{ p.historia.titulo }}</p>
+      {% if hechos %}
+      <ul class="mt-2 space-y-2 text-[13px] leading-snug list-disc pl-4">
+        {% for h in hechos %}<li>{{ h.texto }}{% if h.disputado %} <span class="mono text-xs border border-black px-1">las fuentes difieren</span>{% endif %}{% if h.medios %} <span class="mono text-xs text-gray-700">{{ h.medios|join:" · " }}</span>{% endif %}</li>{% endfor %}
+      </ul>
+      {% else %}<p class="mt-1">{{ p.historia.resumen }}</p>{% endif %}
+      <a class="underline mono text-xs mt-2 inline-block py-1" href="{% url 'archivo:historia' p.historia.slug %}" target="_blank" rel="noopener">todos los hechos y fuentes →</a>
     </div>
   </details>
 
   {% with foco_css="peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-black" %}
   <fieldset>
-    <legend class="mono text-xs uppercase tracking-wide mb-2">1 · ¿Vos qué pensás?</legend>
+    <legend class="mono text-[13px] font-bold mb-2">¿Estás de acuerdo con la frase?</legend>
     <div class="grid grid-cols-3 gap-2">
       <label class="cursor-pointer h-full"><input type="radio" name="opinion" value="acuerdo" class="peer sr-only" required{% if foco %} autofocus{% endif %}>
         <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco_css }}">De acuerdo</span></label>
@@ -25,35 +29,35 @@
         <span class="h-full flex items-center justify-center text-center border-2 border-black py-3 px-1 mono text-sm peer-checked:bg-black peer-checked:text-white hover:bg-gray-100 {{ foco_css }}">En desacuerdo</span></label>
       {# «No sé» envía solo: pasa la frase sin predicción (formnovalidate saltea el required de la opinión) #}
       <button type="submit" name="opinion" value="nose" formnovalidate
-              class="h-full border-2 border-gray-400 text-gray-600 py-2 px-1 mono text-sm hover:bg-gray-100 disabled:opacity-40">No sé<span class="block text-[11px]">paso →</span></button>
+              class="h-full border-2 border-gray-400 text-gray-700 py-2 px-1 mono text-sm hover:bg-gray-100 disabled:opacity-40">No sé<span class="block text-xs">paso →</span></button>
     </div>
   </fieldset>
 
-  <fieldset>
-    <legend class="mono text-xs uppercase tracking-wide mb-2">2 · ¿Qué % de Uruguay está de acuerdo?</legend>
+  <fieldset data-paso2>
+    <legend class="mono text-[13px] font-bold mb-1">Ahora adiviná: ¿cuántos en Uruguay están de acuerdo?</legend>
     <div class="grid grid-cols-5 gap-1">
       {% for valor, etiqueta in buckets %}
       <button type="submit" name="prediccion" value="{{ valor }}" data-prediccion
               class="border-2 border-black py-3 mono text-[11px] sm:text-xs hover:bg-black hover:text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black">{{ etiqueta }}</button>
       {% endfor %}
     </div>
-    <p class="mono text-[11px] text-gray-600 mt-2" data-ayuda>Al tocar el rango se guarda y pasás a la siguiente. No se puede cambiar.</p>
+    <p class="text-[13px] text-gray-700 mt-2" data-ayuda>Tocá un rango. Se guarda y pasás a la siguiente frase; no se puede cambiar.</p>
   </fieldset>
   {% endwith %}
 </form>
 <script>
-  // Los rangos quedan apagados hasta elegir opinión. Sin JS igual funciona: el
-  // navegador exige la opinión (required) al tocar un rango.
+  // Un paso a la vez: la predicción aparece cuando elegiste tu opinión. Sin JS
+  // se ven los dos pasos y el navegador exige la opinión (required) al tocar un rango.
   (function () {
     var f = document.getElementById('juego-paso');
     if (!f) return;
-    var rangos = f.querySelectorAll('[data-prediccion]');
-    var ayuda = f.querySelector('[data-ayuda]');
-    var texto = ayuda.textContent;
+    var paso2 = f.querySelector('[data-paso2]');
+    var contexto = f.querySelector('[data-contexto]');
     function listo() {
       var ok = !!f.querySelector('input[name=opinion]:checked');
-      rangos.forEach(function (b) { b.disabled = !ok; });
-      ayuda.textContent = ok ? texto : 'Primero elegí tu opinión. Si no sabés, «No sé» pasa la frase.';
+      paso2.hidden = !ok;
+      f.querySelectorAll('[data-prediccion]').forEach(function (b) { b.disabled = !ok; });
+      if (ok && contexto) contexto.open = false;
     }
     f.addEventListener('change', listo);
     listo();

@@ -11,6 +11,7 @@ urlpatterns = [
     path("h/<slug:slug>/", views.HistoriaView.as_view(), name="historia"),
     path("e/<int:pk>/", views.EntidadView.as_view(), name="entidad"),
     path("e/<int:pk>/<slug:slug>/", views.EntidadView.as_view(), name="entidad-slug"),
+    path("tema/<slug:categoria>/", views.TemaView.as_view(), name="tema"),
     path("cambios/", views.CambiosView.as_view(), name="cambios"),
     path("cambios/<int:pk>/", views.CambioView.as_view(), name="cambio"),
     path("medios/<slug:slug>/", views.MedioView.as_view(), name="medio"),

@@ -204,3 +204,59 @@ def test_home_separa_hoy_y_ayer(client, historia):
     assert vieja in r.context["ayer"]
     html = r.content.decode()
     assert html.index(historia.titulo) < html.index("Ayer") < html.index("Historia de ayer")
+
+
+def test_cambio_dice_que_paso(client, historia):
+    cambio = Cambio.objects.first()
+    assert cambio.frase.startswith("Diario A cambió el titular")
+    html = client.get(reverse("archivo:cambios")).content.decode()
+    assert "Diario A cambió el titular" in html
+    assert "antes decía" in html and "ahora dice" in html
+
+
+def test_frase_de_cambio_de_cuerpo(historia):
+    cambio = Cambio.objects.first()
+    cambio.tipo = "cuerpo"
+    cambio.diff = [["=", "uno"], ["-", "dos"]]
+    assert "sacó texto de la nota" in cambio.frase
+    cambio.diff = [["=", "uno"], ["-", "dos"], ["+", "tres"]]
+    assert "cambió el texto de la nota" in cambio.frase
+    cambio.tipo = "despublicada"
+    assert "borró la nota" in cambio.frase
+
+
+def test_explicacion_y_menu_en_portada(client, db):
+    html = client.get(reverse("archivo:home")).content.decode()
+    assert 'id="intro"' in html and "No hace falta cuenta" in html
+    assert "notas editadas" in html and "burbujas" in html
+
+
+def test_tema(client, historia):
+    Historia.objects.filter(pk=historia.pk).update(categoria="politica")
+    r = client.get(reverse("archivo:tema", args=["politica"]))
+    assert r.status_code == 200
+    assert historia.titulo in r.content.decode()
+    assert client.get("/tema/inexistente/").status_code == 404
+    html = client.get(reverse("archivo:historia", args=[historia.slug])).content.decode()
+    assert reverse("archivo:tema", args=["politica"]) in html
+
+
+def test_historias_previas(client, historia):
+    from datetime import timedelta
+
+    from archivo.views import historias_previas
+
+    def otra(slug, centroide, dias):
+        return Historia.objects.create(
+            titulo=slug, slug=slug, resumen="r", centroide=centroide, n_embeddings=1,
+            procesada_en=timezone.now(), primera_fuente_en=historia.primera_fuente_en - timedelta(days=dias),
+        )
+
+    misma = list(historia.centroide)
+    opuesta = [-x for x in misma]
+    parecida = otra("antes-parecida", misma, 30)
+    otra("antes-distinta", opuesta, 20)
+    otra("muy-vieja", misma, 400)
+    assert [h.pk for h in historias_previas(historia)] == [parecida.pk]
+    html = client.get(reverse("archivo:historia", args=[historia.slug])).content.decode()
+    assert "Esta historia viene de" in html and "antes-parecida" in html
