@@ -159,3 +159,48 @@ def test_no_invita_a_registrarse_si_esta_cerrado(client, db, settings):
     settings.ACCOUNT_ALLOW_SIGNUPS = False
     html = client.get(reverse("account_login")).content.decode()
     assert "Registrate" not in html and "crear cuenta" not in html
+
+
+def test_extracto_muestra_lo_que_cambio_con_contexto(db):
+    c = Cambio(tipo="cuerpo", diff=[
+        ["=", "la representación de"],
+        ["-", "los trabajadores,"],
+        ["+", "las empresas,"],
+        ["=", "según el escrutinio de la Corte Electoral"],
+    ])
+    assert c.extracto() == [{
+        "antes": "la representación de",
+        "quitado": "los trabajadores,",
+        "agregado": "las empresas,",
+        "despues": "según el escrutinio de",
+    }]
+
+
+def test_notas_editadas_muestran_titular_y_cambio(client, historia):
+    f = historia.fuentes.first()
+    snap = f.snapshots.first()
+    Cambio.objects.create(
+        fuente=f, antes=snap, despues=snap, tipo="cuerpo", cambia_sentido=0.9,
+        resumen="Cuerpo editado: 17 caracteres quitados, 13 agregados.",
+        diff=[["=", "en nombre de"], ["-", "los trabajadores,"], ["+", "las empresas,"], ["=", "dijo"]],
+    )
+    for url in (reverse("archivo:cambios"), reverse("archivo:home")):
+        html = client.get(url).content.decode()
+        assert "caracteres quitados" not in html, url
+        assert "los trabajadores," in html and "las empresas," in html, url
+        assert "Sánchez desmiente reunión por Praxis" in html, url
+
+
+def test_home_separa_hoy_y_ayer(client, historia):
+    from datetime import timedelta
+
+    vieja = Historia.objects.create(
+        titulo="Historia de ayer", slug="historia-de-ayer", procesada_en=timezone.now(),
+        n_medios=5, ultima_fuente_en=timezone.now() - timedelta(days=1),
+        primera_fuente_en=timezone.now() - timedelta(days=1),
+    )
+    r = client.get(reverse("archivo:home"))
+    assert historia in r.context["hoy"] and vieja not in r.context["hoy"]
+    assert vieja in r.context["ayer"]
+    html = r.content.decode()
+    assert html.index(historia.titulo) < html.index("Ayer") < html.index("Historia de ayer")

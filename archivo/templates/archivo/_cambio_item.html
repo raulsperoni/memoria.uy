@@ -1,7 +1,19 @@
 <li class="border-l-4 {% if c.tipo == 'despublicada' or c.cambia_sentido >= 0.5 %}border-black{% else %}border-gray-300{% endif %} pl-3 py-1">
   <div class="mono text-[11px] text-gray-600">
-    {{ c.detectado_en|date:"d/m/Y H:i" }} · {{ c.fuente.medio.nombre }} · {{ c.get_tipo_display }}
+    {{ c.detectado_en|date:"d/m H:i" }} · {{ c.fuente.medio.nombre }} · {{ c.get_tipo_display }}
     {% if c.cambia_sentido >= 0.5 %}· <strong class="text-black">cambia el sentido</strong>{% endif %}
   </div>
-  <a href="{% url 'archivo:cambio' c.pk %}" class="text-sm hover:underline">{{ c.resumen|default:c.fuente.titulo }}</a>
+  {% if c.tipo == "titulo" %}
+  <a href="{% url 'archivo:cambio' c.pk %}" class="block text-sm leading-snug hover:underline">
+    <del class="text-gray-500">{{ c.titulo_antes }}</del><br>
+    <ins class="no-underline font-bold">{{ c.titulo_despues }}</ins>
+  </a>
+  {% else %}
+  <a href="{% url 'archivo:cambio' c.pk %}" class="block text-sm font-bold leading-snug hover:underline">{{ c.titulo_despues|default:c.fuente.titulo }}</a>
+  {% if c.tipo == "despublicada" %}
+  <p class="text-sm text-gray-700">Ya no está en el sitio del medio.</p>
+  {% else %}{% for b in c.extracto %}
+  <p class="text-sm text-gray-700 leading-snug">{% if b.antes %}…{{ b.antes }} {% endif %}{% if b.quitado %}<del class="bg-red-100 text-red-900">{{ b.quitado }}</del> {% endif %}{% if b.agregado %}<ins class="bg-green-100 text-green-900 no-underline">{{ b.agregado }}</ins> {% endif %}{% if b.despues %}{{ b.despues }}…{% endif %}</p>
+  {% endfor %}{% endif %}
+  {% endif %}
 </li>

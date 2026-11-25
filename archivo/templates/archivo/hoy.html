@@ -12,33 +12,35 @@
   {% include "archivo/_nav.html" %}
   {% if jornada %}
   <a href="{% if jornada_completa %}{% url 'juego:resultado' %}{% else %}{% url 'juego:hoy' %}{% endif %}"
-     class="block border-2 border-black bg-black text-white p-5 mb-8 hover:bg-gray-900">
-    {% with n=jornada.items.count %}<p class="mono text-xs opacity-75">{{ jornada.fecha|date:"d/m" }} · {{ n }} frase{{ n|pluralize }} · 1 minuto</p>{% endwith %}
-    <p class="text-2xl font-bold">¿Qué piensa Uruguay?</p>
-    <p class="mono text-sm mt-1">{% if jornada_completa %}ver mi resultado →{% else %}jugar la de hoy →{% endif %}</p>
+     class="flex flex-wrap items-baseline justify-between gap-x-3 border-2 border-black bg-black text-white px-4 py-2 mb-6 hover:bg-gray-900">
+    <span class="font-bold">¿Qué piensa Uruguay?</span>
+    {% with n=jornada.items.count %}<span class="mono text-xs">{{ n }} frase{{ n|pluralize }} · 1 minuto · {% if jornada_completa %}ver mi resultado →{% else %}jugar la de hoy →{% endif %}</span>{% endwith %}
   </a>
   {% else %}
-  <div class="border-2 border-black p-5 mb-8">
-    <p class="text-xl font-bold">¿Qué piensa Uruguay?</p>
-    <p class="mono text-sm mt-1">Un juego diario: frases de las noticias del día. ¿Estás de acuerdo? ¿Y adivinás qué piensa el resto?</p>
-    <p class="mono text-xs text-gray-600 mt-2">// La de hoy todavía no está lista. Sale cada mañana a las 05:30.</p>
-  </div>
+  <p class="mono text-xs border-2 border-black px-4 py-2 mb-6"><strong>¿Qué piensa Uruguay?</strong> El juego del día sale cada mañana a las 05:30.</p>
   {% endif %}
 
-  <h2 class="mono text-2xl font-bold mb-1">Lo que pasó</h2>
-  <p class="mono text-xs text-gray-600 mb-6">// Historias de las últimas 48 h, ordenadas por cobertura. Cada hecho, con sus fuentes.</p>
+  <h2 class="mono text-2xl font-bold mb-1">Hoy <span class="text-base font-normal text-gray-600">{% now "d/m" %}</span></h2>
+  <p class="mono text-xs text-gray-600 mb-6">// Historias con notas nuevas hoy, ordenadas por cobertura. Cada hecho, con sus fuentes.</p>
+  <div class="space-y-4">
+    {% for h in hoy %}{% include "archivo/_historia_item.html" %}
+    {% empty %}<p class="mono text-sm text-gray-600">Todavía no hay historias de hoy.</p>{% endfor %}
+  </div>
 
   {% if cambios %}
-  <section class="mb-8 border-2 border-black p-4">
+  <section class="mt-10 border-2 border-black p-4">
     <h3 class="mono font-bold text-sm mb-2">Notas que cambiaron después de publicadas</h3>
-    <ul class="space-y-2">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
-    <a href="{% url 'archivo:cambios' %}?sentido=1" class="mono text-xs underline mt-2 inline-block">ver todas →</a>
+    <ul class="space-y-3">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
+    <a href="{% url 'archivo:cambios' %}?sentido=1" class="mono text-xs underline mt-3 inline-block">ver todas →</a>
   </section>
   {% endif %}
 
+  {% if ayer %}
+  <h2 class="mono text-2xl font-bold mt-10 mb-6">Ayer</h2>
   <div class="space-y-4">
-    {% for h in historias %}{% include "archivo/_historia_item.html" %}
-    {% empty %}<p class="mono text-sm text-gray-600">Todavía no hay historias procesadas.</p>{% endfor %}
+    {% for h in ayer %}{% include "archivo/_historia_item.html" %}{% endfor %}
   </div>
+  <a href="{% url 'archivo:dia' y=ayer_fecha.year m=ayer_fecha.month d=ayer_fecha.day %}" class="mono text-xs underline mt-3 inline-block">archivo de ayer →</a>
+  {% endif %}
 </div>
 {% endblock %}

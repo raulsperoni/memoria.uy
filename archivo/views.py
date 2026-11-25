@@ -23,6 +23,22 @@ def _historias_publicas():
     return Historia.objects.filter(procesada_en__isnull=False).exclude(slug__isnull=True)
 
 
+def historias_por_dia(n_hoy=20, n_ayer=10):
+    """Historias con notas nuevas hoy y ayer (hora local), cada día ordenado
+    por cobertura. Una historia va al último día en que tuvo una nota."""
+    hoy = timezone.localdate()
+    ayer = hoy - timedelta(days=1)
+    tz = timezone.get_current_timezone()
+    desde = datetime.combine(ayer, time.min, tzinfo=tz)
+    horas = (timezone.now() - desde).total_seconds() / 3600
+    grupos = {hoy: [], ayer: []}
+    for h in historias_top(n=n_hoy + n_ayer + 20, horas=horas):
+        dia = timezone.localtime(h.ultima_fuente_en).date()
+        if dia in grupos:
+            grupos[dia].append(h)
+    return grupos[hoy][:n_hoy], grupos[ayer][:n_ayer]
+
+
 class HoyView(TemplateView):
     """Lo que pasó hoy: historias top de las últimas 48 h."""
 
@@ -30,7 +46,8 @@ class HoyView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["historias"] = historias_top(n=20, horas=48)
+        ctx["hoy"], ctx["ayer"] = historias_por_dia()
+        ctx["ayer_fecha"] = timezone.localdate() - timedelta(days=1)
         from juego.logica import completa, jornada_de_hoy
         from juego.votante import votante
 
@@ -195,7 +212,7 @@ class MedioView(DetailView):
             .select_related("historia")
             .order_by("-publicada_en")[:50]
         )
-        ctx["cambios"] = Cambio.objects.filter(fuente__medio=m)[:20]
+        ctx["cambios"] = Cambio.objects.filter(fuente__medio=m).select_related("fuente__medio")[:20]
         ctx["n_fuentes"] = m.fuentes.filter(estado="procesada").count()
         ctx["n_cambios"] = Cambio.objects.filter(fuente__medio=m).count()
         return ctx
