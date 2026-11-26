@@ -169,11 +169,11 @@ def test_cola_ordena_por_hechos_y_nuevas_primero(mundo):
 
 
 @pytest.mark.django_db
-def test_sin_asociar_se_reintenta_a_los_90_dias(mundo):
+def test_sin_asociar_se_reintenta_a_los_14_dias(mundo):
     e = entidad()
-    FichaEntidad.objects.create(entidad=e, consultada_en=timezone.now() - timedelta(days=60))
+    FichaEntidad.objects.create(entidad=e, consultada_en=timezone.now() - timedelta(days=10))
     assert e not in list(entidades_pendientes())
-    FichaEntidad.objects.filter(entidad=e).update(consultada_en=timezone.now() - timedelta(days=91))
+    FichaEntidad.objects.filter(entidad=e).update(consultada_en=timezone.now() - timedelta(days=15))
     assert e in list(entidades_pendientes())
 
 
