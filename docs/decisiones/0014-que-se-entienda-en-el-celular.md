@@ -10,8 +10,8 @@ explica el sitio y se puede cerrar, un menú con dos entradas principales (lo
 demás en «más», cada una con su explicación), una frase que dice qué pasó en
 cada nota editada antes del diff, las burbujas con lo legible primero y el
 mapa plegado, el juego con una pregunta a la vez y hechos verificados en el
-contexto, letra más grande y menos «//» en los textos que explican, y temas e
-historias previas para seguir un asunto en el tiempo.
+contexto, letra más grande y menos «//» en los textos que explican, y una
+página por tema.
 
 ## Por qué
 
@@ -36,7 +36,13 @@ de terminal: queda en títulos, botones y logo.
 - `juego/views.py` (`_hechos_contexto`): hasta 3 hechos no ocultos con sus
   medios. La predicción aparece al elegir opinión (sin JS se ven las dos); se
   mantienen los dos toques de 0010.
-- `historias_previas()` en `archivo/views.py`: hasta 3 historias de los 180
-  días anteriores con coseno de centroides ≥ `SIM_HISTORIA_PREVIA` (0.6 por
-  defecto, sin calibrar con datos reales), cacheado 6 h por historia.
-  `/tema/<categoria>/` lista las historias de cada categoría.
+- «¿De qué se trata?» viene abierto solo en la primera frase del día; en las
+  otras empuja los botones fuera de la pantalla.
+- `/tema/<categoria>/` lista las historias de cada categoría.
+
+«Esta historia viene de» (historias anteriores parecidas por coseno de
+centroides) quedó afuera. Con 139 historias reales no hubo umbral que separe:
+sobre 0.75 aparecían pares sin relación (una operación ferroviaria con un curso
+de inteligencia artificial) y entre 0.65 y 0.70 pares claros (la elección y el
+procesamiento de Lorena Roqueta en el BPS). Un vínculo falso le quita crédito
+al sitio, así que no se muestra hasta tener una señal mejor.

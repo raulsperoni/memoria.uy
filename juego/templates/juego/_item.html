@@ -6,7 +6,7 @@
   {% csrf_token %}
   <blockquote class="border-2 border-black p-5 text-xl md:text-2xl font-bold leading-snug">«{{ p.texto }}»</blockquote>
 
-  <details class="text-sm" open data-contexto>
+  <details class="text-sm"{% if n == 1 %} open{% endif %} data-contexto>
     <summary class="mono text-[13px] cursor-pointer underline py-1 inline-block">¿de qué se trata?</summary>
     <div class="mt-2 p-3 bg-gray-50 border border-gray-300">
       <p class="font-bold leading-snug">{{ p.historia.titulo }}</p>

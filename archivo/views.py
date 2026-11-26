@@ -6,7 +6,6 @@ from datetime import date, datetime, time, timedelta
 
 from django.contrib.postgres.search import SearchQuery, SearchVector  # noqa: F401
 from django.db import connection
-from django.core.cache import cache
 from django.db.models import Count, Prefetch, Q
 from django.http import Http404
 from django.shortcuts import redirect
@@ -17,8 +16,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 from core.models import Entidad
 
 from .models import Cambio, HechoFuente, Hecho, Historia, Medio, Proposicion
-from .pipeline import env_float, historias_top
-from .providers.embed import coseno
+from .pipeline import historias_top
 
 
 def _historias_publicas():
@@ -94,7 +92,6 @@ class HistoriaView(DetailView):
                     unicos.append(hf)
             hecho.respaldos = unicos
         ctx["cambios"] = Cambio.objects.filter(fuente__historia=h).select_related("fuente__medio")
-        ctx["previas"] = historias_previas(h)
         ctx["entidades"] = (
             Entidad.objects.filter(hechos__historia=h).distinct().order_by("nombre")
         )
@@ -133,49 +130,6 @@ class HistoriaView(DetailView):
             ensure_ascii=False,
         ).replace("</", "<\\/")
         return ctx
-
-
-# Historias previas: las más parecidas (centroide) de los meses anteriores.
-# El umbral se ajusta mirando datos reales; las mismas notas con otro ángulo
-# dan 0.4–0.75 en bge-m3 (ver pipeline.agrupar).
-SIM_PREVIA = lambda: env_float("SIM_HISTORIA_PREVIA", 0.6)  # noqa: E731
-DIAS_PREVIAS = 180
-MAX_CANDIDATAS_PREVIAS = 500
-
-
-def ranking_previas(h):
-    """Todas las historias de los DIAS_PREVIAS anteriores, de la más parecida
-    a la menos: [(similitud, historia)]. Lo usan la página y calibrar_previas."""
-    if not h.centroide:
-        return []
-    candidatas = (
-        _historias_publicas()
-        .filter(
-            primera_fuente_en__gte=h.primera_fuente_en - timedelta(days=DIAS_PREVIAS),
-            primera_fuente_en__lt=h.primera_fuente_en,
-        )
-        .exclude(pk=h.pk)
-        .only("pk", "centroide", "titulo", "slug", "primera_fuente_en")
-        .order_by("-primera_fuente_en")[:MAX_CANDIDATAS_PREVIAS]
-    )
-    return sorted(
-        ((coseno(h.centroide, c.centroide), c) for c in candidatas if c.centroide),
-        key=lambda t: -t[0],
-    )
-
-
-def historias_previas(h, n=3):
-    """Hasta n historias anteriores sobre lo mismo, de la más vieja a la más
-    nueva. Se cachea por historia (cambia solo si entran notas nuevas)."""
-    if not h.centroide:
-        return []
-    clave = f"previas:{h.pk}:{h.n_embeddings}"
-    ids = cache.get(clave)
-    if ids is None:
-        ids = [c.pk for sim, c in ranking_previas(h)[:n] if sim >= SIM_PREVIA()]
-        cache.set(clave, ids, 60 * 60 * 6)
-    por_id = _historias_publicas().in_bulk(ids)
-    return sorted((por_id[i] for i in ids if i in por_id), key=lambda x: x.primera_fuente_en)
 
 
 class TemaView(ListView):

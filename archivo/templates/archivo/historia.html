@@ -21,19 +21,6 @@
   <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">{{ historia.titulo }}</h2>
   <p class="text-base text-gray-800 mb-6">{{ historia.resumen }}</p>
 
-  {% if previas %}
-  <section class="border-2 border-black p-3 mb-8">
-    <h3 class="mono font-bold text-[13px] uppercase tracking-wide mb-2">Esta historia viene de</h3>
-    <ol class="border-l-2 border-black ml-1 space-y-3 text-sm leading-snug">
-      {% for p in previas %}
-      <li class="pl-3 relative"><span aria-hidden="true" class="absolute -left-[5px] top-1.5 w-2 h-2 bg-black"></span><span class="mono text-xs text-gray-700 block">{{ p.primera_fuente_en|date:"d/m/Y" }}</span><a class="hover:underline" href="{% url 'archivo:historia' p.slug %}">{{ p.titulo }}</a></li>
-      {% endfor %}
-      <li class="pl-3 relative"><span aria-hidden="true" class="absolute -left-[5px] top-1.5 w-2 h-2 border-2 border-black bg-white"></span><span class="mono text-xs text-gray-700 block">{{ historia.primera_fuente_en|date:"d/m/Y" }}</span><strong>Esta historia</strong></li>
-    </ol>
-    {% if historia.categoria %}<a class="mono text-xs underline mt-3 inline-block py-1" href="{% url 'archivo:tema' historia.categoria %}">más historias de {{ historia.get_categoria_display }} →</a>{% endif %}
-  </section>
-  {% endif %}
-
   <section class="mb-8">
     <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Hechos</h3>
     <ol class="space-y-4">
