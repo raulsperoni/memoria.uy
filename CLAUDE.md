@@ -32,6 +32,7 @@ poetry run python manage.py detectar_feeds
 poetry run python manage.py probar_archivo URL [URL ...]
 poetry run python manage.py armar_jornada
 poetry run python manage.py tonos_backfill --contar
+poetry run python manage.py limpiar_textos        # avisos repetidos de cada medio; --aplicar para guardar
 
 # Tailwind
 poetry run python manage.py tailwind start
