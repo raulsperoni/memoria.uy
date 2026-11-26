@@ -28,6 +28,7 @@ agrega, nunca se reescribe.
 | [0012](0012-notas-editadas-sin-ruido.md) | Una nota editada es un cambio en el texto, no en la captura |
 | [0013](0013-tono-de-los-medios.md) | El tono de los medios mide cómo queda parada la persona |
 | [0014](0014-que-se-entienda-en-el-celular.md) | Que el sitio se entienda en el celular la primera vez |
+| [0015](0015-politica-de-ia-y-licencia.md) | Política de IA y licencia: nos pueden leer y citar, con CC BY 4.0 |
 | [0016](0016-fichas-de-wikidata.md) | Fichas de entidades con Wikidata, solo si hay confianza alta |
 
 El registro de la noche del 21 al 22/11/2026

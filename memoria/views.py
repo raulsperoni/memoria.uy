@@ -20,20 +20,51 @@ def favicon(request):
     )
 
 
+BOTS_IA = [
+    "GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot",
+    "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended",
+    "CCBot", "cohere-ai", "Meta-ExternalAgent", "Amazonbot", "DuckAssistBot", "MistralAI-User",
+]
+# Lo que no debe indexarse: resultados de búsqueda, votos y páginas personales, admin.
+NO_INDEXAR = [
+    "/admin/",
+    "/accounts/",
+    "/buscar/",
+    "/hoy/resultado/",
+    "/hoy/votar/",
+    "/p/",
+    "/h/*/opinar/",
+]
+
+
 def robots_txt(request):
-    """Generate robots.txt file for search engine crawlers."""
+    """robots.txt: se puede leer todo lo público, también con IA (el objetivo
+    es que nos citen). Ver docs/decisiones/0015-politica-de-ia-y-licencia.md."""
+    reglas = ["Allow: /"] + [f"Disallow: {p}" for p in NO_INDEXAR]
     lines = [
-        "User-agent: *",
-        "Allow: /",
+        "# memoria.uy: archivo abierto de noticias uruguayas, con fuentes.",
+        "# Política de IA: los crawlers y agentes de IA pueden leer, indexar y citar todo lo público.",
+        "# Hechos, resúmenes y datos: CC BY 4.0 (citar a memoria.uy). Detalle en https://memoria.uy/llms.txt",
         "",
-        "# Sitemaps",
+        "User-agent: *",
+        "Content-Signal: search=yes, ai-input=yes, ai-train=yes",
+        *reglas,
+        "",
+        "# Crawlers de IA, declarados a propósito (un grupo propio ignora el de *, por eso se repiten las reglas)",
+        *[f"User-agent: {b}" for b in BOTS_IA],
+        *reglas,
+        "",
         "Sitemap: https://memoria.uy/sitemap.xml",
         "",
-        "Disallow: /admin/",
-        "Disallow: /accounts/",
-        "Disallow: /hoy/resultado/",
     ]
-    return HttpResponse("\n".join(lines), content_type="text/plain")
+    return HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
+
+
+def llms_txt(request):
+    """llms.txt: qué es el sitio, dónde están los datos y bajo qué licencia."""
+    from django.shortcuts import render
+
+    return render(request, "llms.txt", content_type="text/plain; charset=utf-8")
 
 
 def manifest(request):
