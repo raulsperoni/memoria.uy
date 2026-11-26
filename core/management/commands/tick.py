@@ -62,6 +62,12 @@ def _tonos():
     return tonos_pendientes()
 
 
+def _fichas():
+    from archivo.tasks import fichas_pendientes
+
+    return fichas_pendientes()
+
+
 def _cerrar():
     from archivo.tasks import cerrar_historias
 
@@ -96,13 +102,14 @@ TAREAS = {
     "recrawls": (_recrawls, timedelta(minutes=59), None),
     "tonos": (_tonos, timedelta(minutes=29), None),
     "cerrar_historias": (_cerrar, timedelta(minutes=59), None),
+    "fichas": (_fichas, timedelta(minutes=59), None),
     "burbujas": (_burbujas, None, "02:15"),
     "jornada": (_jornada, None, "05:30"),
     "resumen_staff": (_resumen_staff, None, os.environ.get("DAILY_SUMMARY_HORA", "09:00")),
 }
 # Orden de ejecución: primero lo que alimenta a lo siguiente.
-# Tonos va al final: es la más lenta y no alimenta a ninguna otra.
-ORDEN = ["medios", "ciclo_ingesta", "procesar_historias", "recrawls", "cerrar_historias", "burbujas", "jornada", "resumen_staff", "tonos"]
+# Tonos y fichas van al final: son lentas y no alimentan a ninguna otra.
+ORDEN = ["medios", "ciclo_ingesta", "procesar_historias", "recrawls", "cerrar_historias", "burbujas", "jornada", "resumen_staff", "tonos", "fichas"]
 
 CLAVE = "tick:ultima:{}"
 

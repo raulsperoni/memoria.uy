@@ -398,3 +398,51 @@ class UsoProveedor(models.Model):
 
     class Meta:
         unique_together = ("fecha", "proveedor", "operacion")
+
+
+class FichaEntidad(models.Model):
+    """
+    Datos públicos de una entidad sacados de Wikidata y Wikipedia (1:1 con
+    core.Entidad). Ver docs/decisiones/0016-fichas-de-wikidata.md.
+
+    Staff corrige con `fijada`: el QID (o su ausencia, si está vacío) queda como
+    está y la tarea solo refresca los datos de ese QID.
+    """
+
+    entidad = models.OneToOneField(
+        "core.Entidad", on_delete=models.CASCADE, related_name="ficha"
+    )
+    qid = models.CharField(
+        max_length=20, blank=True, help_text="Ej. Q1234. Vacío = sin asociar"
+    )
+    fijada = models.BooleanField(
+        default=False,
+        help_text="Staff decidió el QID (o dejarlo vacío): la tarea no lo busca de nuevo",
+    )
+    confianza = models.FloatField(default=0, help_text="Qué tan seguro está Jev de que es la misma entidad")
+    etiqueta = models.CharField(max_length=255, blank=True)
+    descripcion = models.CharField(max_length=300, blank=True)
+    cargo = models.CharField(max_length=300, blank=True)
+    organizacion = models.CharField(max_length=300, blank=True, help_text="Partido u organización")
+    resumen = models.TextField(blank=True, help_text="Primer párrafo de Wikipedia")
+    wikipedia_url = models.URLField(max_length=500, blank=True)
+    foto_url = models.URLField(max_length=600, blank=True)
+    foto_pagina = models.URLField(max_length=600, blank=True, help_text="Página de la imagen en Commons")
+    foto_autor = models.CharField(max_length=300, blank=True)
+    foto_licencia = models.CharField(max_length=100, blank=True)
+    consultada_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "ficha de entidad"
+        verbose_name_plural = "fichas de entidades"
+
+    def __str__(self):
+        return f"{self.entidad} → {self.qid or '—'}"
+
+    @property
+    def visible(self):
+        return bool(self.qid)
+
+    @property
+    def wikidata_url(self):
+        return f"https://www.wikidata.org/wiki/{self.qid}" if self.qid else ""

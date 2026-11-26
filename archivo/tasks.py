@@ -106,3 +106,14 @@ def tonos_pendientes():
     from .tonos import SEGUNDOS_POR_CORRIDA, TONOS_POR_CORRIDA, calcular_tonos
 
     return calcular_tonos(limite=TONOS_POR_CORRIDA(), segundos=SEGUNDOS_POR_CORRIDA())
+
+
+@shared_task
+@task_lock(timeout=60 * 10)
+def fichas_pendientes():
+    """Ficha de Wikidata/Wikipedia de las entidades con más hechos. Cada hora, con cupo diario."""
+    if not ingesta_activa():
+        return "ingesta desactivada"
+    from .entidades_wikidata import POR_CORRIDA, SEGUNDOS_POR_CORRIDA, enriquecer_pendientes
+
+    return enriquecer_pendientes(limite=POR_CORRIDA(), segundos=SEGUNDOS_POR_CORRIDA())

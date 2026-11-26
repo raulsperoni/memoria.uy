@@ -1,0 +1,23 @@
+{% comment %}Ficha de Wikidata/Wikipedia. Sin ficha asociada no muestra nada.{% endcomment %}
+{% with f=entidad.ficha %}{% if f.visible %}
+<aside class="mb-6 border-2 border-black p-3 flex gap-3 items-start" id="ficha" aria-label="Datos de {{ entidad.nombre }}">
+  {% if f.foto_url %}
+  <figure class="shrink-0 w-20 sm:w-28">
+    <img src="{{ f.foto_url }}" alt="{{ entidad.nombre }}" loading="lazy" referrerpolicy="no-referrer" class="w-20 h-20 sm:w-28 sm:h-28 object-cover border-2 border-black">
+    <figcaption class="mono text-[10px] leading-tight text-gray-600 mt-1">
+      <a class="underline" href="{{ f.foto_pagina|default:f.wikidata_url }}" rel="noopener" target="_blank">Foto</a>{% if f.foto_autor %}: {{ f.foto_autor|truncatechars:40 }}{% endif %}{% if f.foto_licencia %} · {{ f.foto_licencia }}{% endif %}
+    </figcaption>
+  </figure>
+  {% endif %}
+  <div class="min-w-0 text-sm">
+    {% if f.descripcion %}<p class="font-bold">{{ f.descripcion|capfirst }}</p>{% endif %}
+    {% if f.cargo %}<p><span class="mono text-xs text-gray-700">Cargo u ocupación</span> {{ f.cargo }}</p>{% endif %}
+    {% if f.organizacion %}<p><span class="mono text-xs text-gray-700">{% if entidad.tipo == "persona" %}Partido{% else %}Organización{% endif %}</span> {{ f.organizacion }}</p>{% endif %}
+    {% if f.resumen %}<p class="text-gray-800 mt-2">{{ f.resumen|truncatechars:320 }}</p>{% endif %}
+    <p class="mono text-xs mt-2">
+      {% if f.wikipedia_url %}<a class="underline whitespace-nowrap inline-block py-1" href="{{ f.wikipedia_url }}" rel="noopener" target="_blank">Wikipedia</a> · {% endif %}<a class="underline whitespace-nowrap inline-block py-1" href="{{ f.wikidata_url }}" rel="noopener" target="_blank">Wikidata</a>
+      <span class="text-gray-600">· datos de Wikimedia{% if f.resumen %}, texto CC BY-SA{% endif %}</span>
+    </p>
+  </div>
+</aside>
+{% endif %}{% endwith %}
