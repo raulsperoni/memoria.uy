@@ -44,6 +44,18 @@ class Medio(models.Model):
         return self.nombre
 
 
+def slug_corto(texto, largo=100):
+    """Slug de hasta `largo` caracteres, cortado entre palabras (no a media
+    palabra: «…congelamiento-de-pat»)."""
+    slug = slugify(texto)
+    if len(slug) <= largo:
+        return slug
+    if slug[largo] == "-":
+        return slug[:largo]
+    corte = slug[:largo]
+    return corte.rsplit("-", 1)[0] if "-" in corte else corte
+
+
 class Historia(models.Model):
     CATEGORIAS = [
         ("politica", "Política"),
@@ -83,7 +95,7 @@ class Historia(models.Model):
     def asignar_slug(self):
         if self.slug or not self.titulo:
             return
-        base = slugify(self.titulo)[:100] or "historia"
+        base = slug_corto(self.titulo) or "historia"
         slug, n = base, 2
         while Historia.objects.filter(slug=slug).exclude(pk=self.pk).exists():
             slug = f"{base}-{n}"
