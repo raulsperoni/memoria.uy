@@ -30,7 +30,7 @@ CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins]
 
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    "core.admin_site.MemoriaAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
