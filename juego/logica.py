@@ -185,6 +185,8 @@ def fin_de(fecha):
 def filtro_votante(voter: dict) -> Q:
     if voter.get("usuario"):
         return Q(usuario=voter["usuario"])
+    if not voter.get("session_key"):
+        return Q(pk__in=[])  # anónimo sin id: todavía no votó
     return Q(session_key=voter["session_key"])
 
 
