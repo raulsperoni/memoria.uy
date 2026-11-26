@@ -40,6 +40,8 @@ def get_github_issue_url(
     return f"{base_url}?{'&'.join(params)}"
 
 
+from core.ratelimit import ip_cliente  # noqa: E402
+
 RETRY_AFTER_SEGUNDOS = 60
 
 
@@ -49,11 +51,11 @@ def ratelimited_error(request, exception):
     Returns JSON for API requests, HTML for web requests.
     """
     logger.warning(
-        f"Rate limit exceeded: {request.path} from {request.META.get('REMOTE_ADDR')}",
+        f"Rate limit exceeded: {request.path} from {ip_cliente(request)}",
         extra={
             "path": request.path,
             "method": request.method,
-            "ip": request.META.get("REMOTE_ADDR"),
+            "ip": ip_cliente(request),
             "user_agent": request.META.get("HTTP_USER_AGENT"),
         },
     )

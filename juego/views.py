@@ -92,7 +92,7 @@ class HoyView(View):
         return render(request, "juego/hoy.html", ctx)
 
 
-@method_decorator(ratelimit(key="ip", rate="60/m", method="POST", block=True), name="post")
+@method_decorator(ratelimit(key="core.ratelimit.clave", rate="60/m", method="POST", block=True), name="post")
 class VotarItemView(View):
     """POST de un ítem de la jornada: opinión + predicción, o «no sé» sin
     predicción (pasa la frase; no suma puntaje)."""
@@ -154,7 +154,7 @@ class ResultadoView(View):
         )
 
 
-@method_decorator(ratelimit(key="ip", rate="60/m", method="POST", block=True), name="post")
+@method_decorator(ratelimit(key="core.ratelimit.clave", rate="60/m", method="POST", block=True), name="post")
 class VotarProposicionView(View):
     """Voto desde la página de una historia (sin predicción; no suma puntaje)."""
 

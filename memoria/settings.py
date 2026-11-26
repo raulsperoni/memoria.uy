@@ -226,6 +226,8 @@ else:
 # Rate limiting configuration
 RATELIMIT_ENABLE = os.getenv("RATELIMIT_ENABLE", "True") == "True"
 RATELIMIT_USE_CACHE = "default"
+# Railway pone la IP del cliente en X-Real-IP; solo se confía en producción (core/ratelimit.py)
+RATELIMIT_CONFIAR_X_REAL_IP = not DEBUG
 RATELIMIT_VIEW = "core.error_handlers.ratelimited_error"
 
 
