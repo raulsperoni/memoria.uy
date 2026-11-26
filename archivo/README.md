@@ -55,7 +55,7 @@ línea.
 | `MAX_ENRIQUECIMIENTOS_DIA` / `ENRIQUECER_POR_CORRIDA` | `100` / `15` | Cupo diario y por corrida de entidades consultadas |
 | `UMBRAL_WIKIDATA` / `MARGEN_WIKIDATA` | `0.8` / `0.2` | Jev: mínimo para asociar un candidato y ventaja sobre el segundo |
 | `MIN_HECHOS_ENRIQUECER` | `2` | Hechos mínimos para buscar la ficha |
-| `REFRESCO_FICHA_DIAS` / `REINTENTO_FICHA_DIAS` | `30` / `90` | Cuándo refrescar una ficha y cuándo reintentar las no asociadas |
+| `REFRESCO_FICHA_DIAS` / `REINTENTO_FICHA_DIAS` | `30` / `14` | Cuándo refrescar una ficha y cuándo reintentar las no asociadas |
 | `TONOS_SEGUNDOS_POR_CORRIDA` | `600` | Tiempo máximo por corrida del tick |
 | `UMBRAL_TONO` | `0.5` | Mínimo de Jev para aceptar un tono |
 | `TONOS_LLM_MODELS` | (los de `ARCHIVO_LLM_MODELS`) | Modelos para el tono |

@@ -69,7 +69,7 @@ def test_decider_ve_los_hechos(mundo):
 def test_sin_confianza_no_asocia(mundo):
     set_decider(FakeDecider(default=0.5))
     e = entidad()
-    assert enriquecer(e) == "sin_candidato"
+    assert enriquecer(e) == "dudosa"
     assert e.ficha.qid == "" and e.ficha.confianza == 0.5
 
 
@@ -78,7 +78,7 @@ def test_homonimos_ambiguos_no_asocian(mundo):
     enr, _ = mundo
     enr.items["Q2"] = OTRO_ORSI
     e = entidad()
-    assert enriquecer(e) == "sin_candidato"  # los dos con 0.9: sin ventaja
+    assert enriquecer(e) == "dudosa"  # los dos con 0.9: sin ventaja
 
 
 @pytest.mark.django_db
