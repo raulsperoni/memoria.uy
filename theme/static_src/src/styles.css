@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* El atributo hidden gana siempre, aunque el elemento tenga flex o grid. */
+[hidden] {
+  display: none !important;
+}
+
 /* Custom styles */
 .newspaper-bg {
   background-image:

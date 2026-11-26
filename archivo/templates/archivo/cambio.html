@@ -9,7 +9,7 @@
   <p class="mono text-xs text-gray-700">{{ cambio.fuente.medio.nombre }} · detectado {{ cambio.detectado_en|date:"d/m/Y H:i" }}</p>
   <h2 class="text-2xl font-bold mb-2">{{ cambio.get_tipo_display }}</h2>
   {% if cambio.cambia_sentido >= 0.5 %}<p class="mono text-xs bg-black text-white inline-block px-2 py-1 mb-3">el cambio altera el sentido de la nota</p>{% endif %}
-  <p class="mb-4"><a href="{{ cambio.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline">{{ cambio.fuente.url|truncatechars:80 }}</a>
+  <p class="mb-4"><a href="{{ cambio.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline break-all">{{ cambio.fuente.url|truncatechars:80 }}</a>
   {% if cambio.fuente.historia.slug %} · <a class="underline" href="{% url 'archivo:historia' cambio.fuente.historia.slug %}">ver historia</a>{% endif %}</p>
 
   {% if cambio.tipo == "despublicada" %}

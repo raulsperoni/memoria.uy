@@ -12,7 +12,7 @@
   <p class="mono text-xs text-gray-700">{{ entidad.get_tipo_display }}</p>
   <div class="flex items-start justify-between gap-3 mb-6">
     <h2 class="text-3xl font-bold">{{ entidad.nombre }}</h2>
-    <button type="button" id="compartir" data-titulo="{{ entidad.nombre }} en memoria.uy" class="mono text-xs font-bold border-2 border-black px-3 py-2 whitespace-nowrap hover:bg-black hover:text-white">compartir</button>
+    <button type="button" id="compartir" data-titulo="{{ entidad.nombre }} en memoria.uy" class="mono text-xs font-bold border-2 border-black px-3 min-h-[44px] whitespace-nowrap hover:bg-black hover:text-white">compartir</button>
   </div>
 
   {% if proposiciones %}
@@ -81,12 +81,15 @@
     function avisar(t) { var o = b.textContent; b.textContent = t; setTimeout(function () { b.textContent = o; }, 2000); }
     b.addEventListener('click', function () {
       var url = location.origin + location.pathname;
-      if (navigator.share) {
-        navigator.share({ title: b.dataset.titulo, url: url }).catch(function () {});
-      } else if (navigator.clipboard) {
+      function copiar() {
+        if (!navigator.clipboard) return avisar('copiá el link de la barra');
         navigator.clipboard.writeText(url).then(function () { avisar('link copiado ✓'); }, function () { avisar('copiá el link de la barra'); });
+      }
+      if (navigator.share) {
+        // Cancelar el menú de compartir no es un error; cualquier otra falla copia el link.
+        navigator.share({ title: b.dataset.titulo, url: url }).catch(function (e) { if (e && e.name !== 'AbortError') copiar(); });
       } else {
-        avisar('copiá el link de la barra');
+        copiar();
       }
     });
   })();
