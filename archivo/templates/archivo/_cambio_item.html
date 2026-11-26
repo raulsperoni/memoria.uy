@@ -1,19 +1,22 @@
 <li class="border-l-4 {% if c.tipo == 'despublicada' or c.cambia_sentido >= 0.5 %}border-black{% else %}border-gray-300{% endif %} pl-3 py-1">
-  <div class="mono text-[11px] text-gray-600">
-    {{ c.detectado_en|date:"d/m H:i" }} · {{ c.fuente.medio.nombre }} · {{ c.get_tipo_display }}
-    {% if c.cambia_sentido >= 0.5 %}· <strong class="text-black">cambia el sentido</strong>{% endif %}
-  </div>
+  <a href="{% url 'archivo:cambio' c.pk %}" class="block text-[15px] font-bold leading-snug hover:underline">{{ c.frase }}</a>
+  <p class="mono text-xs text-gray-700 mt-1">
+    {% if c.cambia_sentido >= 0.5 %}<span class="bg-black text-white px-1.5 py-0.5 mr-1">cambia el sentido</span>{% endif %}{{ c.detectado_en|date:"d/m H:i" }}{% if c.tipo != "titulo" %} · «{{ c.titulo_despues|default:c.titulo_antes|default:c.fuente.titulo|truncatechars:90 }}»{% endif %}
+  </p>
   {% if c.tipo == "titulo" %}
-  <a href="{% url 'archivo:cambio' c.pk %}" class="block text-sm leading-snug hover:underline">
-    <del class="text-gray-500">{{ c.titulo_antes }}</del><br>
-    <ins class="no-underline font-bold">{{ c.titulo_despues }}</ins>
-  </a>
+  <dl class="mt-2 text-sm leading-snug space-y-1.5">
+    <div><dt class="mono text-xs text-gray-700">antes decía</dt><dd class="text-gray-500 line-through">{{ c.titulo_antes }}</dd></div>
+    <div><dt class="mono text-xs text-gray-700">ahora dice</dt><dd class="font-bold">{{ c.titulo_despues }}</dd></div>
+  </dl>
+  {% elif c.tipo == "despublicada" %}
+  <a href="{% url 'archivo:cambio' c.pk %}" class="mono text-xs underline mt-1 inline-block py-1">ver la versión que guardamos →</a>
   {% else %}
-  <a href="{% url 'archivo:cambio' c.pk %}" class="block text-sm font-bold leading-snug hover:underline">{{ c.titulo_despues|default:c.fuente.titulo }}</a>
-  {% if c.tipo == "despublicada" %}
-  <p class="text-sm text-gray-700">Ya no está en el sitio del medio.</p>
-  {% else %}{% for b in c.extracto %}
-  <p class="text-sm text-gray-700 leading-snug">{% if b.antes %}…{{ b.antes }} {% endif %}{% if b.quitado %}<del class="bg-red-100 text-red-900">{{ b.quitado }}</del> {% endif %}{% if b.agregado %}<ins class="bg-green-100 text-green-900 no-underline">{{ b.agregado }}</ins> {% endif %}{% if b.despues %}{{ b.despues }}…{% endif %}</p>
-  {% endfor %}{% endif %}
+  <details class="mt-1 text-sm">
+    <summary class="mono text-xs underline cursor-pointer py-1 inline-block">ver qué cambió</summary>
+    {% for b in c.extracto %}
+    <p class="mt-1 text-gray-700 leading-snug">{% if b.antes %}…{{ b.antes }} {% endif %}{% if b.quitado %}<del class="bg-red-100 text-red-900">{{ b.quitado }}</del> {% endif %}{% if b.agregado %}<ins class="bg-green-100 text-green-900 no-underline">{{ b.agregado }}</ins> {% endif %}{% if b.despues %}{{ b.despues }}…{% endif %}</p>
+    {% endfor %}
+    <a href="{% url 'archivo:cambio' c.pk %}" class="mono text-xs underline mt-1 inline-block py-1">la nota completa, antes y después →</a>
+  </details>
   {% endif %}
 </li>

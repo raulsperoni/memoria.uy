@@ -150,8 +150,8 @@
                 <span class="cursor">memoria.uy</span>
               </a>
             </h1>
-            <p class="hidden sm:block text-xs mt-1 text-gray-600 mono">
-              // Lo que pasó en Uruguay, con fuentes.
+            <p class="text-xs mt-0.5 sm:mt-1 text-gray-700 mono px-2">
+              Lo que pasó en Uruguay, con fuentes.
             </p>
           </div>
         </div>
@@ -159,7 +159,7 @@
         <!-- Auth Links -->
         <div class="flex items-center space-x-3 text-sm">
           {% if user.is_authenticated %}
-            <span class="hidden md:inline mono text-gray-600">
+            <span class="hidden md:inline mono text-gray-700">
               > usuario: <span class="text-black font-semibold">{{ user.username }}</span>
             </span>
             {% if user.is_staff %}
@@ -209,14 +209,14 @@
     <div class="max-w-5xl mx-auto px-4">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center text-xs mono">
         <div class="mb-4 md:mb-0">
-          <p class="text-gray-600">
+          <p class="text-gray-700">
             > memoria.uy — lo que pasó en Uruguay, con fuentes. y lo que pensamos.
           </p>
-          <p class="text-gray-600 mt-1">
+          <p class="text-gray-700 mt-1">
             // anónimo por defecto. código abierto. uruguay 2026.
           </p>
         </div>
-        <div class="flex flex-wrap gap-x-4 text-gray-600">
+        <div class="flex flex-wrap gap-x-4 text-gray-700">
           <a href="{% url 'acerca_de' %}" class="py-2 hover:text-black hover:underline">acerca</a>
           <a href="{% url 'privacidad' %}" class="py-2 hover:text-black hover:underline">privacidad</a>
           <a href="{% url 'archivo:datos' %}" class="py-2 hover:text-black hover:underline">datos</a>

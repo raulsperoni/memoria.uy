@@ -35,6 +35,17 @@ def _guardar_voto(voter, proposicion, opinion, prediccion=None, jornada=None):
         return VotoProposicion.objects.get(filtro, proposicion=proposicion), False
 
 
+def _hechos_contexto(historia, n=3):
+    """Los primeros hechos verificados de la historia, cada uno con los medios
+    que lo respaldan, para el «¿de qué se trata?» de la frase."""
+    hechos = list(
+        historia.hechos.filter(oculto=False).prefetch_related("hechofuente_set__fuente__medio")[:n]
+    )
+    for h in hechos:
+        h.medios = list(dict.fromkeys(hf.fuente.medio.nombre for hf in h.hechofuente_set.all()))
+    return hechos
+
+
 def _ctx_paso(voter, jornada, items=None):
     """Contexto de un paso: la frase pendiente y, arriba, el resultado de la
     anterior. None si ya no quedan frases."""
@@ -43,7 +54,14 @@ def _ctx_paso(voter, jornada, items=None):
     i = next((i for i, it in enumerate(items) if it.proposicion_id not in votos), None)
     if i is None:
         return None
-    ctx = {"jornada": jornada, "item": items[i], "n": i + 1, "total": len(items), "buckets": BUCKETS}
+    ctx = {
+        "jornada": jornada,
+        "item": items[i],
+        "n": i + 1,
+        "total": len(items),
+        "buckets": BUCKETS,
+        "hechos": _hechos_contexto(items[i].proposicion.historia),
+    }
     if i > 0:
         previo = items[i - 1]
         voto = votos[previo.proposicion_id]

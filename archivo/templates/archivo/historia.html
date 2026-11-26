@@ -13,9 +13,9 @@
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
 
-  <div class="mono text-xs text-gray-600 mb-2 flex flex-wrap gap-x-3">
+  <div class="mono text-xs text-gray-700 mb-2 flex flex-wrap gap-x-3">
     <a class="underline" href="{% url 'archivo:dia' y=historia.primera_fuente_en.year m=historia.primera_fuente_en.month d=historia.primera_fuente_en.day %}">{{ historia.primera_fuente_en|date:"d/m/Y" }}</a>
-    {% if historia.categoria %}<span>#{{ historia.categoria }}</span>{% endif %}
+    {% if historia.categoria %}<a class="underline" href="{% url 'archivo:tema' historia.categoria %}">{{ historia.get_categoria_display }}</a>{% endif %}
     <span>{{ historia.n_medios }} medio{{ historia.n_medios|pluralize }}</span>
   </div>
   <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">{{ historia.titulo }}</h2>
@@ -26,22 +26,22 @@
     <ol class="space-y-4">
       {% for hecho in historia.hechos.all %}
       <li>
-        <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-[11px] border border-black px-1 ml-1">las fuentes difieren</span>{% endif %}</p>
-        <div class="flex flex-wrap gap-2 mt-2 mono text-[11px]" data-chips>
+        <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-xs border border-black px-1 ml-1">las fuentes difieren</span>{% endif %}</p>
+        <div class="flex flex-wrap gap-2 mt-2 mono text-xs" data-chips>
           {% for hf in hecho.respaldos %}
           <button type="button" aria-expanded="false" aria-controls="cita-{{ hf.pk }}"
                   class="border border-black px-2 py-1.5 min-h-[32px] aria-expanded:bg-black aria-expanded:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">{{ hf.fuente.medio.nombre }}<span aria-hidden="true" class="ml-1">▾</span></button>
           {% endfor %}
         </div>
         {% for hf in hecho.respaldos %}
-        <div id="cita-{{ hf.pk }}" hidden class="mono text-[11px] mt-2 p-2 bg-gray-50 border border-gray-300 max-w-prose">
+        <div id="cita-{{ hf.pk }}" hidden class="mono text-xs mt-2 p-2 bg-gray-50 border border-gray-300 max-w-prose">
           {% if hf.cita %}<p class="italic">«{{ hf.cita }}»</p>{% endif %}
           <p class="mt-1"><a href="{{ hf.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline">{{ hf.fuente.medio.nombre }}: {{ hf.fuente.titulo|truncatechars:90 }}</a></p>
-          {% if hf.fuente.ultimo_snapshot %}<p class="text-gray-600 mt-1">capturado {{ hf.fuente.ultimo_snapshot.capturado_en|date:"d/m/Y H:i" }} · sha256 {{ hf.fuente.ultimo_snapshot.contenido_hash|slice:":12" }}…</p>{% endif %}
+          {% if hf.fuente.ultimo_snapshot %}<p class="text-gray-700 mt-1">capturado {{ hf.fuente.ultimo_snapshot.capturado_en|date:"d/m/Y H:i" }} · sha256 {{ hf.fuente.ultimo_snapshot.contenido_hash|slice:":12" }}…</p>{% endif %}
         </div>
         {% endfor %}
       </li>
-      {% empty %}<li class="mono text-sm text-gray-600">Sin hechos verificados.</li>
+      {% empty %}<li class="mono text-sm text-gray-700">Sin hechos verificados.</li>
       {% endfor %}
     </ol>
   </section>
@@ -72,7 +72,7 @@
     <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué publicó cada medio</h3>
     <ul class="space-y-2 text-sm">
       {% for f in fuentes %}
-      <li><span class="mono text-[11px] text-gray-600">{{ f.publicada_en|date:"d/m H:i" }} · <a class="underline" href="{% url 'archivo:medio' f.medio.slug %}">{{ f.medio.nombre }}</a>{% if f.medio.tipo == 'oficial' %} (oficial){% endif %}{% if f.estado == 'despublicada' %} · despublicada{% endif %}</span><br>
+      <li><span class="mono text-xs text-gray-700">{{ f.publicada_en|date:"d/m H:i" }} · <a class="underline" href="{% url 'archivo:medio' f.medio.slug %}">{{ f.medio.nombre }}</a>{% if f.medio.tipo == 'oficial' %} (oficial){% endif %}{% if f.estado == 'despublicada' %} · despublicada{% endif %}</span><br>
         <a href="{{ f.url }}" rel="nofollow noopener" target="_blank" class="hover:underline">{{ f.titulo }}</a></li>
       {% endfor %}
     </ul>
@@ -87,8 +87,8 @@
   </section>
   {% endif %}
 
-  <p class="mono text-[11px] text-gray-500 border-t border-gray-300 pt-3">
-    // Hechos redactados por memoria.uy a partir de las fuentes citadas, verificados automáticamente. Las notas originales pertenecen a sus medios.
+  <p class="mono text-xs text-gray-600 border-t border-gray-300 pt-3">
+    Hechos redactados por memoria.uy a partir de las fuentes citadas, verificados automáticamente. Las notas originales pertenecen a sus medios.
     ¿Error? <a class="underline" href="https://github.com/raulsperoni/memoria.uy/issues/new?title={{ 'Error en: '|urlencode }}{{ historia.titulo|urlencode }}&body={{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener">avisanos</a>.
   </p>
 </div>

@@ -1,15 +1,15 @@
 {% with r=anterior.r voto=anterior.voto %}
 <div class="border border-gray-400 p-3 mb-5" id="juego-anterior">
-  <p class="mono text-[11px] uppercase tracking-wide text-gray-600 mb-1">Frase {{ anterior.n }} · así va</p>
+  <p class="mono text-xs uppercase tracking-wide text-gray-700 mb-1">Frase {{ anterior.n }} · así va</p>
   <p class="text-sm font-medium leading-snug">«{{ anterior.item.proposicion.texto }}»</p>
   {% if r.pct_acuerdo is not None %}
   <div class="flex justify-between mono text-xs mt-2 mb-1"><span>de acuerdo {{ r.pct_acuerdo|floatformat:0 }} %</span><span>en desacuerdo {{ r.pct_desacuerdo|floatformat:0 }} %</span></div>
   <div class="h-3 border border-black flex" role="img" aria-label="{{ r.pct_acuerdo|floatformat:0 }} % de acuerdo">
     <div class="bg-black h-full" style="width: {{ r.pct_acuerdo|floatformat:0 }}%"></div>
   </div>
-  <p class="mono text-[11px] text-gray-600 mt-1">{{ r.opinan }} {{ r.opinan|pluralize:"opinión,opiniones" }}{% if r.nose %} · {{ r.nose }} no sabe{{ r.nose|pluralize:"n" }}{% endif %}{% if r.provisorio %} · provisorio{% endif %}</p>
+  <p class="mono text-xs text-gray-700 mt-1">{{ r.opinan }} {{ r.opinan|pluralize:"opinión,opiniones" }}{% if r.nose %} · {{ r.nose }} no sabe{{ r.nose|pluralize:"n" }}{% endif %}{% if r.provisorio %} · provisorio{% endif %}</p>
   {% else %}
-  <p class="mono text-xs text-gray-600 mt-2">Todavía no hay otras opiniones.</p>
+  <p class="mono text-xs text-gray-700 mt-2">Todavía no hay otras opiniones.</p>
   {% endif %}
   <p class="mono text-xs mt-2">
     Vos: <strong>{{ voto.get_opinion_display|lower }}</strong> ·

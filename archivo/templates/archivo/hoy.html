@@ -20,11 +20,11 @@
   <p class="mono text-xs border-2 border-black px-4 py-2 mb-6"><strong>¿Qué piensa Uruguay?</strong> El juego del día sale cada mañana a las 05:30.</p>
   {% endif %}
 
-  <h2 class="mono text-2xl font-bold mb-1">Hoy <span class="text-base font-normal text-gray-600">{% now "d/m" %}</span></h2>
-  <p class="mono text-xs text-gray-600 mb-6">// Historias con notas nuevas hoy, ordenadas por cobertura. Cada hecho, con sus fuentes.</p>
+  <h2 class="mono text-2xl font-bold mb-1">Hoy <span class="text-base font-normal text-gray-700">{% now "d/m" %}</span></h2>
+  <p class="text-[13px] text-gray-800 mb-6">Las historias con notas nuevas hoy. Primero las que cubrieron más medios.</p>
   <div class="space-y-4">
     {% for h in hoy %}{% include "archivo/_historia_item.html" %}
-    {% empty %}<p class="mono text-sm text-gray-600">Todavía no hay historias de hoy.</p>{% endfor %}
+    {% empty %}<p class="mono text-sm text-gray-700">Todavía no hay historias de hoy.</p>{% endfor %}
   </div>
 
   {% if cambios %}

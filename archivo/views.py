@@ -132,6 +132,25 @@ class HistoriaView(DetailView):
         return ctx
 
 
+class TemaView(ListView):
+    """Historias de una categoría, de la más nueva a la más vieja."""
+
+    template_name = "archivo/tema.html"
+    context_object_name = "historias"
+    paginate_by = 30
+
+    def get_queryset(self):
+        self.nombre = dict(Historia.CATEGORIAS).get(self.kwargs["categoria"])
+        if not self.nombre:
+            raise Http404
+        return _historias_publicas().filter(categoria=self.kwargs["categoria"]).order_by("-primera_fuente_en")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["tema"] = self.nombre
+        return ctx
+
+
 class EntidadView(DetailView):
     template_name = "archivo/entidad.html"
     context_object_name = "entidad"

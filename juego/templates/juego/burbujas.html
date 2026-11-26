@@ -7,31 +7,21 @@
   {% include "archivo/_nav.html" %}
   <h2 class="mono text-2xl font-bold mb-1">Burbujas</h2>
   {% if not run %}
-    <p class="mono text-sm text-gray-600">// Todavía no hay suficientes votos para dibujar las burbujas. Jugá <a class="underline" href="{% url 'juego:hoy' %}">la de hoy</a> y volvé en unos días.</p>
+    <p class="mono text-sm text-gray-700">Todavía no hay suficientes votos para dibujar las burbujas. Jugá <a class="underline" href="{% url 'juego:hoy' %}">la de hoy</a> y volvé en unos días.</p>
   {% else %}
-  <p class="mono text-xs text-gray-600 mb-6">// {{ run.n_votantes }} personas · {{ run.n_proposiciones }} frases · actualizado {{ run.creada_en|date:"d/m H:i" }}. Agrupamos a quienes votan parecido (PCA + k-means, como <a class="underline" href="https://pol.is" rel="noopener">Polis</a>).</p>
-
-  <figure class="border-2 border-black mb-2">
-    {% localize off %}<svg viewBox="0 0 100 100" class="w-full h-auto block" role="img" aria-label="Mapa de burbujas: cada punto es una persona">
-      {% for x, y, num in puntos %}<circle cx="{{ x }}" cy="{{ y }}" r="1.3" fill="{{ grises|get_item:num }}" opacity="0.75"/>{% endfor %}
-      {% for b, x, y, dist in burbujas %}
-        <circle cx="{{ x }}" cy="{{ y }}" r="4" fill="white" stroke="black" stroke-width="0.6"/>
-        <text x="{{ x }}" y="{{ y }}" font-size="4" text-anchor="middle" dominant-baseline="central" font-family="monospace" font-weight="bold">{{ b.letra }}</text>
-      {% endfor %}
-      {% if yo %}<circle cx="{{ yo.0 }}" cy="{{ yo.1 }}" r="2" fill="none" stroke="black" stroke-width="0.8"/><text x="{{ yo.0 }}" y="{{ yo.4 }}" font-size="3" text-anchor="middle" font-family="monospace">vos</text>{% endif %}
-    </svg>{% endlocalize %}
-  </figure>
-  {% if mi_burbuja %}<p class="mono text-sm mb-8">Estás en la burbuja <strong>{{ mi_burbuja.letra }}{% if mi_burbuja.nombre %} · {{ mi_burbuja.nombre }}{% endif %}</strong>.</p>
-  {% else %}<p class="mono text-xs text-gray-600 mb-8">// Aparecés en el mapa cuando votaste al menos 5 frases. El mapa se recalcula cada noche (02:15).</p>{% endif %}
+  <p class="text-[14px] text-gray-800 mb-1">Juntamos en grupos a la gente que vota parecido en el juego. Hoy hay <strong>{{ burbujas|length }} burbuja{{ burbujas|length|pluralize }}</strong>.</p>
+  <p class="mono text-xs text-gray-700 mb-5">{{ run.n_votantes }} personas · {{ run.n_proposiciones }} frases · actualizado {{ run.creada_en|date:"d/m H:i" }}</p>
+  {% if mi_burbuja %}<p class="border-2 border-black p-3 mono text-[13px] mb-6">Estás en la burbuja <strong>{{ mi_burbuja.letra }}{% if mi_burbuja.nombre %} · {{ mi_burbuja.nombre }}{% endif %}</strong>.</p>
+  {% else %}<p class="border-2 border-black p-3 mono text-[13px] mb-6">Todavía no estás en ninguna. Aparecés cuando votaste al menos 5 frases. <a class="underline" href="{% url 'juego:hoy' %}">Jugar la de hoy →</a></p>{% endif %}
 
   {% if une %}
   <section class="mb-8 border-2 border-black p-4">
     <h3 class="mono font-bold text-sm uppercase tracking-wide mb-1">Lo que nos une</h3>
-    <p class="mono text-[11px] text-gray-600 mb-3">// Frases en las que todas las burbujas coinciden.</p>
+    <p class="text-[13px] text-gray-700 mb-3">Frases en las que todas las burbujas piensan lo mismo.</p>
     <ul class="space-y-3">
       {% for p, pats, fuerza, a_favor in une %}
       <li><p>«{{ p.texto }}»</p>
-        <p class="mono text-[11px] text-gray-600"><strong class="text-black">{% if a_favor %}todas de acuerdo{% else %}todas en desacuerdo{% endif %}</strong> · {% for b, pat in pats.items %}{{ b.letra }}: {% if a_favor %}{{ pat.pct_acuerdo|floatformat:0 }}{% else %}{{ pat.pct_desacuerdo|floatformat:0 }}{% endif %} %{% if not forloop.last %} · {% endif %}{% endfor %} · <a class="underline" href="{% url 'archivo:historia' p.historia.slug %}">contexto</a></p></li>
+        <p class="mono text-xs text-gray-700"><strong class="text-black">{% if a_favor %}todas de acuerdo{% else %}todas en desacuerdo{% endif %}</strong> · {% for b, pat in pats.items %}{{ b.letra }}: {% if a_favor %}{{ pat.pct_acuerdo|floatformat:0 }}{% else %}{{ pat.pct_desacuerdo|floatformat:0 }}{% endif %} %{% if not forloop.last %} · {% endif %}{% endfor %} · <a class="underline" href="{% url 'archivo:historia' p.historia.slug %}">contexto</a></p></li>
       {% endfor %}
     </ul>
   </section>
@@ -39,12 +29,13 @@
 
   {% if divide %}
   <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Lo que nos divide</h3>
+    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-1">Lo que nos divide</h3>
+    <p class="text-[13px] text-gray-700 mb-3">Acá cada burbuja piensa distinto.</p>
     <ul class="space-y-4">
       {% for p, pats, brecha in divide %}
       <li><p>«{{ p.texto }}»</p>
         {% for b, pat in pats.items %}
-        <div class="flex items-center gap-2 mono text-[11px]"><span class="w-4 font-bold">{{ b.letra }}</span>
+        <div class="flex items-center gap-2 mono text-xs"><span class="w-4 font-bold">{{ b.letra }}</span>
           <div class="flex-1 h-2.5 border border-black max-w-xs"><div class="bg-black h-full" style="width: {{ pat.pct_acuerdo|floatformat:0 }}%"></div></div>
           <span>{{ pat.pct_acuerdo|floatformat:0 }} %</span></div>
         {% endfor %}
@@ -59,7 +50,7 @@
     <div class="space-y-5">
       {% for b, x, y, dist in burbujas %}
       <div>
-        <p class="font-bold">{{ b.letra }}{% if b.nombre %} · {{ b.nombre }}{% endif %} <span class="mono text-xs font-normal text-gray-600">{{ b.tamano }} personas</span></p>
+        <p class="font-bold">{{ b.letra }}{% if b.nombre %} · {{ b.nombre }}{% endif %} <span class="mono text-xs font-normal text-gray-700">{{ b.tamano }} personas</span></p>
         {% if b.descripcion %}<p class="text-sm text-gray-700">{{ b.descripcion }}</p>{% endif %}
         <ul class="mono text-xs mt-1 space-y-1">
           {% for p, propio, resto, d in dist %}<li>«{{ p.texto|truncatechars:110 }}» — {{ propio|floatformat:0 }} % de acuerdo (resto: {{ resto|floatformat:0 }} %)</li>{% endfor %}
@@ -68,6 +59,20 @@
       {% endfor %}
     </div>
   </section>
+  <details class="border border-black mb-8">
+    <summary class="mono text-[13px] px-3 py-2 cursor-pointer">ver el mapa · cada punto es una persona{% if yo %}, el círculo con «vos» sos vos{% endif %}</summary>
+  <figure class="border-t border-black">
+    {% localize off %}<svg viewBox="0 0 100 100" class="w-full h-auto block" role="img" aria-label="Mapa de burbujas: cada punto es una persona">
+      {% for x, y, num in puntos %}<circle cx="{{ x }}" cy="{{ y }}" r="1.3" fill="{{ grises|get_item:num }}" opacity="0.75"/>{% endfor %}
+      {% for b, x, y, dist in burbujas %}
+        <circle cx="{{ x }}" cy="{{ y }}" r="4" fill="white" stroke="black" stroke-width="0.6"/>
+        <text x="{{ x }}" y="{{ y }}" font-size="4" text-anchor="middle" dominant-baseline="central" font-family="monospace" font-weight="bold">{{ b.letra }}</text>
+      {% endfor %}
+      {% if yo %}<circle cx="{{ yo.0 }}" cy="{{ yo.1 }}" r="2" fill="none" stroke="black" stroke-width="0.8"/><text x="{{ yo.0 }}" y="{{ yo.4 }}" font-size="3" text-anchor="middle" font-family="monospace">vos</text>{% endif %}
+    </svg>{% endlocalize %}
+  </figure>
+    <p class="text-xs text-gray-700 p-3">Cómo se calcula: reducimos los votos a dos dimensiones (PCA) y agrupamos con k-means, como <a class="underline" href="https://pol.is" rel="noopener">Polis</a>. El mapa se recalcula cada noche (02:15).</p>
+  </details>
   {% endif %}
 </div>
 {% endblock %}
