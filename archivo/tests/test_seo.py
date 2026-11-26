@@ -311,3 +311,24 @@ def test_licencia_en_acerca_y_privacidad(client, db):
     a = client.get("/acerca-de/").content.decode()
     assert 'id="licencia"' in a and "CC BY 4.0" in a and "llms.txt" in a
     assert "Licencia de lo que publicamos" in client.get("/privacidad/").content.decode()
+
+
+def test_jsonld_entidad_con_ficha_de_wikidata(client, historia):  # noqa: F811
+    from django.utils.text import slugify
+
+    from archivo.models import FichaEntidad
+
+    e = Entidad.objects.create(nombre="Ana Pérez", normalized_name="ana perez", tipo="persona")
+    Hecho.objects.filter(historia=historia).first().entidades.add(e)
+    url = reverse("archivo:entidad-slug", args=[e.pk, slugify(e.nombre)])
+    persona = {n["@type"]: n for n in _nodos(client.get(url).content.decode())}["Person"]
+    assert "sameAs" not in persona
+    FichaEntidad.objects.create(
+        entidad=e, qid="Q42", descripcion="Política", wikipedia_url="https://es.wikipedia.org/wiki/Ana", foto_url="https://commons.wikimedia.org/x.jpg"
+    )
+    persona = {n["@type"]: n for n in _nodos(client.get(url).content.decode())}["Person"]
+    assert persona["sameAs"] == ["https://www.wikidata.org/wiki/Q42", "https://es.wikipedia.org/wiki/Ana"]
+    assert persona["image"].endswith("x.jpg") and persona["description"] == "Política"
+    FichaEntidad.objects.filter(entidad=e).update(qid="")
+    persona = {n["@type"]: n for n in _nodos(client.get(url).content.decode())}["Person"]
+    assert "sameAs" not in persona

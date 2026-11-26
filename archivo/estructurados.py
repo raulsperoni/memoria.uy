@@ -145,11 +145,21 @@ def historia(h, hechos, fuentes, entidades):
 
 
 def datos_entidad_extra(entidad) -> dict:
-    """Punto de extensión: campos extra del JSON-LD de la entidad (`sameAs`,
-    `image`, `description`, `birthDate`…). Hoy no hay ninguno; cuando la
-    entidad tenga datos externos (p. ej. Wikidata) se devuelven acá y se
-    suman sin tocar el resto."""
-    return {}
+    """Punto de extensión: campos extra del JSON-LD de la entidad. Hoy sale
+    de la ficha de Wikidata (`FichaEntidad`), solo si tiene QID (la ficha
+    visible es la que se muestra en la página)."""
+    try:
+        f = entidad.ficha
+    except Exception:  # sin ficha (RelatedObjectDoesNotExist)
+        return {}
+    if not f.visible:
+        return {}
+    extra = {"sameAs": [u for u in (f.wikidata_url, f.wikipedia_url) if u]}
+    if f.descripcion:
+        extra["description"] = f.descripcion
+    if f.foto_url:
+        extra["image"] = f.foto_url
+    return extra
 
 
 def entidad(e, historias):
