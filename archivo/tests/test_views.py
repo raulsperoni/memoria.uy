@@ -260,3 +260,22 @@ def test_historias_previas(client, historia):
     assert [h.pk for h in historias_previas(historia)] == [parecida.pk]
     html = client.get(reverse("archivo:historia", args=[historia.slug])).content.decode()
     assert "Esta historia viene de" in html and "antes-parecida" in html
+
+
+def test_calibrar_previas(historia):
+    from datetime import timedelta
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    Historia.objects.create(
+        titulo="La anterior", slug="la-anterior", resumen="r", centroide=list(historia.centroide), n_embeddings=1,
+        procesada_en=timezone.now(), primera_fuente_en=historia.primera_fuente_en - timedelta(days=5),
+    )
+    out = StringIO()
+    call_command("calibrar_previas", stdout=out)
+    texto = out.getvalue()
+    assert "1 con anteriores" in texto and "La anterior" in texto
+    out = StringIO()
+    call_command("calibrar_previas", "--umbral", "0.9", stdout=out)
+    assert "Todos los pares ≥ 0.90" in out.getvalue()

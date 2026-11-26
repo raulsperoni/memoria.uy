@@ -143,6 +143,27 @@ DIAS_PREVIAS = 180
 MAX_CANDIDATAS_PREVIAS = 500
 
 
+def ranking_previas(h):
+    """Todas las historias de los DIAS_PREVIAS anteriores, de la más parecida
+    a la menos: [(similitud, historia)]. Lo usan la página y calibrar_previas."""
+    if not h.centroide:
+        return []
+    candidatas = (
+        _historias_publicas()
+        .filter(
+            primera_fuente_en__gte=h.primera_fuente_en - timedelta(days=DIAS_PREVIAS),
+            primera_fuente_en__lt=h.primera_fuente_en,
+        )
+        .exclude(pk=h.pk)
+        .only("pk", "centroide", "titulo", "slug", "primera_fuente_en")
+        .order_by("-primera_fuente_en")[:MAX_CANDIDATAS_PREVIAS]
+    )
+    return sorted(
+        ((coseno(h.centroide, c.centroide), c) for c in candidatas if c.centroide),
+        key=lambda t: -t[0],
+    )
+
+
 def historias_previas(h, n=3):
     """Hasta n historias anteriores sobre lo mismo, de la más vieja a la más
     nueva. Se cachea por historia (cambia solo si entran notas nuevas)."""
@@ -151,21 +172,7 @@ def historias_previas(h, n=3):
     clave = f"previas:{h.pk}:{h.n_embeddings}"
     ids = cache.get(clave)
     if ids is None:
-        candidatas = (
-            _historias_publicas()
-            .filter(
-                primera_fuente_en__gte=h.primera_fuente_en - timedelta(days=DIAS_PREVIAS),
-                primera_fuente_en__lt=h.primera_fuente_en,
-            )
-            .exclude(pk=h.pk)
-            .only("pk", "centroide")
-            .order_by("-primera_fuente_en")[:MAX_CANDIDATAS_PREVIAS]
-        )
-        ranking = sorted(
-            ((coseno(h.centroide, c.centroide), c.pk) for c in candidatas if c.centroide),
-            reverse=True,
-        )
-        ids = [pk for sim, pk in ranking[:n] if sim >= SIM_PREVIA()]
+        ids = [c.pk for sim, c in ranking_previas(h)[:n] if sim >= SIM_PREVIA()]
         cache.set(clave, ids, 60 * 60 * 6)
     por_id = _historias_publicas().in_bulk(ids)
     return sorted((por_id[i] for i in ids if i in por_id), key=lambda x: x.primera_fuente_en)
