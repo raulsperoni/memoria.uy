@@ -109,6 +109,16 @@ PREGUNTAS = {
             "persona o apunta en la dirección contraria."
         ),
     },
+    "misma_entidad": {
+        "tipo": "noul",
+        "instrucciones": (
+            "Una entidad aparece en noticias uruguayas (nombre, tipo y hechos "
+            "donde aparece). ¿El candidato de Wikidata (etiqueta, descripción, "
+            "cargo, organización) es esa misma persona, organización o lugar? "
+            "Responder no si podría ser un homónimo, si la descripción no "
+            "encaja con los hechos o si hay dudas razonables."
+        ),
+    },
     "divisividad": {
         "tipo": "score",
         "instrucciones": (
