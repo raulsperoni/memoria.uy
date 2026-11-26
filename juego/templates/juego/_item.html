@@ -12,7 +12,7 @@
       <p class="font-bold leading-snug">{{ p.historia.titulo }}</p>
       {% if hechos %}
       <ul class="mt-2 space-y-2 text-[13px] leading-snug list-disc pl-4">
-        {% for h in hechos %}<li>{{ h.texto }}{% if h.disputado %} <span class="mono text-xs border border-black px-1">las fuentes difieren</span>{% endif %}{% if h.medios %} <span class="mono text-xs text-gray-700">{{ h.medios|join:" · " }}</span>{% endif %}</li>{% endfor %}
+        {% for h in hechos %}<li>{{ h.texto }}{% if h.disputado %} <span class="mono text-xs border border-black px-1 whitespace-nowrap">las fuentes difieren</span>{% endif %}{% if h.medios %} <span class="mono text-xs text-gray-700">{{ h.medios|join:" · " }}</span>{% endif %}</li>{% endfor %}
       </ul>
       {% else %}<p class="mt-1">{{ p.historia.resumen }}</p>{% endif %}
       <a class="underline mono text-xs mt-2 inline-block py-1" href="{% url 'archivo:historia' p.historia.slug %}" target="_blank" rel="noopener">todos los hechos y fuentes →</a>

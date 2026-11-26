@@ -5,9 +5,9 @@
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <div class="flex justify-between items-baseline mb-6 mono">
-    {% if anterior %}<a class="text-xs underline py-2" href="{% url 'archivo:dia' y=anterior.year m=anterior.month d=anterior.day %}">← {{ anterior|date:"d/m" }}</a>{% else %}<span></span>{% endif %}
+    {% if anterior %}<a class="text-xs underline py-3 whitespace-nowrap" href="{% url 'archivo:dia' y=anterior.year m=anterior.month d=anterior.day %}">← {{ anterior|date:"d/m" }}</a>{% else %}<span></span>{% endif %}
     <h2 class="text-xl font-bold">{{ dia|date:"l j \d\e F \d\e Y" }}</h2>
-    {% if siguiente %}<a class="text-xs underline py-2" href="{% url 'archivo:dia' y=siguiente.year m=siguiente.month d=siguiente.day %}">{{ siguiente|date:"d/m" }} →</a>{% else %}<span></span>{% endif %}
+    {% if siguiente %}<a class="text-xs underline py-3 whitespace-nowrap" href="{% url 'archivo:dia' y=siguiente.year m=siguiente.month d=siguiente.day %}">{{ siguiente|date:"d/m" }} →</a>{% else %}<span></span>{% endif %}
   </div>
   <div class="space-y-4">
     {% for h in historias %}{% include "archivo/_historia_item.html" %}

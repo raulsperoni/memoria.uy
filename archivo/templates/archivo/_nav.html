@@ -1,9 +1,9 @@
 {% with ns=request.resolver_match.namespace url=request.resolver_match.url_name %}
-{% if not ns == 'juego' or not url == 'hoy' %}
-{# Explicación para la primera visita: se cierra y no vuelve (localStorage). No sale mientras se juega. #}
+{% if ns == 'archivo' %}
+{# Explicación para la primera visita, solo en el archivo: se cierra y no vuelve (localStorage). #}
 <div id="intro" class="border-2 border-black p-3 mb-4 text-[13px] leading-snug flex gap-3 items-start">
   <p class="flex-1">Juntamos las notas de todos los medios uruguayos sobre un mismo hecho y mostramos qué dijo cada uno. Cada mañana sale un juego de 1 minuto: <strong>¿qué piensa Uruguay?</strong> No hace falta cuenta.</p>
-  <button type="button" id="intro-cerrar" class="mono text-xs border border-black px-2 py-1 shrink-0 hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" aria-label="Cerrar explicación">✕</button>
+  <button type="button" id="intro-cerrar" class="mono text-sm border border-black w-11 h-11 -mt-1 -mr-1 flex items-center justify-center shrink-0 hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" aria-label="Cerrar explicación">✕</button>
 </div>
 <script>
   (function () {
@@ -19,14 +19,14 @@
 <nav aria-label="Secciones" class="mono text-[13px] mb-6 border-b border-black pb-3">
   {% with activo="bg-black text-white" normal="hover:bg-black hover:text-white" foco="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black" %}
   <div class="grid grid-cols-2 gap-2">
-    <a href="{% url 'archivo:home' %}" class="px-3 py-2.5 border-2 border-black text-center {{ foco }} {% if ns == 'archivo' and url == 'home' or ns == 'archivo' and url == 'hoy' %}{{ activo }}" aria-current="page{% else %}{{ normal }}{% endif %}">lo que pasó</a>
-    <a href="{% url 'juego:hoy' %}" class="px-3 py-2.5 border-2 border-black text-center {{ foco }} {% if ns == 'juego' and url == 'hoy' or ns == 'juego' and url == 'resultado' %}{{ activo }}" aria-current="page{% else %}{{ normal }}{% endif %}">¿qué piensa uruguay?</a>
+    <a href="{% url 'archivo:home' %}" class="min-h-[44px] px-3 py-2 border-2 border-black flex items-center justify-center text-center {{ foco }} {% if ns == 'archivo' and url == 'home' or ns == 'archivo' and url == 'hoy' %}{{ activo }}" aria-current="page{% else %}{{ normal }}{% endif %}">lo que pasó</a>
+    <a href="{% url 'juego:hoy' %}" class="min-h-[44px] px-3 py-2 border-2 border-black flex items-center justify-center text-center {{ foco }} {% if ns == 'juego' and url == 'hoy' or ns == 'juego' and url == 'resultado' %}{{ activo }}" aria-current="page{% else %}{{ normal }}{% endif %}">¿qué piensa uruguay?</a>
   </div>
   <div class="flex flex-wrap gap-2 mt-2 items-start">
     {% now "Y" as hoy_y %}{% now "n" as hoy_m %}{% now "j" as hoy_d %}
-    <details class="group">
-      <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer px-3 py-2 border border-black {{ foco }} {% if url == 'cambios' or url == 'cambio' or url == 'burbujas' or url == 'dia' %}{{ activo }}{% else %}{{ normal }}{% endif %}">{% if url == 'cambios' or url == 'cambio' %}notas editadas{% elif url == 'burbujas' %}burbujas{% elif url == 'dia' %}por día{% else %}más{% endif %} <span aria-hidden="true" class="inline-block group-open:rotate-180">▾</span></summary>
-      <ul class="mt-2 border border-black divide-y divide-gray-300 bg-white max-w-sm">
+    <details class="group relative" id="menu-mas">
+      <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer h-11 px-3 flex items-center gap-1 border border-black {{ foco }} {% if url == 'cambios' or url == 'cambio' or url == 'burbujas' or url == 'dia' %}{{ activo }}{% else %}{{ normal }}{% endif %}">{% if url == 'cambios' or url == 'cambio' %}notas editadas{% elif url == 'burbujas' %}burbujas{% elif url == 'dia' %}por día{% else %}más{% endif %} <span aria-hidden="true" class="inline-block group-open:rotate-180">▾</span></summary>
+      <ul class="absolute left-0 top-full z-40 mt-1 w-72 max-w-[calc(100vw-2rem)] border-2 border-black divide-y divide-gray-300 bg-white shadow-[4px_4px_0_#000]">
         <li><a href="{% url 'archivo:cambios' %}" class="block p-2 hover:bg-gray-100 {{ foco }}"{% if url == 'cambios' or url == 'cambio' %} aria-current="page"{% endif %}><strong>notas editadas</strong><br><span class="text-gray-700">Notas que los medios cambiaron después de publicarlas.</span></a></li>
         <li><a href="{% url 'juego:burbujas' %}" class="block p-2 hover:bg-gray-100 {{ foco }}"{% if url == 'burbujas' %} aria-current="page"{% endif %}><strong>burbujas</strong><br><span class="text-gray-700">Grupos de gente que vota parecido.</span></a></li>
         <li><a href="{% url 'archivo:dia' y=hoy_y m=hoy_m d=hoy_d %}" class="block p-2 hover:bg-gray-100 {{ foco }}"{% if url == 'dia' %} aria-current="page"{% endif %}><strong>por día</strong><br><span class="text-gray-700">El archivo, día por día.</span></a></li>
@@ -34,9 +34,17 @@
     </details>
     <form action="{% url 'archivo:buscar' %}" method="get" role="search" class="flex-1 min-w-[10rem] flex">
       <input type="search" name="q" value="{{ q|default:'' }}" placeholder="buscar en el archivo…" aria-label="Buscar en el archivo"
-             class="flex-1 min-w-0 border border-black px-3 py-2 mono text-[13px] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-black">
+             class="flex-1 min-w-0 h-11 border border-black px-3 mono text-[13px] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-black">
     </form>
   </div>
   {% endwith %}
 </nav>
+<script>
+  (function () {
+    var m = document.getElementById('menu-mas');
+    if (!m) return;
+    document.addEventListener('click', function (e) { if (m.open && !m.contains(e.target)) m.open = false; });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && m.open) { m.open = false; m.querySelector('summary').focus(); } });
+  })();
+</script>
 {% endwith %}

@@ -26,11 +26,11 @@
     <ol class="space-y-4">
       {% for hecho in historia.hechos.all %}
       <li>
-        <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-xs border border-black px-1 ml-1">las fuentes difieren</span>{% endif %}</p>
+        <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-xs border border-black px-1 ml-1 whitespace-nowrap">las fuentes difieren</span>{% endif %}</p>
         <div class="flex flex-wrap gap-2 mt-2 mono text-xs" data-chips>
           {% for hf in hecho.respaldos %}
           <button type="button" aria-expanded="false" aria-controls="cita-{{ hf.pk }}"
-                  class="border border-black px-2 py-1.5 min-h-[32px] aria-expanded:bg-black aria-expanded:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">{{ hf.fuente.medio.nombre }}<span aria-hidden="true" class="ml-1">▾</span></button>
+                  class="group border border-black px-3 min-h-[44px] aria-expanded:bg-black aria-expanded:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">{{ hf.fuente.medio.nombre }}<span aria-hidden="true" class="ml-1 inline-block group-aria-expanded:rotate-180">▾</span></button>
           {% endfor %}
         </div>
         {% for hf in hecho.respaldos %}
@@ -82,7 +82,7 @@
   <section class="mb-8">
     <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Quiénes aparecen</h3>
     <div class="flex flex-wrap gap-2">
-      {% for e in entidades %}<a href="{% url 'archivo:entidad-slug' e.pk e.nombre|slugify %}" class="mono text-xs border border-black px-3 py-2 hover:bg-black hover:text-white">{{ e.nombre }}</a>{% endfor %}
+      {% for e in entidades %}<a href="{% url 'archivo:entidad-slug' e.pk e.nombre|slugify %}" class="mono text-xs border border-black px-3 min-h-[44px] inline-flex items-center hover:bg-black hover:text-white">{{ e.nombre }}</a>{% endfor %}
     </div>
   </section>
   {% endif %}
