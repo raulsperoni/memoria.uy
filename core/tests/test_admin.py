@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from archivo.models import (
-    Cambio, Decision, Fuente, Hecho, HechoFuente, Historia, Medio, Proposicion,
+    Cambio, Decision, FichaEntidad, Fuente, Hecho, HechoFuente, Historia, Medio, Proposicion,
     Snapshot, Tono, UsoProveedor,
 )
 from core.models import Entidad
@@ -48,6 +48,7 @@ def crear_datos(n=1, sufijo=""):
             diff=[["=", "hola"], ["-", "viejo"], ["+", "nuevo"]],
         )
         ent = Entidad.objects.create(nombre=f"Persona {k}", tipo="persona")
+        FichaEntidad.objects.create(entidad=ent, qid=f"Q{i + 1}", confianza=0.9, cargo="Cargo")
         hecho = Hecho.objects.create(historia=historia, texto=f"Hecho {k}")
         hecho.entidades.add(ent)
         HechoFuente.objects.create(hecho=hecho, fuente=fuente, fiel=0.9)

@@ -10,6 +10,7 @@ from . import pipeline
 from .models import (
     Cambio,
     Decision,
+    FichaEntidad,
     Fuente,
     Hecho,
     HechoFuente,
@@ -531,3 +532,30 @@ class UsoProveedorAdmin(admin.ModelAdmin):
     list_filter = ("proveedor", "operacion")
     date_hierarchy = "fecha"
     ordering = ("-fecha", "proveedor", "operacion")
+
+
+@admin.register(FichaEntidad)
+class FichaEntidadAdmin(admin.ModelAdmin):
+    """Ficha de Wikidata. Para corregir el QID a mano, marcar «fijada»: la tarea no la vuelve a tocar."""
+
+    list_display = ("entidad_link", "qid_link", "confianza_pct", "fijada", "cargo", "organizacion", "consultada_en")
+    list_filter = ("fijada", "entidad__tipo")
+    search_fields = ("entidad__nombre", "qid", "etiqueta", "cargo", "organizacion")
+    list_select_related = ("entidad",)
+    raw_id_fields = ("entidad",)
+    readonly_fields = ("consultada_en",)
+    show_full_result_count = False
+
+    @admin.display(description="entidad", ordering="entidad__nombre")
+    def entidad_link(self, obj):
+        return link_admin(obj.entidad)
+
+    @admin.display(description="QID", ordering="qid")
+    def qid_link(self, obj):
+        if not obj.qid:
+            return badge("sin ficha")
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', obj.wikidata_url, obj.qid)
+
+    @admin.display(description="confianza", ordering="confianza")
+    def confianza_pct(self, obj):
+        return pct(obj.confianza, umbral=0.8)
