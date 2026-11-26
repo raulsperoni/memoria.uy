@@ -137,14 +137,14 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# WhiteNoise configuration for serving static files
-# CompressedStaticFilesStorage works without manifest
+# WhiteNoise: estáticos con hash en el nombre y caché inmutable de un año
+# (el manifest lo arma `collectstatic` en el build del Dockerfile)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        "BACKEND": "core.storage.EstaticosConHash",
     },
 }
 
