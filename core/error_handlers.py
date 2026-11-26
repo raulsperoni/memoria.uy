@@ -40,6 +40,9 @@ def get_github_issue_url(
     return f"{base_url}?{'&'.join(params)}"
 
 
+RETRY_AFTER_SEGUNDOS = 60
+
+
 def ratelimited_error(request, exception):
     """
     Custom 429 error handler for rate limiting.
@@ -55,26 +58,27 @@ def ratelimited_error(request, exception):
         },
     )
 
-    # Check if it's an API request (JSON response expected)
-    if request.path.startswith('/api/') or request.headers.get('Accept') == 'application/json':
-        return JsonResponse(
+    # El límite es por minuto (ver juego/views.py): se reintenta a los 60 s.
+    espera = RETRY_AFTER_SEGUNDOS
+    accept = request.headers.get("Accept", "")
+    if request.path.startswith("/api/") or "application/json" in accept:
+        respuesta = JsonResponse(
             {
                 "error": "Rate limit exceeded",
-                "message": "Demasiadas solicitudes. Por favor intenta más tarde.",
-                "retry_after": "1 hour"
+                "message": "Demasiadas solicitudes. Probá de nuevo en un minuto.",
+                "retry_after": espera,
             },
-            status=429
+            status=429,
         )
-    
-    # HTML response for web requests
-    return render(
-        request,
-        "429.html",
-        {
-            "message": "Has excedido el límite de solicitudes. Por favor intenta más tarde."
-        },
-        status=429
-    )
+    else:
+        respuesta = render(
+            request,
+            "429.html",
+            {"message": "Hiciste demasiadas solicitudes seguidas. Esperá un minuto y probá de nuevo."},
+            status=429,
+        )
+    respuesta["Retry-After"] = str(espera)
+    return respuesta
 
 
 def server_error(request, *args, **kwargs):
