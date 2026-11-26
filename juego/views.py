@@ -86,13 +86,13 @@ class HoyView(View):
         jornada = logica.jornada_de_hoy()
         if not jornada:
             return render(request, "juego/sin_jornada.html")
-        ctx = _ctx_paso(votante(request), jornada)
+        ctx = _ctx_paso(votante(request, crear=False), jornada)
         if ctx is None:
             return redirect("juego:resultado")
         return render(request, "juego/hoy.html", ctx)
 
 
-@method_decorator(ratelimit(key="ip", rate="60/m", method="POST", block=True), name="post")
+@method_decorator(ratelimit(key="core.ratelimit.clave", rate="60/m", method="POST", block=True), name="post")
 class VotarItemView(View):
     """POST de un ítem de la jornada: opinión + predicción, o «no sé» sin
     predicción (pasa la frase; no suma puntaje)."""
@@ -134,7 +134,7 @@ class ResultadoView(View):
         jornada = logica.jornada_de_hoy()
         if not jornada:
             return render(request, "juego/sin_jornada.html")
-        voter = votante(request)
+        voter = votante(request, crear=False)
         if not logica.completa(voter, jornada):
             return redirect("juego:hoy")
         filas, aciertos = logica.puntaje(voter, jornada)
@@ -154,7 +154,7 @@ class ResultadoView(View):
         )
 
 
-@method_decorator(ratelimit(key="ip", rate="60/m", method="POST", block=True), name="post")
+@method_decorator(ratelimit(key="core.ratelimit.clave", rate="60/m", method="POST", block=True), name="post")
 class VotarProposicionView(View):
     """Voto desde la página de una historia (sin predicción; no suma puntaje)."""
 
@@ -165,7 +165,7 @@ class VotarProposicionView(View):
             return HttpResponseBadRequest("opinión inválida")
         voto, _ = _guardar_voto(votante(request), prop, opinion)
         if not request.headers.get("HX-Request"):
-            return redirect("archivo:historia", slug=prop.historia.slug)
+            return redirect("archivo:opinar", slug=prop.historia.slug)
         from .burbujas import patrones_por_proposicion, ultimo_run
 
         run = ultimo_run()
@@ -190,7 +190,7 @@ class BurbujasView(View):
             x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
             sx = lambda x: 5 + 90 * (x - x0) / ((x1 - x0) or 1)  # noqa: E731
             sy = lambda y: 5 + 90 * (y - y0) / ((y1 - y0) or 1)  # noqa: E731
-            voter = votante(request)
+            voter = votante(request, crear=False)
             yo = None
             puntos = []
             for x, y, num, sk, uid in miembros:

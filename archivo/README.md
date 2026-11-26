@@ -69,7 +69,7 @@ línea.
 
 ## Páginas
 
-`/archivo/` hoy · `/archivo/AAAA/M/D/` día · `/h/<slug>/` historia ·
+`/` hoy (`/archivo/` redirige) · `/archivo/AAAA/M/D/` día · `/h/<slug>/` historia ·
 `/e/<id>/<slug>/` entidad · `/cambios/` notas editadas · `/medios/<slug>/` ·
 `/buscar/?q=`
 
@@ -80,3 +80,13 @@ poetry run pytest archivo
 ```
 
 Todos los proveedores tienen versión `Fake` (ver `archivo/tests/test_pipeline.py`).
+
+## Para máquinas
+
+`/llms.txt`, `/feed.xml` y `/cambios/feed.xml` (Atom), `/h/<slug>.md` y
+`.json`, `/datos/*.csv` y `hechos.jsonl`, JSON-LD en cada página
+(`archivo/estructurados.py`). Licencia CC BY 4.0 para lo que produce
+memoria.uy; nunca el cuerpo de las notas
+([0015](../docs/decisiones/0015-politica-de-ia-y-licencia.md)).
+La votación de una historia vive en `/h/<slug>/opinar/` (HTMX) para que la
+página no dependa de la sesión y se pueda cachear.

@@ -32,7 +32,7 @@ def test_paginas_publicas(client, historia):
     hoy = timezone.localdate()
     cambio = Cambio.objects.first()
     urls = [
-        reverse("archivo:hoy"),
+        reverse("archivo:home"),
         reverse("archivo:historia", args=[historia.slug]),
         reverse("archivo:cambios"),
         reverse("archivo:cambios") + "?sentido=1&medio=a",

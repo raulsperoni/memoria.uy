@@ -8,6 +8,12 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# URL pública canónica (JSON-LD, feeds, .md/.json, llms.txt)
+SITE_URL = "https://memoria.uy"
+# Licencia de lo que produce memoria.uy (docs/decisiones/0015-politica-de-ia-y-licencia.md)
+LICENCIA_URL = "https://creativecommons.org/licenses/by/4.0/"
+LICENCIA_NOMBRE = "CC BY 4.0"
+
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-key")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", str(DEBUG)) == "True"
@@ -21,6 +27,17 @@ railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
 if railway_domain:
     allowed_hosts.append(railway_domain)
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts if host.strip()]
+
+# Detrás del proxy de Railway: `X-Forwarded-Proto` siempre indica https
+# (docs.railway.com/networking/public-networking/specs-and-limits). Sin esto
+# Django cree que el request es http (sitemap con http://, cookies sin Secure).
+# Solo en producción: en el dev local el header no existe y no hay https.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Un mes; subirlo cuando se confirme que nada necesita http.
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", str(30 * 24 * 3600)))
 
 # CSRF trusted origins - split by comma to support multiple domains
 csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "https://memoria.uy").split(",")
@@ -51,6 +68,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Antes de la sesión: ve el Set-Cookie que ella agrega a la respuesta
+    "core.middleware.CachePublicoMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -118,14 +137,14 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# WhiteNoise configuration for serving static files
-# CompressedStaticFilesStorage works without manifest
+# WhiteNoise: estáticos con hash en el nombre y caché inmutable de un año
+# (el manifest lo arma `collectstatic` en el build del Dockerfile)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        "BACKEND": "core.storage.EstaticosConHash",
     },
 }
 
@@ -207,6 +226,8 @@ else:
 # Rate limiting configuration
 RATELIMIT_ENABLE = os.getenv("RATELIMIT_ENABLE", "True") == "True"
 RATELIMIT_USE_CACHE = "default"
+# Railway pone la IP del cliente en X-Real-IP; solo se confía en producción (core/ratelimit.py)
+RATELIMIT_CONFIAR_X_REAL_IP = not DEBUG
 RATELIMIT_VIEW = "core.error_handlers.ratelimited_error"
 
 

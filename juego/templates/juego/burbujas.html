@@ -5,7 +5,7 @@
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
-  <h2 class="mono text-2xl font-bold mb-1">Burbujas</h2>
+  <h1 class="mono text-2xl font-bold mb-1">Burbujas</h1>
   {% if not run %}
     <p class="mono text-sm text-gray-700">Todavía no hay suficientes votos para dibujar las burbujas. Jugá <a class="underline" href="{% url 'juego:hoy' %}">la de hoy</a> y volvé en unos días.</p>
   {% else %}
@@ -16,7 +16,7 @@
 
   {% if une %}
   <section class="mb-8 border-2 border-black p-4">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-1">Lo que nos une</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide mb-1">Lo que nos une</h2>
     <p class="text-[13px] text-gray-700 mb-3">Frases en las que todas las burbujas piensan lo mismo.</p>
     <ul class="space-y-3">
       {% for p, pats, fuerza, a_favor in une %}
@@ -29,7 +29,7 @@
 
   {% if divide %}
   <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-1">Lo que nos divide</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-1">Lo que nos divide</h2>
     <p class="text-[13px] text-gray-700 mb-3">Acá cada burbuja piensa distinto.</p>
     <ul class="space-y-4">
       {% for p, pats, brecha in divide %}
@@ -46,7 +46,7 @@
   {% endif %}
 
   <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cada burbuja</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cada burbuja</h2>
     <div class="space-y-5">
       {% for b, x, y, dist in burbujas %}
       <div>

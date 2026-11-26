@@ -6,7 +6,7 @@
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
 
-  <h2 class="mono text-2xl font-bold mb-1">Política de privacidad</h2>
+  <h1 class="mono text-2xl font-bold mb-1">Política de privacidad</h1>
   <p class="mono text-xs text-gray-700 mb-8">Última actualización: 23 de noviembre de 2026</p>
 
   <div class="space-y-8 text-[15px] leading-relaxed">
@@ -16,7 +16,7 @@
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué guardamos</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué guardamos</h2>
       <ul class="space-y-3 pl-4 list-disc">
         <li><strong>Un identificador anónimo.</strong> La primera vez que votás, generamos un código al azar y lo guardamos en tu sesión del navegador (una cookie). Sirve para que no votes dos veces la misma frase y para calcular tu puntaje y tu racha. No contiene tu nombre ni tu email. Si borrás las cookies, perdés ese identificador.</li>
         <li><strong>Tus votos.</strong> Para cada frase: si estás de acuerdo, en desacuerdo o no sabés, y en el juego, tu predicción. Quedan asociados al identificador anónimo, o a tu cuenta si iniciaste sesión.</li>
@@ -27,17 +27,22 @@
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué publicamos</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué publicamos</h2>
       <p>Solo resultados agregados: porcentajes por frase, por burbuja y los <a class="underline" href="{% url 'archivo:datos' %}">datos abiertos</a> en CSV. <strong>Nunca publicamos votos individuales.</strong></p>
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Las noticias</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Licencia de lo que publicamos</h2>
+      <p>Los resultados agregados y los datos abiertos tienen licencia <a class="underline" href="https://creativecommons.org/licenses/by/4.0/" rel="license">CC BY 4.0</a>. Los textos de los medios no entran en ella. Más en <a class="underline" href="{% url 'acerca_de' %}#licencia">Acerca de</a>.</p>
+    </section>
+
+    <section>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Las noticias</h2>
       <p>Para armar el archivo guardamos copias de notas públicas de medios uruguayos. Esas copias son privadas y sirven como evidencia de lo que se publicó. El texto de las notas se procesa con modelos de lenguaje. A esos servicios les mandamos texto de noticias, nunca datos tuyos.</p>
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Con quién se comparte</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Con quién se comparte</h2>
       <p class="mb-3">No vendemos datos ni los compartimos con anunciantes. Usamos estos proveedores:</p>
       <ul class="space-y-2 pl-4 list-disc">
         <li><strong>Railway</strong>: servidores y base de datos, donde están los votos y las cuentas.</li>
@@ -45,12 +50,11 @@
         <li><strong>OpenRouter</strong> y los modelos que ofrece: procesamiento del texto de las noticias.</li>
         <li><strong>Resend</strong>: envío de emails de la cuenta (confirmación, contraseña).</li>
         <li><strong>Umami</strong>: estadísticas de visitas.</li>
-        <li><strong>Google Fonts, unpkg y jsDelivr</strong>: tipografías y librerías que carga tu navegador. Esos servicios ven tu IP al pedirlas.</li>
       </ul>
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cuánto tiempo</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cuánto tiempo</h2>
       <ul class="space-y-2 pl-4 list-disc">
         <li>La sesión del navegador vence a las dos semanas sin uso.</li>
         <li>Los votos se guardan mientras exista el proyecto, porque con ellos se calculan los resultados y las burbujas.</li>
@@ -59,18 +63,18 @@
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Tus derechos</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Tus derechos</h2>
       <p class="mb-3">Podés pedir ver, corregir o borrar los datos de tu cuenta y sus votos. Los votos anónimos no los podemos asociar a vos, salvo que todavía tengas la sesión en el navegador: en ese caso, iniciá sesión o escribinos desde ese navegador.</p>
       <p>Para cualquier pedido, abrí un issue en <a class="underline break-all" href="https://github.com/raulsperoni/memoria.uy/issues" target="_blank" rel="noopener">github.com/raulsperoni/memoria.uy/issues</a>.</p>
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Código abierto</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Código abierto</h2>
       <p>Todo el código es público, así que se puede revisar qué hace con los datos: <a class="underline break-all" href="https://github.com/raulsperoni/memoria.uy" target="_blank" rel="noopener">github.com/raulsperoni/memoria.uy</a>.</p>
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios</h2>
       <p>Si esta política cambia, actualizamos la fecha de arriba.</p>
     </section>
   </div>

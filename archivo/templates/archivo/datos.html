@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Datos abiertos · memoria.uy{% endblock %}
 {% block meta_description %}Descargá el archivo de memoria.uy: historias, hechos con fuentes, proposiciones con resultados agregados, burbujas y notas editadas.{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
-  <h2 class="mono text-2xl font-bold mb-1">Datos abiertos</h2>
-  <p class="mono text-xs text-gray-700 mb-6">CSV en UTF-8, se actualizan cada hora. Usalos libremente citando a memoria.uy. Nunca publicamos votos individuales: solo totales.</p>
+  <h1 class="mono text-2xl font-bold mb-1">Datos abiertos</h1>
+  <p class="mono text-xs text-gray-700 mb-6">CSV en UTF-8, se actualizan cada hora. Licencia <a class="underline" href="https://creativecommons.org/licenses/by/4.0/" rel="license">CC BY 4.0</a>: usalos libremente, también con IA, citando a memoria.uy. Nunca publicamos votos individuales: solo totales.</p>
   <ul class="space-y-4">
     {% for nombre, def in exports.items %}
     <li class="border-2 border-black p-4">
@@ -13,7 +14,11 @@
       <p class="mono text-xs text-gray-700 mt-1">columnas: {{ def.0|join:", " }}</p>
     </li>
     {% endfor %}
+    <li class="border-2 border-black p-4">
+      <a href="{% url 'archivo:export-jsonl' 'hechos' %}" class="font-bold underline mono">hechos.jsonl</a>
+      <p class="mono text-xs text-gray-700 mt-1">un hecho por línea, con sus fuentes (medio, enlace, cita, captura, sha256).</p>
+    </li>
   </ul>
-  <p class="mono text-xs text-gray-600 mt-6">Los hechos son redacción de memoria.uy a partir de las notas citadas; los textos originales pertenecen a sus medios. Código: <a class="underline" href="https://github.com/raulsperoni/memoria.uy">github.com/raulsperoni/memoria.uy</a>.</p>
+  <p class="mono text-xs text-gray-600 mt-6">Los hechos y resúmenes son redacción de memoria.uy a partir de las notas citadas. Los títulos y las citas de las notas, y los textos originales, pertenecen a sus medios y no entran en la licencia. Código: <a class="underline" href="https://github.com/raulsperoni/memoria.uy">github.com/raulsperoni/memoria.uy</a>.</p>
 </div>
 {% endblock %}

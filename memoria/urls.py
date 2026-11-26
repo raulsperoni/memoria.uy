@@ -24,7 +24,7 @@ from django.views.generic import RedirectView
 
 from core.sitemaps import CambioSitemap, EntidadSitemap, HistoriaSitemap, StaticViewSitemap
 from core.views import AcercaDeView, PrivacidadView
-from memoria.views import favicon, health_check, manifest, offline, robots_txt, service_worker
+from memoria.views import favicon, health_check, manifest, llms_txt, offline, robots_txt, service_worker
 
 sitemaps = {
     "static": StaticViewSitemap,
@@ -49,6 +49,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("favicon.ico", favicon, name="favicon"),
     path("robots.txt", robots_txt, name="robots_txt"),
+    path("llms.txt", llms_txt, name="llms_txt"),
     path("manifest.webmanifest", manifest, name="manifest"),
     path("offline/", offline, name="offline"),
     path("sw.js", service_worker, name="service_worker"),

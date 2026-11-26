@@ -6,13 +6,13 @@
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
 
-  <h2 class="mono text-2xl font-bold mb-1">Acerca de memoria.uy</h2>
+  <h1 class="mono text-2xl font-bold mb-1">Acerca de memoria.uy</h1>
   <p class="mono text-xs text-gray-700 mb-8">Lo que pasó en Uruguay, con fuentes. Y lo que pensamos.</p>
 
   <div class="space-y-8 text-[15px] leading-relaxed">
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué es</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué es</h2>
       <p class="mb-3">memoria.uy es dos cosas que se alimentan entre sí:</p>
       <ul class="space-y-2 pl-4 list-disc">
         <li><strong>Un archivo</strong> de las noticias uruguayas. Junta las notas de varios medios sobre un mismo hecho y las convierte en una <em>historia</em>: un resumen y una lista de hechos, cada uno con los medios que lo respaldan.</li>
@@ -22,7 +22,7 @@
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo se arma el archivo</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo se arma el archivo</h2>
       <ol class="space-y-3 pl-4 list-decimal">
         <li><strong>Descubrir.</strong> Leemos los feeds y sitemaps de medios uruguayos y fuentes oficiales.</li>
         <li><strong>Filtrar.</strong> Un modelo decide si cada nota es de interés público para Uruguay (política, economía, justicia, salud, educación…). Deportes, espectáculos y crímenes sin dimensión política quedan afuera.</li>
@@ -34,13 +34,13 @@
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">El juego y las burbujas</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">El juego y las burbujas</h2>
       <p class="mb-3">Cada mañana a las 05:30 salen las frases del día, de historias distintas. Votás sin cuenta. Tu voto no cuenta para evaluar tu propia predicción, y el puntaje final se calcula con el resultado al cierre del día.</p>
       <p>Con los votos de varias semanas armamos las <a class="underline" href="{% url 'juego:burbujas' %}">burbujas</a>: grupos de personas que votan parecido, al estilo de <a class="underline" href="https://pol.is" rel="noopener" target="_blank">Polis</a>. Mostramos en qué coinciden todas y en qué se separan.</p>
     </section>
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Principios</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Principios</h2>
       <ul class="space-y-2 pl-4 list-disc">
         <li><strong>Fuente primaria.</strong> Cada hecho dice de dónde sale, con un link a la nota original.</li>
         <li><strong>Agregador, no copia.</strong> Lo público son hechos redactados por memoria.uy, citas breves y links. Las notas pertenecen a sus medios.</li>
@@ -49,8 +49,17 @@
       </ul>
     </section>
 
+    <section id="licencia">
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Licencia y uso con IA</h2>
+      <ul class="space-y-2 pl-4 list-disc">
+        <li>Lo que produce memoria.uy (hechos, proposiciones, resúmenes, datos agregados y CSV) tiene licencia <a class="underline" href="https://creativecommons.org/licenses/by/4.0/" rel="license">CC BY 4.0</a>: se puede reutilizar citando a memoria.uy y enlazando la historia.</li>
+        <li>Los textos de los medios no se republican ni se relicencian. Acá solo hay títulos, enlaces y citas breves, y siguen siendo de sus medios.</li>
+        <li>Los crawlers y agentes de IA pueden leer, indexar y citar todo lo público. Lo que necesitan está en <a class="underline" href="{% url 'llms_txt' %}">llms.txt</a>, los <a class="underline" href="{% url 'archivo:feed' %}">feeds</a> y el Markdown y JSON de cada historia.</li>
+      </ul>
+    </section>
+
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Límites</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Límites</h2>
       <ul class="space-y-2 pl-4 list-disc text-gray-800">
         <li>La verificación es automática. Detecta datos inventados, pero se le pueden escapar errores sutiles, como un número mal contado.</li>
         <li>No todos los medios publican feeds o dejan leer sus sitemaps, así que la cobertura de algunos es parcial.</li>
@@ -60,7 +69,7 @@
 
     {% if decisiones %}
     <section id="decisiones">
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo llegamos acá</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cómo llegamos acá</h2>
       <p class="mb-4 text-gray-700">Las decisiones que dieron forma al sitio, de la más nueva a la más vieja. Cada una enlaza al registro completo y a los cambios en el código.</p>
       <ol class="border-l-2 border-black ml-1">
         {% for d in decisiones %}
@@ -80,7 +89,7 @@
     {% endif %}
 
     <section>
-      <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Errores, ideas, código</h3>
+      <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Errores, ideas, código</h2>
       <p class="mb-3">Si encontrás un error en un hecho o en el sitio, o tenés una idea, abrí un issue en GitHub. El código está en el mismo lugar.</p>
       <div class="flex flex-wrap gap-2 mono text-sm">
         <a href="https://github.com/raulsperoni/memoria.uy/issues/new" target="_blank" rel="noopener" class="border-2 border-black px-4 py-2 hover:bg-black hover:text-white">avisar un error →</a>

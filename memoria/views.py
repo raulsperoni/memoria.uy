@@ -20,20 +20,51 @@ def favicon(request):
     )
 
 
+BOTS_IA = [
+    "GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot",
+    "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended",
+    "CCBot", "cohere-ai", "Meta-ExternalAgent", "Amazonbot", "DuckAssistBot", "MistralAI-User",
+]
+# Lo que no debe indexarse: resultados de búsqueda, votos y páginas personales, admin.
+NO_INDEXAR = [
+    "/admin/",
+    "/accounts/",
+    "/buscar/",
+    "/hoy/resultado/",
+    "/hoy/votar/",
+    "/p/",
+    "/h/*/opinar/",
+]
+
+
 def robots_txt(request):
-    """Generate robots.txt file for search engine crawlers."""
+    """robots.txt: se puede leer todo lo público, también con IA (el objetivo
+    es que nos citen). Ver docs/decisiones/0015-politica-de-ia-y-licencia.md."""
+    reglas = ["Allow: /"] + [f"Disallow: {p}" for p in NO_INDEXAR]
     lines = [
-        "User-agent: *",
-        "Allow: /",
+        "# memoria.uy: archivo abierto de noticias uruguayas, con fuentes.",
+        "# Política de IA: los crawlers y agentes de IA pueden leer, indexar y citar todo lo público.",
+        "# Hechos, resúmenes y datos: CC BY 4.0 (citar a memoria.uy). Detalle en https://memoria.uy/llms.txt",
         "",
-        "# Sitemaps",
+        "User-agent: *",
+        "Content-Signal: search=yes, ai-input=yes, ai-train=yes",
+        *reglas,
+        "",
+        "# Crawlers de IA, declarados a propósito (un grupo propio ignora el de *, por eso se repiten las reglas)",
+        *[f"User-agent: {b}" for b in BOTS_IA],
+        *reglas,
+        "",
         "Sitemap: https://memoria.uy/sitemap.xml",
         "",
-        "Disallow: /admin/",
-        "Disallow: /accounts/",
-        "Disallow: /hoy/resultado/",
     ]
-    return HttpResponse("\n".join(lines), content_type="text/plain")
+    return HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
+
+
+def llms_txt(request):
+    """llms.txt: qué es el sitio, dónde están los datos y bajo qué licencia."""
+    from django.shortcuts import render
+
+    return render(request, "llms.txt", content_type="text/plain; charset=utf-8")
 
 
 def manifest(request):
@@ -43,6 +74,7 @@ def manifest(request):
 
     return JsonResponse(
         {
+            "id": "/",
             "name": "memoria.uy",
             "short_name": "memoria.uy",
             "description": "Lo que pasó en Uruguay, con fuentes. Y lo que pensamos.",
@@ -50,11 +82,23 @@ def manifest(request):
             "scope": "/",
             "display": "standalone",
             "background_color": "#ffffff",
-            "theme_color": "#000000",
+            "theme_color": "#ffffff",  # igual que <meta name="theme-color">
             "lang": "es-UY",
+            "dir": "ltr",
+            "categories": ["news"],
             "icons": [
-                {"src": static("core/icons/icon-256.png"), "sizes": "256x256", "type": "image/png"},
-                {"src": static("core/icons/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+                # "any" a sangre; "maskable" aparte, con la marca dentro de la zona segura
+                {"src": static("core/icons/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                {"src": static("core/icons/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                {"src": static("core/icons/icon-maskable-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+            ],
+            "screenshots": [
+                {"src": static("core/screenshots/inicio-ancha.webp"), "sizes": "1280x720", "type": "image/webp", "form_factor": "wide", "label": "Lo que pasó hoy, agrupado por hecho y con fuentes"},
+                {"src": static("core/screenshots/inicio-angosta.webp"), "sizes": "540x960", "type": "image/webp", "form_factor": "narrow", "label": "Lo que pasó hoy, en el celular"},
+            ],
+            "shortcuts": [
+                {"name": "¿Qué piensa Uruguay?", "short_name": "Jugar", "url": "/hoy/?pwa=1", "description": "El juego de hoy: 1 minuto"},
+                {"name": "Notas editadas", "short_name": "Editadas", "url": "/cambios/?pwa=1"},
             ],
         },
         content_type="application/manifest+json",
@@ -64,10 +108,12 @@ def manifest(request):
 
 SERVICE_WORKER = """
 // memoria.uy — service worker mínimo: red primero; sin red, la copia guardada o una página offline.
-const CACHE = 'memoria-v2';
+const CACHE = 'memoria-v3';
 const OFFLINE = '/offline/';
 // Páginas que dependen de la sesión o del día: nunca se guardan.
 const NO_GUARDAR = ['/accounts/', '/admin/', '/hoy/', '/p/', '/perfil', '/profile'];
+// La página de voto de una historia (/h/<slug>/opinar/) también es personal.
+const esPersonal = path => NO_GUARDAR.some(p => path.startsWith(p)) || path.endsWith('/opinar/');
 self.addEventListener('install', e => e.waitUntil(
   caches.open(CACHE).then(c => c.add(OFFLINE)).then(() => self.skipWaiting())
 ));
@@ -79,7 +125,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
-  if (NO_GUARDAR.some(p => url.pathname.startsWith(p))) return;
+  if (esPersonal(url.pathname)) return;
   const navegacion = req.mode === 'navigate';
   e.respondWith(
     fetch(req).then(res => {

@@ -137,7 +137,8 @@ def test_voto_desde_archivo(client, props):
     r = client.post(reverse("juego:votar-proposicion", args=[p.pk]), {"opinion": "desacuerdo"}, HTTP_HX_REQUEST="true")
     assert r.status_code == 200
     assert VotoProposicion.objects.get().jornada is None
-    r = client.get(reverse("archivo:historia", args=[p.historia.slug]))
+    # La página de la historia no depende de la sesión; el voto se pide aparte.
+    r = client.get(reverse("archivo:opinar", args=[p.historia.slug]), HTTP_HX_REQUEST="true")
     assert "vos: en desacuerdo" in r.content.decode()
 
 

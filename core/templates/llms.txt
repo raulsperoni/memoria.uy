@@ -1,0 +1,36 @@
+# memoria.uy
+
+> Archivo abierto de las noticias uruguayas, agrupadas por hecho y con fuentes. Cada historia junta las notas de varios medios; cada hecho lleva la cita y el enlace de la nota que lo respalda, la fecha de captura y el hash del contenido. También detecta las notas que un medio cambió o despublicó después de publicarlas, y tiene un juego diario («¿Qué piensa Uruguay?») con burbujas de opinión. Sin fines de lucro.
+
+Los agentes y crawlers de IA pueden leer, indexar y citar todo lo público. Pedimos que citen a memoria.uy y enlacen la historia.
+
+## Leer
+
+- [Lo que pasó hoy](https://memoria.uy/): historias de las últimas 48 horas
+- [Notas editadas](https://memoria.uy/cambios/): notas que un medio cambió o despublicó
+- [Archivo por día](https://memoria.uy/archivo/2026/1/1/): `/archivo/AAAA/M/D/`
+- [Temas](https://memoria.uy/tema/politica/): `/tema/<categoria>/`
+- [Buscar](https://memoria.uy/buscar/?q=): búsqueda de texto en el archivo (no indexable)
+- [Sitemap](https://memoria.uy/sitemap.xml)
+
+## Formatos para máquinas
+
+- [Feed Atom de historias nuevas](https://memoria.uy/feed.xml)
+- [Feed Atom de notas editadas](https://memoria.uy/cambios/feed.xml)
+- Cada historia, `/h/<slug>/`, también en Markdown (`/h/<slug>.md`) y JSON (`/h/<slug>.json`): título, resumen, hechos con sus fuentes (medio, enlace, cita, fecha de captura, sha256) y entidades. Cada hecho tiene un ancla propia: `/h/<slug>/#hecho-<id>`.
+- [Datos abiertos](https://memoria.uy/datos/): CSV de historias, hechos (con cita, captura y hash), proposiciones, burbujas y cambios. Nunca incluye votos individuales.
+- Las páginas llevan datos estructurados schema.org (JSON-LD): `NewsArticle` con cada hecho como `Claim`, `Person`/`Organization`, `Dataset`, `BreadcrumbList`.
+
+## Licencia y uso
+
+- Lo que produce memoria.uy (hechos, proposiciones, resúmenes, datos agregados y CSV) va con [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): se puede reutilizar, también para entrenar o alimentar modelos, citando a memoria.uy y enlazando la historia.
+- Los textos de los medios no se republican ni se relicencian. Acá solo hay títulos, enlaces a la nota original y citas breves, que siguen siendo de sus medios y no entran en la licencia.
+- No hay API de escritura. El voto del juego es para personas; no lo automatices (contamina las burbujas).
+- Sin límite en las lecturas. Los votos tienen límite por minuto y responden 429 con `Retry-After`.
+- Errores o ideas: https://github.com/raulsperoni/memoria.uy/issues
+
+## Más
+
+- [Acerca de](https://memoria.uy/acerca-de/): cómo se arma el archivo y las decisiones que lo explican
+- [Privacidad](https://memoria.uy/privacidad/)
+- [Código](https://github.com/raulsperoni/memoria.uy)

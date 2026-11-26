@@ -6,73 +6,72 @@
 {% block og_type %}article{% endblock %}
 {% block og_image %}https://memoria.uy{% url 'archivo:og-historia' historia.slug %}{% endblock %}
 {% block twitter_image %}https://memoria.uy{% url 'archivo:og-historia' historia.slug %}{% endblock %}
+{% block alternates %}
+<link rel="alternate" type="text/markdown" title="Markdown" href="{% url 'archivo:historia-md' historia.slug %}">
+<link rel="alternate" type="application/json" title="JSON" href="{% url 'archivo:historia-json' historia.slug %}">
+{% endblock %}
 {% block extra_head %}
 <script type="application/ld+json">{{ jsonld|safe }}</script>
 {% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto py-2">
+<article class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
 
   <div class="mono text-xs text-gray-700 mb-2 flex flex-wrap gap-x-3">
-    <a class="underline" href="{% url 'archivo:dia' y=historia.primera_fuente_en.year m=historia.primera_fuente_en.month d=historia.primera_fuente_en.day %}">{{ historia.primera_fuente_en|date:"d/m/Y" }}</a>
+    <a class="underline" href="{% url 'archivo:dia' y=historia.primera_fuente_en.year m=historia.primera_fuente_en.month d=historia.primera_fuente_en.day %}"><time datetime="{{ historia.primera_fuente_en|date:'c' }}">{{ historia.primera_fuente_en|date:"d/m/Y" }}</time></a>
     {% if historia.categoria %}<a class="underline" href="{% url 'archivo:tema' historia.categoria %}">{{ historia.get_categoria_display }}</a>{% endif %}
     <span>{{ historia.n_medios }} medio{{ historia.n_medios|pluralize }}</span>
+    {% if historia.procesada_en %}<span>actualizada <time datetime="{{ historia.procesada_en|date:'c' }}">{{ historia.procesada_en|date:"d/m/Y H:i" }}</time></span>{% endif %}
   </div>
-  <h2 class="text-2xl md:text-3xl font-bold leading-tight mb-3">{{ historia.titulo }}</h2>
+  <h1 class="text-2xl md:text-3xl font-bold leading-tight mb-3">{{ historia.titulo }}</h1>
   <p class="text-base text-gray-800 mb-6">{{ historia.resumen }}</p>
 
-  <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Hechos</h3>
+  <section class="mb-8" aria-labelledby="hechos">
+    <h2 id="hechos" class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Hechos</h2>
     <ol class="space-y-4">
-      {% for hecho in historia.hechos.all %}
-      <li>
+      {% for hecho in hechos %}
+      <li id="hecho-{{ hecho.pk }}" class="scroll-mt-28">
         <p class="font-medium">{{ hecho.texto }}{% if hecho.disputado %} <span class="mono text-xs border border-black px-1 ml-1 whitespace-nowrap">las fuentes difieren</span>{% endif %}</p>
-        <div class="flex flex-wrap gap-2 mt-2 mono text-xs" data-chips>
+        <div class="flex flex-wrap gap-2 mt-2 mono text-xs">
           {% for hf in hecho.respaldos %}
-          <button type="button" aria-expanded="false" aria-controls="cita-{{ hf.pk }}"
-                  class="group border border-black px-3 min-h-[44px] aria-expanded:bg-black aria-expanded:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">{{ hf.fuente.medio.nombre }}<span aria-hidden="true" class="ml-1 inline-block group-aria-expanded:rotate-180">▾</span></button>
+          <details name="hecho-{{ hecho.pk }}" class="group open:w-full">
+            <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer border border-black px-3 min-h-[44px] inline-flex items-center group-open:bg-black group-open:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">{{ hf.fuente.medio.nombre }}<span aria-hidden="true" class="ml-1 inline-block group-open:rotate-180">▾</span></summary>
+            <div class="mono text-xs mt-2 p-2 bg-gray-50 border border-gray-300 max-w-prose">
+              {% if hf.cita %}<blockquote cite="{{ hf.fuente.url }}" class="italic">«{{ hf.cita }}»</blockquote>{% endif %}
+              <p class="mt-1"><cite><a href="{{ hf.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline">{{ hf.fuente.medio.nombre }}: {{ hf.fuente.titulo|truncatechars:90 }}</a></cite></p>
+              {% if hf.fuente.ultimo_snapshot %}<p class="text-gray-700 mt-1">capturado <time datetime="{{ hf.fuente.ultimo_snapshot.capturado_en|date:'c' }}">{{ hf.fuente.ultimo_snapshot.capturado_en|date:"d/m/Y H:i" }}</time> · sha256 {{ hf.fuente.ultimo_snapshot.contenido_hash|slice:":12" }}…</p>{% endif %}
+            </div>
+          </details>
           {% endfor %}
         </div>
-        {% for hf in hecho.respaldos %}
-        <div id="cita-{{ hf.pk }}" hidden class="mono text-xs mt-2 p-2 bg-gray-50 border border-gray-300 max-w-prose">
-          {% if hf.cita %}<p class="italic">«{{ hf.cita }}»</p>{% endif %}
-          <p class="mt-1"><a href="{{ hf.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline">{{ hf.fuente.medio.nombre }}: {{ hf.fuente.titulo|truncatechars:90 }}</a></p>
-          {% if hf.fuente.ultimo_snapshot %}<p class="text-gray-700 mt-1">capturado {{ hf.fuente.ultimo_snapshot.capturado_en|date:"d/m/Y H:i" }} · sha256 {{ hf.fuente.ultimo_snapshot.contenido_hash|slice:":12" }}…</p>{% endif %}
-        </div>
-        {% endfor %}
       </li>
       {% empty %}<li class="mono text-sm text-gray-700">Sin hechos verificados.</li>
       {% endfor %}
     </ol>
   </section>
 
-  {% if props_votos %}
+  {% if proposiciones %}
   <section id="opinar" class="mb-8 border-2 border-black p-4 scroll-mt-28">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">¿Qué pensás?</h3>
-    <ul class="space-y-4">
-      {% for p, voto, r, pats in props_votos %}
-      <li>
-        <p class="text-base">«{{ p.texto }}»</p>
-        {% if voto %}{% include "juego/_voto_archivo.html" %}
-        {% else %}{% include "juego/_votar_archivo.html" %}{% endif %}
-      </li>
-      {% endfor %}
-    </ul>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide mb-2">¿Qué pensás?</h2>
+    <div hx-get="{% url 'archivo:opinar' historia.slug %}" hx-trigger="load" hx-swap="outerHTML">
+      <ul class="space-y-4">{% for p in proposiciones %}<li><p class="text-base">«{{ p.texto }}»</p></li>{% endfor %}</ul>
+      <p class="mono text-xs mt-3"><a class="underline" href="{% url 'archivo:opinar' historia.slug %}">opinar →</a></p>
+    </div>
   </section>
   {% endif %}
 
   {% if cambios %}
   <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios detectados</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios detectados</h2>
     <ul class="space-y-2">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
   </section>
   {% endif %}
 
   <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué publicó cada medio</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Qué publicó cada medio</h2>
     <ul class="space-y-2 text-sm">
       {% for f in fuentes %}
-      <li><span class="mono text-xs text-gray-700">{{ f.publicada_en|date:"d/m H:i" }} · <a class="underline" href="{% url 'archivo:medio' f.medio.slug %}">{{ f.medio.nombre }}</a>{% if f.medio.tipo == 'oficial' %} (oficial){% endif %}{% if f.estado == 'despublicada' %} · despublicada{% endif %}</span><br>
+      <li><span class="mono text-xs text-gray-700"><time datetime="{{ f.publicada_en|date:'c' }}">{{ f.publicada_en|date:"d/m H:i" }}</time> · <a class="underline" href="{% url 'archivo:medio' f.medio.slug %}">{{ f.medio.nombre }}</a>{% if f.medio.tipo == 'oficial' %} (oficial){% endif %}{% if f.estado == 'despublicada' %} · despublicada{% endif %}</span><br>
         <a href="{{ f.url }}" rel="nofollow noopener" target="_blank" class="hover:underline">{{ f.titulo }}</a></li>
       {% endfor %}
     </ul>
@@ -80,7 +79,7 @@
 
   {% if entidades %}
   <section class="mb-8">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Quiénes aparecen</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Quiénes aparecen</h2>
     <div class="flex flex-wrap gap-2">
       {% for e in entidades %}<a href="{% url 'archivo:entidad-slug' e.pk e.nombre|slugify %}" class="mono text-xs border border-black px-3 min-h-[44px] inline-flex items-center hover:bg-black hover:text-white">{{ e.nombre }}</a>{% endfor %}
     </div>
@@ -91,24 +90,6 @@
     Hechos redactados por memoria.uy a partir de las fuentes citadas, verificados automáticamente. Las notas originales pertenecen a sus medios.
     ¿Error? <a class="underline" href="https://github.com/raulsperoni/memoria.uy/issues/new?title={{ 'Error en: '|urlencode }}{{ historia.titulo|urlencode }}&body={{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener">avisanos</a>.
   </p>
-</div>
-<script>
-  // Un panel de cita abierto por hecho; los chips no se mueven.
-  document.querySelectorAll('[data-chips]').forEach(function (fila) {
-    var botones = fila.querySelectorAll('button[aria-controls]');
-    botones.forEach(function (b) {
-      b.addEventListener('click', function () {
-        var abrir = b.getAttribute('aria-expanded') !== 'true';
-        botones.forEach(function (o) {
-          o.setAttribute('aria-expanded', 'false');
-          document.getElementById(o.getAttribute('aria-controls')).hidden = true;
-        });
-        if (abrir) {
-          b.setAttribute('aria-expanded', 'true');
-          document.getElementById(b.getAttribute('aria-controls')).hidden = false;
-        }
-      });
-    });
-  });
-</script>
+  <p class="mono text-xs text-gray-600 mt-2">Hechos y resúmenes de memoria.uy con licencia <a class="underline" href="https://creativecommons.org/licenses/by/4.0/" rel="license">CC BY 4.0</a>: citá a memoria.uy y enlazá esta historia. Los títulos y citas de las notas son de sus medios. También en <a class="underline" href="{% url 'archivo:historia-md' historia.slug %}">Markdown</a> y <a class="underline" href="{% url 'archivo:historia-json' historia.slug %}">JSON</a>.</p>
+</article>
 {% endblock %}

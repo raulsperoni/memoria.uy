@@ -4,7 +4,11 @@ from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
 
-class StaticViewSitemap(Sitemap):
+class _Https(Sitemap):
+    protocol = "https"  # no depender de que el proxy avise el esquema
+
+
+class StaticViewSitemap(_Https):
     """Sitemap for static pages."""
 
     priority = 0.5
@@ -19,7 +23,7 @@ class StaticViewSitemap(Sitemap):
         return reverse(item)
 
 
-class HistoriaSitemap(Sitemap):
+class HistoriaSitemap(_Https):
     changefreq = "weekly"
     priority = 0.9
     limit = 5000
@@ -39,7 +43,7 @@ class HistoriaSitemap(Sitemap):
         return reverse("archivo:historia", args=[obj.slug])
 
 
-class CambioSitemap(Sitemap):
+class CambioSitemap(_Https):
     changefreq = "monthly"
     priority = 0.6
 
@@ -55,7 +59,7 @@ class CambioSitemap(Sitemap):
         return reverse("archivo:cambio", args=[obj.pk])
 
 
-class EntidadSitemap(Sitemap):
+class EntidadSitemap(_Https):
     changefreq = "daily"
     priority = 0.7
 

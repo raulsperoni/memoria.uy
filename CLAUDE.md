@@ -74,6 +74,13 @@ sesión (`juego/votante.py`; no se usa `session_key` porque Django la rota al
 hacer login). Al iniciar sesión los votos anónimos pasan a la cuenta
 (`juego/signals.py`).
 
+### Cookies y caché
+Un GET no crea sesión ni cookies: `votante(request, crear=False)` en lecturas;
+el id anónimo nace al votar. `core/middleware.py` marca el HTML público anónimo
+con `Cache-Control` corto; lo personal (`/hoy/`, `/burbujas/`, `/h/<slug>/opinar/`)
+queda fuera. Detrás de Railway, `SECURE_PROXY_SSL_HEADER`, cookies Secure y HSTS
+solo con `DEBUG=False`.
+
 ### URL normalization
 
 Ver `normalize_url()` en [core/utils.py](core/utils.py): quita parámetros de

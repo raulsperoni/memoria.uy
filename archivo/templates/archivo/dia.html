@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{{ dia|date:"j \d\e F \d\e Y" }} · archivo · memoria.uy{% endblock %}
 {% block meta_description %}Qué pasó en Uruguay el {{ dia|date:"j \d\e F \d\e Y" }}, según los medios, con fuentes.{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <div class="flex justify-between items-baseline mb-6 mono">
     {% if anterior %}<a class="text-xs underline py-3 whitespace-nowrap" href="{% url 'archivo:dia' y=anterior.year m=anterior.month d=anterior.day %}">← {{ anterior|date:"d/m" }}</a>{% else %}<span></span>{% endif %}
-    <h2 class="text-xl font-bold">{{ dia|date:"l j \d\e F \d\e Y" }}</h2>
+    <h1 class="text-xl font-bold">{{ dia|date:"l j \d\e F \d\e Y" }}</h1>
     {% if siguiente %}<a class="text-xs underline py-3 whitespace-nowrap" href="{% url 'archivo:dia' y=siguiente.year m=siguiente.month d=siguiente.day %}">{{ siguiente|date:"d/m" }} →</a>{% else %}<span></span>{% endif %}
   </div>
   <div class="space-y-4">

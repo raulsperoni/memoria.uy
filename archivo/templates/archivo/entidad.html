@@ -6,12 +6,13 @@
 {% block og_image %}https://memoria.uy{% url 'archivo:og-entidad' entidad.pk %}{% endblock %}
 {% block twitter_title %}{{ entidad.nombre }} en las noticias uruguayas{% endblock %}
 {% block twitter_image %}https://memoria.uy{% url 'archivo:og-entidad' entidad.pk %}{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <p class="mono text-xs text-gray-700">{{ entidad.get_tipo_display }}</p>
   <div class="flex items-start justify-between gap-3 mb-6">
-    <h2 class="text-3xl font-bold">{{ entidad.nombre }}</h2>
+    <h1 class="text-3xl font-bold">{{ entidad.nombre }}</h1>
     <button type="button" id="compartir" data-titulo="{{ entidad.nombre }} en memoria.uy" class="mono text-xs font-bold border-2 border-black px-3 min-h-[44px] whitespace-nowrap hover:bg-black hover:text-white">compartir</button>
   </div>
 
@@ -19,10 +20,10 @@
 
   {% if proposiciones %}
   <section class="mb-8 border-2 border-black p-4">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide mb-2">Frases para opinar</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide mb-2">Frases para opinar</h2>
     <ul class="space-y-2">{% for p in proposiciones %}<li>«{{ p.texto }}» <a class="mono text-xs underline whitespace-nowrap inline-block py-1" href="{% url 'archivo:historia' p.historia.slug %}#opinar">opiná en la historia →</a></li>{% endfor %}</ul>
     {% if props_burbujas %}
-    <h4 class="mono font-bold text-xs uppercase tracking-wide mt-4 mb-1">Cómo lo ve cada burbuja</h4>
+    <h3 class="mono font-bold text-xs uppercase tracking-wide mt-4 mb-1">Cómo lo ve cada burbuja</h3>
     <ul class="mono text-xs space-y-1">{% for p, pats in props_burbujas %}<li>«{{ p.texto|truncatechars:80 }}»: {% for b, pat in pats.items %}{{ b.letra }} {{ pat.pct_acuerdo|floatformat:0 }} %{% if not forloop.last %} · {% endif %}{% endfor %}</li>{% endfor %}</ul>
     {% endif %}
   </section>
@@ -30,7 +31,7 @@
 
   {% if tonos_medios %}
   <section class="mb-8" id="tono">
-    <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-2">Cómo queda en cada medio</h3>
+    <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-2">Cómo queda en cada medio</h2>
     <p class="text-xs text-gray-700 mb-3">Promedio de cómo queda en las notas de cada medio, de −2 (muy mal) a +2 (muy bien). Cuenta lo que la nota cuenta, no solo cómo lo cuenta: una mala noticia baja aunque la nota sea neutral. Lo calcula un modelo y lo verifica otro; cada nota trae la cita que lo justifica.</p>
     <ul class="space-y-3">
       {% for m in tonos_medios %}
@@ -63,7 +64,7 @@
   </section>
   {% endif %}
 
-  <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Línea de tiempo</h3>
+  <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Línea de tiempo</h2>
   <ol class="relative border-l-2 border-black ml-2 space-y-5">
     {% for h in historias %}
     <li class="ml-4">

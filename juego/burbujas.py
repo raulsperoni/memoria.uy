@@ -187,7 +187,12 @@ def burbuja_de(voter, run=None):
     run = run or ultimo_run()
     if not run:
         return None
-    filtro = {"usuario": voter["usuario"]} if voter.get("usuario") else {"session_key": voter["session_key"]}
+    if voter.get("usuario"):
+        filtro = {"usuario": voter["usuario"]}
+    elif voter.get("session_key"):
+        filtro = {"session_key": voter["session_key"]}
+    else:
+        return None
     m = BurbujaMiembro.objects.filter(run=run, **filtro).select_related("burbuja").first()
     return m.burbuja if m else None
 
