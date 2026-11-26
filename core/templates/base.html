@@ -1,7 +1,7 @@
 {% load static tailwind_tags %}
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-UY">
 <head>
   <meta charset="utf-8">
   <title>{% block title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}</title>
@@ -9,7 +9,13 @@
   <meta name="description" content="{% block meta_description %}Las noticias uruguayas agrupadas por hecho, con lo que dijo cada medio y las notas que cambiaron. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}">
 
   <!-- Canonical URL -->
-  <link rel="canonical" href="{% block canonical_url %}https://memoria.uy{{ request.path }}{% endblock %}">
+  {% block canonical_tag %}<link rel="canonical" href="{% block canonical_url %}https://memoria.uy{{ request.path }}{% endblock %}">{% endblock %}
+  {% block robots %}{% endblock %}
+
+  <!-- Formatos para agentes y lectores de feeds -->
+  <link rel="alternate" type="application/atom+xml" title="memoria.uy · historias nuevas" href="{% url 'archivo:feed' %}">
+  <link rel="alternate" type="application/atom+xml" title="memoria.uy · notas editadas" href="{% url 'archivo:feed-cambios' %}">
+  {% block alternates %}{% endblock %}
 
   <!-- Open Graph Meta Tags -->
   <meta property="og:site_name" content="memoria.uy">
@@ -39,7 +45,7 @@
   <meta name="color-scheme" content="light">
   <link rel="apple-touch-icon" href="{% static 'core/icons/icon-256.png' %}">
   {% tailwind_css %}
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script defer src="{% static 'core/htmx.min.js' %}"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,11 +151,11 @@
             <img src="{% static 'core/logo.svg' %}" alt="memoria.uy" class="h-8 w-8 md:h-10 md:w-10">
           </a>
           <div>
-            <h1 class="text-xl md:text-2xl font-bold mono tracking-tight">
+            <p class="text-xl md:text-2xl font-bold mono tracking-tight">
               <a href="{% url 'archivo:home' %}" class="hover:bg-black hover:text-white px-2 py-1 transition-colors">
                 <span class="cursor">memoria.uy</span>
               </a>
-            </h1>
+            </p>
             <p class="text-xs mt-0.5 sm:mt-1 text-gray-700 mono px-2">
               Lo que pasó en Uruguay, con fuentes.
             </p>
@@ -213,13 +219,15 @@
             > memoria.uy — lo que pasó en Uruguay, con fuentes. y lo que pensamos.
           </p>
           <p class="text-gray-700 mt-1">
-            // anónimo por defecto. código abierto. uruguay 2026.
+            // anónimo por defecto. código abierto. datos con licencia CC BY 4.0. uruguay 2026.
           </p>
         </div>
         <div class="flex flex-wrap gap-x-4 text-gray-700">
           <a href="{% url 'acerca_de' %}" class="py-2 hover:text-black hover:underline">acerca</a>
           <a href="{% url 'privacidad' %}" class="py-2 hover:text-black hover:underline">privacidad</a>
           <a href="{% url 'archivo:datos' %}" class="py-2 hover:text-black hover:underline">datos</a>
+          <a href="{% url 'archivo:feed' %}" class="py-2 hover:text-black hover:underline">feed</a>
+          <a href="{% url 'llms_txt' %}" class="py-2 hover:text-black hover:underline">para agentes</a>
           <a href="https://github.com/raulsperoni/memoria.uy" target="_blank" rel="noopener" class="py-2 hover:text-black hover:underline">código</a>
         </div>
       </div>

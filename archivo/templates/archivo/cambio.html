@@ -3,11 +3,12 @@
 {% block meta_description %}{{ cambio.resumen }}{% endblock %}
 {% block og_image %}https://memoria.uy{% url 'archivo:og-cambio' cambio.pk %}{% endblock %}
 {% block twitter_image %}https://memoria.uy{% url 'archivo:og-cambio' cambio.pk %}{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   <p class="mono text-xs text-gray-700">{{ cambio.fuente.medio.nombre }} · detectado {{ cambio.detectado_en|date:"d/m/Y H:i" }}</p>
-  <h2 class="text-2xl font-bold mb-2">{{ cambio.get_tipo_display }}</h2>
+  <h1 class="text-2xl font-bold mb-2">{{ cambio.get_tipo_display }}</h1>
   {% if cambio.cambia_sentido >= 0.5 %}<p class="mono text-xs bg-black text-white inline-block px-2 py-1 mb-3">el cambio altera el sentido de la nota</p>{% endif %}
   <p class="mb-4"><a href="{{ cambio.fuente.url }}" rel="nofollow noopener" target="_blank" class="underline break-all">{{ cambio.fuente.url|truncatechars:80 }}</a>
   {% if cambio.fuente.historia.slug %} · <a class="underline" href="{% url 'archivo:historia' cambio.fuente.historia.slug %}">ver historia</a>{% endif %}</p>
@@ -17,10 +18,10 @@
   {% else %}
     <p class="mono text-xs bg-gray-900 text-white px-2 py-1 mb-3"><del>tachado</del>: lo que se sacó · <ins class="underline decoration-2">subrayado</ins>: lo que se agregó</p>
     {% if cambio.titulo_antes != cambio.titulo_despues %}
-    <h3 class="text-xl font-bold mb-4 leading-snug">
+    <h2 class="text-xl font-bold mb-4 leading-snug">
       <del class="bg-red-100 text-red-900">{{ cambio.titulo_antes }}</del><br>
       <ins class="bg-green-100 text-green-900 underline decoration-2 underline-offset-4">{{ cambio.titulo_despues }}</ins>
-    </h3>
+    </h2>
     {% endif %}
     {% if cambio.tipo == "cuerpo" %}
     <div class="leading-relaxed text-[15px]">

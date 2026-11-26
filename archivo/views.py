@@ -1,20 +1,22 @@
 """Páginas públicas del archivo."""
 
-import json
-
 from datetime import date, datetime, time, timedelta
 
 from django.contrib.postgres.search import SearchQuery, SearchVector  # noqa: F401
 from django.db import connection
 from django.db.models import Count, Prefetch, Q
-from django.http import Http404
-from django.shortcuts import redirect
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.text import slugify
+from django.views import View
+from django.views.decorators.cache import never_cache
 from django.views.generic import DetailView, ListView, TemplateView
 
 from core.models import Entidad
 
+from . import estructurados, formatos
 from .models import Cambio, HechoFuente, Hecho, Historia, Medio, Proposicion
 from .pipeline import historias_top
 
@@ -53,13 +55,45 @@ class HoyView(TemplateView):
 
         jornada = jornada_de_hoy()
         ctx["jornada"] = jornada
-        ctx["jornada_completa"] = bool(jornada and completa(votante(self.request), jornada))
+        ctx["jornada_completa"] = bool(jornada and completa(votante(self.request, crear=False), jornada))
         ctx["cambios"] = (
             Cambio.objects.select_related("fuente__medio")
             .filter(Q(cambia_sentido__gte=0.5) | Q(tipo="despublicada"))
             .order_by("-detectado_en")[:5]
         )
+        ctx["jsonld"] = estructurados.jsonld(estructurados.sitio())
         return ctx
+
+
+def _queryset_historia():
+    hechos = Hecho.objects.filter(oculto=False).prefetch_related(
+        Prefetch(
+            "hechofuente_set",
+            queryset=HechoFuente.objects.select_related("fuente__medio", "fuente__ultimo_snapshot"),
+        ),
+        "entidades",
+    )
+    return _historias_publicas().prefetch_related(
+        Prefetch("hechos", queryset=hechos),
+        Prefetch("proposiciones", queryset=Proposicion.objects.filter(estado="publicada").order_by("pk")),
+    )
+
+
+def _partes_historia(h):
+    """Hechos (con un respaldo por medio), notas, entidades y frases de una
+    historia; lo comparten la página, el .md y el .json."""
+    fuentes = list(h.fuentes.select_related("medio").order_by("publicada_en"))
+    hechos = list(h.hechos.all())
+    for hecho in hechos:
+        # Un chip por medio en cada hecho (si dos notas del mismo medio lo respaldan)
+        vistos, unicos = set(), []
+        for hf in hecho.hechofuente_set.all():
+            if hf.fuente.medio_id not in vistos:
+                vistos.add(hf.fuente.medio_id)
+                unicos.append(hf)
+        hecho.respaldos = unicos
+    entidades = list(Entidad.objects.filter(hechos__historia=h).distinct().order_by("nombre"))
+    return hechos, fuentes, entidades, list(h.proposiciones.all())
 
 
 class HistoriaView(DetailView):
@@ -67,34 +101,50 @@ class HistoriaView(DetailView):
     context_object_name = "historia"
 
     def get_queryset(self):
-        hechos = Hecho.objects.filter(oculto=False).prefetch_related(
-            Prefetch(
-                "hechofuente_set",
-                queryset=HechoFuente.objects.select_related("fuente__medio", "fuente__ultimo_snapshot"),
-            ),
-            "entidades",
-        )
-        return _historias_publicas().prefetch_related(
-            Prefetch("hechos", queryset=hechos),
-            Prefetch("proposiciones", queryset=Proposicion.objects.filter(estado="publicada").order_by("pk")),
-        )
+        return _queryset_historia()
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         h = self.object
-        ctx["fuentes"] = h.fuentes.select_related("medio").order_by("publicada_en")
-        # Un chip por medio en cada hecho (si dos notas del mismo medio lo respaldan)
-        for hecho in h.hechos.all():
-            vistos, unicos = set(), []
-            for hf in hecho.hechofuente_set.all():
-                if hf.fuente.medio_id not in vistos:
-                    vistos.add(hf.fuente.medio_id)
-                    unicos.append(hf)
-            hecho.respaldos = unicos
+        hechos, fuentes, entidades, props = _partes_historia(h)
+        ctx["hechos"] = hechos
+        ctx["fuentes"] = fuentes
+        ctx["entidades"] = entidades
+        ctx["proposiciones"] = props
         ctx["cambios"] = Cambio.objects.filter(fuente__historia=h).select_related("fuente__medio")
-        ctx["entidades"] = (
-            Entidad.objects.filter(hechos__historia=h).distinct().order_by("nombre")
-        )
+        ctx["jsonld"] = estructurados.jsonld(estructurados.historia(h, hechos, fuentes, entidades))
+        return ctx
+
+
+def _historia_o_404(slug):
+    h = _queryset_historia().filter(slug=slug).first()
+    if not h:
+        raise Http404
+    return h
+
+
+def historia_json(request, slug):
+    h = _historia_o_404(slug)
+    d = formatos.historia_dict(h, *_partes_historia(h))
+    return JsonResponse(d, json_dumps_params={"ensure_ascii": False, "indent": 2}, content_type="application/json; charset=utf-8")
+
+
+def historia_md(request, slug):
+    h = _historia_o_404(slug)
+    d = formatos.historia_dict(h, *_partes_historia(h))
+    return HttpResponse(formatos.historia_markdown(d), content_type="text/markdown; charset=utf-8")
+
+
+class OpinarView(View):
+    """«¿Qué pensás?» de una historia. Es lo único de la historia que depende
+    de quién mira (sus votos, el token CSRF), así que vive aparte y la página
+    se puede cachear: la historia lo pide con HTMX al cargar. Sin JS, el enlace
+    «opinar» lleva acá, a una página entera."""
+
+    @method_decorator(never_cache)
+    def get(self, request, slug):
+        h = _historia_o_404(slug)
+        from juego.burbujas import patrones_por_proposicion, ultimo_run
         from juego.logica import filtro_votante, resultado
         from juego.models import VotoProposicion
         from juego.votante import votante
@@ -102,34 +152,19 @@ class HistoriaView(DetailView):
         props = list(h.proposiciones.all())
         mis_votos = {
             v.proposicion_id: v
-            for v in VotoProposicion.objects.filter(filtro_votante(votante(self.request)), proposicion__in=props)
+            for v in VotoProposicion.objects.filter(
+                filtro_votante(votante(request, crear=False)), proposicion__in=props
+            )
         }
-        from juego.burbujas import patrones_por_proposicion, ultimo_run
-
         run = ultimo_run()
         pats = patrones_por_proposicion(run) if run else {}
-        ctx["props_votos"] = [(p, mis_votos.get(p.pk), resultado(p), pats.get(p.pk, {})) for p in props]
-        ctx["jsonld"] = json.dumps(
-            {
-                "@context": "https://schema.org",
-                "@type": "CreativeWork",
-                "name": h.titulo,
-                "abstract": h.resumen,
-                "dateCreated": h.primera_fuente_en.isoformat(),
-                "inLanguage": "es-UY",
-                "citation": [
-                    {
-                        "@type": "NewsArticle",
-                        "url": f.url,
-                        "headline": f.titulo,
-                        "publisher": {"@type": "Organization", "name": f.medio.nombre},
-                    }
-                    for f in ctx["fuentes"]
-                ],
-            },
-            ensure_ascii=False,
-        ).replace("</", "<\\/")
-        return ctx
+        ctx = {
+            "historia": h,
+            "props_votos": [(p, mis_votos.get(p.pk), resultado(p), pats.get(p.pk, {})) for p in props],
+        }
+        if request.headers.get("HX-Request"):
+            return render(request, "archivo/_opinar.html", ctx)
+        return render(request, "archivo/opinar.html", ctx)
 
 
 class TemaView(ListView):
@@ -148,6 +183,9 @@ class TemaView(ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["tema"] = self.nombre
+        ctx["jsonld"] = estructurados.jsonld(
+            estructurados.pagina_con_migas(("Inicio", "/"), (self.nombre, None))
+        )
         return ctx
 
 
@@ -179,6 +217,7 @@ class EntidadView(DetailView):
             .order_by("-primera_fuente_en")[:100]
         )
         ctx["historias"] = historias
+        ctx["jsonld"] = estructurados.jsonld(estructurados.entidad(ent, list(historias)))
         if ent.tipo == "persona":
             from .tonos import resumen_por_medio
 
@@ -216,6 +255,11 @@ class CambioView(DetailView):
     template_name = "archivo/cambio.html"
     context_object_name = "cambio"
     queryset = Cambio.objects.select_related("fuente__medio", "fuente__historia", "antes", "despues")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["jsonld"] = estructurados.jsonld(estructurados.cambio(self.object))
+        return ctx
 
 
 class MedioView(DetailView):
@@ -262,6 +306,9 @@ class DiaView(TemplateView):
             _historias_publicas()
             .filter(primera_fuente_en__gte=desde, primera_fuente_en__lt=hasta)
             .order_by("-n_medios", "-primera_fuente_en")
+        )
+        ctx["jsonld"] = estructurados.jsonld(
+            estructurados.pagina_con_migas(("Inicio", "/"), (f"{d:%d/%m/%Y}", None))
         )
         return ctx
 

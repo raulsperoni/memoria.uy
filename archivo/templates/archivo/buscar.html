@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{% if q %}«{{ q }}» · {% endif %}buscar · archivo · memoria.uy{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,follow">{% endblock %}
+{% block canonical_tag %}<link rel="canonical" href="https://memoria.uy/buscar/">{% endblock %}
+{% block meta_description %}Buscá en el archivo de memoria.uy: personas, organizaciones y temas de las noticias uruguayas.{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
   {% if q %}
-    <h2 class="mono text-2xl font-bold mb-1">«{{ q }}»</h2>
+    <h1 class="mono text-2xl font-bold mb-1">«{{ q }}»</h1>
     <p class="mono text-xs text-gray-700 mb-4">{% with n=paginator.count|default:0 %}{{ n }} historia{{ n|pluralize }}{% endwith %}</p>
     {% if entidades %}
     <div class="mb-6">
@@ -20,6 +23,7 @@
     </div>
     {% include "archivo/_paginacion.html" %}
   {% else %}
+    <h1 class="mono text-2xl font-bold mb-2">Buscar</h1>
     <p class="mono text-sm text-gray-700">Buscá personas, organizaciones o temas.</p>
   {% endif %}
 </div>

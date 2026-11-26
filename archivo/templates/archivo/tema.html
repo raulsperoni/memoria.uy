@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ tema }} · archivo · memoria.uy{% endblock %}
 {% block meta_description %}Historias de {{ tema|lower }} en Uruguay, con lo que dijo cada medio y sus fuentes.{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
-  <h2 class="mono text-2xl font-bold mb-1">{{ tema }}</h2>
+  <h1 class="mono text-2xl font-bold mb-1">{{ tema }}</h1>
   <p class="text-[13px] text-gray-800 mb-6">Todas las historias del tema, de la más nueva a la más vieja.</p>
   <div class="space-y-4">
     {% for h in historias %}{% include "archivo/_historia_item.html" %}

@@ -3,13 +3,13 @@
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
-  <h2 class="text-3xl font-bold">{{ medio.nombre }}</h2>
+  <h1 class="text-3xl font-bold">{{ medio.nombre }}</h1>
   <p class="mono text-xs text-gray-700 mb-6">{{ medio.dominio }} · {{ n_fuentes }} notas archivadas · {{ n_cambios }} cambio{{ n_cambios|pluralize }} detectado{{ n_cambios|pluralize }}</p>
   {% if cambios %}
-  <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios recientes</h3>
+  <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Cambios recientes</h2>
   <ul class="space-y-2 mb-8">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
   {% endif %}
-  <h3 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Últimas notas</h3>
+  <h2 class="mono font-bold text-sm uppercase tracking-wide border-b-2 border-black pb-1 mb-3">Últimas notas</h2>
   <ul class="space-y-2 text-sm">
     {% for f in fuentes %}<li><span class="mono text-xs text-gray-700">{{ f.publicada_en|date:"d/m H:i" }}</span> <a href="{% url 'archivo:historia' f.historia.slug %}" class="hover:underline">{{ f.titulo }}</a></li>{% endfor %}
   </ul>

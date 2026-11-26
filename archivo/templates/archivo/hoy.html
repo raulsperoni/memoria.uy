@@ -7,6 +7,7 @@
 {% block og_description %}Las noticias uruguayas del día, agrupadas por hecho, con lo que dijo cada medio. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}
 {% block twitter_title %}memoria.uy · Lo que pasó en Uruguay, con fuentes{% endblock %}
 {% block twitter_description %}Las noticias uruguayas del día, agrupadas por hecho, con lo que dijo cada medio. Y un juego diario: ¿qué piensa Uruguay?{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-2">
   {% include "archivo/_nav.html" %}
@@ -20,16 +21,16 @@
   <p class="mono text-xs border-2 border-black px-4 py-2 mb-6"><strong>¿Qué piensa Uruguay?</strong> El juego del día sale cada mañana a las 05:30.</p>
   {% endif %}
 
-  <h2 class="mono text-2xl font-bold mb-1">Hoy <span class="text-base font-normal text-gray-700">{% now "d/m" %}</span></h2>
+  <h1 class="mono text-2xl font-bold mb-1">Hoy<span class="sr-only"> en Uruguay, con fuentes</span> <span class="text-base font-normal text-gray-700">{% now "d/m" %}</span></h1>
   <p class="text-[13px] text-gray-800 mb-6">Las historias con notas nuevas hoy. Primero las que cubrieron más medios.</p>
   <div class="space-y-4">
-    {% for h in hoy %}{% include "archivo/_historia_item.html" %}
+    {% for h in hoy %}{% include "archivo/_historia_item.html" with nivel=3 %}
     {% empty %}<p class="mono text-sm text-gray-700">Todavía no hay historias de hoy.</p>{% endfor %}
   </div>
 
   {% if cambios %}
   <section class="mt-10 border-2 border-black p-4">
-    <h3 class="mono font-bold text-sm mb-2">Notas que cambiaron después de publicadas</h3>
+    <h2 class="mono font-bold text-sm mb-2">Notas que cambiaron después de publicadas</h2>
     <ul class="space-y-3">{% for c in cambios %}{% include "archivo/_cambio_item.html" %}{% endfor %}</ul>
     <a href="{% url 'archivo:cambios' %}?sentido=1" class="mono text-xs underline mt-3 inline-block">ver todas →</a>
   </section>
@@ -38,7 +39,7 @@
   {% if ayer %}
   <h2 class="mono text-2xl font-bold mt-10 mb-6">Ayer</h2>
   <div class="space-y-4">
-    {% for h in ayer %}{% include "archivo/_historia_item.html" %}{% endfor %}
+    {% for h in ayer %}{% include "archivo/_historia_item.html" with nivel=3 %}{% endfor %}
   </div>
   <a href="{% url 'archivo:dia' y=ayer_fecha.year m=ayer_fecha.month d=ayer_fecha.day %}" class="mono text-xs underline mt-3 inline-block">archivo de ayer →</a>
   {% endif %}

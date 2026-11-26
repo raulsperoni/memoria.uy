@@ -4,8 +4,8 @@
     {% if h.categoria %}<a class="underline hover:text-black" href="{% url 'archivo:tema' h.categoria %}">{{ h.get_categoria_display }}</a>{% endif %}
     <span>{{ h.n_medios }} medio{{ h.n_medios|pluralize }}</span>
   </div>
-  <h3 class="font-bold text-lg leading-snug">
+  <h{{ nivel|default:"2" }} class="font-bold text-lg leading-snug">
     <a href="{% url 'archivo:historia' h.slug %}" class="hover:underline">{{ h.titulo }}</a>
-  </h3>
+  </h{{ nivel|default:"2" }}>
   {% if h.resumen %}<p class="text-[15px] text-gray-900 mt-1">{{ h.resumen|truncatechars:240 }}</p>{% endif %}
 </article>
