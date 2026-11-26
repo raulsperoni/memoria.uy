@@ -3,7 +3,7 @@ Datos de una entidad en Wikidata y Wikipedia (APIs públicas, gratis).
 
 - WikidataEnriquecedor: wbsearchentities + wbgetentities (Wikidata), imageinfo
   (Commons) y REST summary (Wikipedia en español). Serie, con pausa entre
-  pedidos, User-Agent del proyecto y reintento si responden 429/maxlag.
+  pedidos, User-Agent del proyecto y reintento si responden 429.
 - FakeEnriquecedor: tests.
 
 Solo devuelve candidatos uruguayos: personas con ciudadanía Uruguay (P27),
@@ -116,7 +116,7 @@ class WikidataEnriquecedor(Enriquecedor):
         raise RuntimeError(f"{url} no responde (límite de pedidos)")
 
     def _wd(self, **params):
-        return self._get(API_WD, format="json", maxlag=5, **params)
+        return self._get(API_WD, format="json", **params)
 
     def _etiquetas(self, qids):
         qids = sorted(set(qids))

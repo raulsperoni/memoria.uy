@@ -30,6 +30,7 @@ agrega, nunca se reescribe.
 | [0014](0014-que-se-entienda-en-el-celular.md) | Que el sitio se entienda en el celular la primera vez |
 | [0015](0015-politica-de-ia-y-licencia.md) | Política de IA y licencia: nos pueden leer y citar, con CC BY 4.0 |
 | [0016](0016-fichas-de-wikidata.md) | Fichas de entidades con Wikidata, solo si hay confianza alta |
+| [0017](0017-fichas-reintento-y-maxlag.md) | Fichas: lectura sin maxlag y reintento a los 14 días |
 
 El registro de la noche del 21 al 22/11/2026
 ([DECISIONES_2026-11-22.md](../DECISIONES_2026-11-22.md)) queda como estaba;

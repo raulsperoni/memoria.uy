@@ -69,7 +69,7 @@ def test_decider_ve_los_hechos(mundo):
 def test_sin_confianza_no_asocia(mundo):
     set_decider(FakeDecider(default=0.5))
     e = entidad()
-    assert enriquecer(e) == "sin_candidato"
+    assert enriquecer(e) == "dudosa"
     assert e.ficha.qid == "" and e.ficha.confianza == 0.5
 
 
@@ -78,7 +78,7 @@ def test_homonimos_ambiguos_no_asocian(mundo):
     enr, _ = mundo
     enr.items["Q2"] = OTRO_ORSI
     e = entidad()
-    assert enriquecer(e) == "sin_candidato"  # los dos con 0.9: sin ventaja
+    assert enriquecer(e) == "dudosa"  # los dos con 0.9: sin ventaja
 
 
 @pytest.mark.django_db
@@ -169,11 +169,11 @@ def test_cola_ordena_por_hechos_y_nuevas_primero(mundo):
 
 
 @pytest.mark.django_db
-def test_sin_asociar_se_reintenta_a_los_90_dias(mundo):
+def test_sin_asociar_se_reintenta_a_los_14_dias(mundo):
     e = entidad()
-    FichaEntidad.objects.create(entidad=e, consultada_en=timezone.now() - timedelta(days=60))
+    FichaEntidad.objects.create(entidad=e, consultada_en=timezone.now() - timedelta(days=10))
     assert e not in list(entidades_pendientes())
-    FichaEntidad.objects.filter(entidad=e).update(consultada_en=timezone.now() - timedelta(days=91))
+    FichaEntidad.objects.filter(entidad=e).update(consultada_en=timezone.now() - timedelta(days=15))
     assert e in list(entidades_pendientes())
 
 

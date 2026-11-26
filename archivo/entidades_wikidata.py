@@ -45,7 +45,7 @@ UMBRAL_WIKIDATA = lambda: float(os.environ.get("UMBRAL_WIKIDATA", 0.8))  # noqa:
 MARGEN_WIKIDATA = lambda: float(os.environ.get("MARGEN_WIKIDATA", 0.2))  # noqa: E731
 MIN_HECHOS = lambda: int(os.environ.get("MIN_HECHOS_ENRIQUECER", 2))  # noqa: E731
 REFRESCO_DIAS = lambda: int(os.environ.get("REFRESCO_FICHA_DIAS", 30))  # noqa: E731
-REINTENTO_DIAS = lambda: int(os.environ.get("REINTENTO_FICHA_DIAS", 90))  # noqa: E731
+REINTENTO_DIAS = lambda: int(os.environ.get("REINTENTO_FICHA_DIAS", 14))  # noqa: E731
 MAX_ERRORES_SEGUIDOS = 3
 HECHOS_DE_CONTEXTO = 6
 
@@ -154,7 +154,7 @@ def enriquecer(entidad, enr=None) -> str:
         ficha.confianza = confianza
         ficha.consultada_en = timezone.now()
         ficha.save(update_fields=["confianza", "consultada_en"])
-        return "sin_candidato"
+        return "dudosa" if confianza else "sin_candidato"
     _aplicar(ficha, enr.detalle(d), confianza)
     return "asociada"
 
@@ -210,7 +210,7 @@ def enriquecer_pendientes(limite=None, segundos=None) -> str:
     enr = get_enriquecedor()
     fin = time.monotonic() + segundos if segundos else None
     cuenta = {}
-    errores = hechas = 0
+    errores = seguidos = hechas = 0
     for e in entidades_pendientes().iterator():
         if enriquecimientos_hoy() >= MAX_DIA() or (limite is not None and hechas >= limite):
             break
@@ -220,11 +220,12 @@ def enriquecer_pendientes(limite=None, segundos=None) -> str:
         registrar_uso("wikidata", "enriquecer")
         try:
             r = enriquecer(e, enr)
-            errores = 0
+            seguidos = 0
         except Exception:
             logger.exception("Ficha falló para %s", e)
             errores += 1
-            if errores >= MAX_ERRORES_SEGUIDOS:  # Wikidata caído: no seguir golpeando
+            seguidos += 1
+            if seguidos >= MAX_ERRORES_SEGUIDOS:  # Wikidata caído: no seguir golpeando
                 break
             continue
         cuenta[r] = cuenta.get(r, 0) + 1
