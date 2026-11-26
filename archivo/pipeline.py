@@ -25,6 +25,7 @@ from django.utils import timezone
 from core.models import Entidad
 from core.utils import normalize_url
 
+from .limpieza import limpiar, lineas_del_medio
 from .llm import get_procesador
 from .models import (
     Cambio,
@@ -269,6 +270,7 @@ def extraer(fuente: Fuente, respetar_cupo=True) -> bool:
         fuente.save(update_fields=["estado", "motivo_descarte", "intentos"])
         return False
     registrar_uso(extractor.nombre, "extraer")
+    res.texto = limpiar(res.texto, lineas_del_medio(fuente.medio, res.texto))
 
     snap = guardar_snapshot(fuente, res)
     fuente.ultimo_snapshot = snap
@@ -291,7 +293,10 @@ def extraer(fuente: Fuente, respetar_cupo=True) -> bool:
 
 
 def _texto_para_embedding(fuente):
-    primer_parrafo = (fuente.texto or fuente.bajada).split("\n", 1)[0][:600]
+    # El primer párrafo con contenido: un saludo o una línea suelta de la
+    # página no alcanza para saber de qué trata la nota.
+    lineas = [x for x in (fuente.texto or fuente.bajada).split("\n") if x.strip()]
+    primer_parrafo = next((x for x in lineas if len(x) >= 40), lineas[0] if lineas else "")[:600]
     return f"{fuente.titulo}\n{primer_parrafo}"
 
 
@@ -309,6 +314,13 @@ def _actualizar_centroide(historia, emb):
 def agrupar(fuente: Fuente) -> Historia | None:
     if fuente.estado not in ("extraida", "procesada") or not fuente.texto:
         return None
+    # Una nota guardada antes de que su aviso se repitiera lo bastante como
+    # para reconocerlo.
+    limpio = limpiar(fuente.texto, lineas_del_medio(fuente.medio))
+    if limpio != fuente.texto:
+        fuente.texto = limpio
+        fuente.embedding = None
+        fuente.save(update_fields=["texto"])
     if not fuente.embedding:
         fuente.embedding = get_embedder().embed([_texto_para_embedding(fuente)])[0]
         registrar_uso("embed", "embed")
@@ -727,6 +739,11 @@ def recrawl(fuente: Fuente) -> Cambio | None:
         fuente.save(update_fields=["recrawls_hechos", "proximo_recrawl"])
         return None
     registrar_uso(extractor.nombre, "recrawl")
+    # Las dos versiones se comparan limpias: si no, un aviso nuevo del medio
+    # (o uno que antes no se limpiaba) parece una edición.
+    lineas = lineas_del_medio(fuente.medio, res.texto)
+    res.texto = limpiar(res.texto, lineas)
+    fuente.texto = limpiar(fuente.texto, lineas)
 
     cambio_titulo = res.titulo != anterior.titulo
     clase = "igual"

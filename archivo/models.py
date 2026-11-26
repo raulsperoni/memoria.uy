@@ -31,6 +31,9 @@ class Medio(models.Model):
     secciones_excluidas = models.JSONField(default=list, blank=True)
     activo = models.BooleanField(default=True)
     pago = models.BooleanField(default=False, help_text="Tiene paywall")
+    lineas_repetidas = models.JSONField(
+        default=list, blank=True, help_text="Líneas que el medio repite en todas sus notas (avisos, muro de pago); se sacan del texto"
+    )
     ultimo_descubrimiento = models.DateTimeField(null=True, blank=True)
 
     class Meta:
