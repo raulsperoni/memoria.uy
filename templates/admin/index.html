@@ -1,0 +1,11 @@
+{% extends "admin/index.html" %}
+{% block content %}
+{% if pulso %}
+<section class="pulso" aria-label="Pulso del pipeline">
+  {% for etiqueta, valor, url in pulso %}
+  <a class="pulso-item" href="{{ url }}"><span class="pulso-valor">{{ valor }}</span><span class="pulso-etiqueta">{{ etiqueta }}</span></a>
+  {% endfor %}
+</section>
+{% endif %}
+{{ block.super }}
+{% endblock %}
