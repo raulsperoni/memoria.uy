@@ -1,6 +1,6 @@
 # 0015 — Política de IA y licencia: nos pueden leer y citar, con CC BY 4.0
 
-*Fecha: 2026-11-26 · Estado: vigente · Commits: 0000000*
+*Fecha: 2026-11-26 · Estado: vigente · Commits: ebbde5f, fecf81b*
 
 ## Decisión
 
