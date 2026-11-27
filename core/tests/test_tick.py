@@ -19,9 +19,9 @@ def _local(h, m, dia=0):
 def test_vencida_por_intervalo():
     ahora = timezone.now()
     assert tick.vencida("procesar_historias", ahora)
-    cache.set(tick.CLAVE.format("procesar_historias"), ahora - timedelta(minutes=5), None)
+    tick.marcar("procesar_historias", ahora - timedelta(minutes=5))
     assert not tick.vencida("procesar_historias", ahora)
-    cache.set(tick.CLAVE.format("procesar_historias"), ahora - timedelta(minutes=15), None)
+    tick.marcar("procesar_historias", ahora - timedelta(minutes=15))
     assert tick.vencida("procesar_historias", ahora)
 
 
@@ -31,7 +31,7 @@ def test_vencida_diaria():
     despues = _local(5, 45)
     assert not tick.vencida("jornada", antes)
     assert tick.vencida("jornada", despues)
-    cache.set(tick.CLAVE.format("jornada"), despues, None)
+    tick.marcar("jornada", despues)
     assert not tick.vencida("jornada", despues + timedelta(minutes=30))
     assert tick.vencida("jornada", despues + timedelta(days=1))
 
@@ -62,3 +62,11 @@ def test_tarea_medios_carga_si_no_hay():
     nombres = [c.args[0] for c in cc.call_args_list]
     assert nombres == ["cargar_medios"]  # no hay medios reales en el mock → no detecta
     assert Medio.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_vaciar_el_cache_no_repite_la_tarea_diaria():
+    despues = _local(9, 30)
+    tick.marcar("resumen_staff", despues)
+    cache.clear()  # el cache de base borra entradas al pasar MAX_ENTRIES
+    assert not tick.vencida("resumen_staff", despues + timedelta(hours=2))
