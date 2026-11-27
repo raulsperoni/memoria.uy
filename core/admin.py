@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db.models import Count
 
-from .models import Entidad
+from .models import Entidad, TareaCorrida
 
 
 @admin.register(Entidad)
@@ -30,3 +30,9 @@ class EntidadAdmin(admin.ModelAdmin):
     @admin.display(description="tonos", ordering="_n_tonos")
     def n_tonos(self, obj):
         return obj._n_tonos
+
+
+@admin.register(TareaCorrida)
+class TareaCorridaAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "ultima")
+    ordering = ("nombre",)

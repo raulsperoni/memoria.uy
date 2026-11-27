@@ -53,3 +53,13 @@ class Entidad(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class TareaCorrida(models.Model):
+    """Última corrida de cada tarea de `manage.py tick`."""
+
+    nombre = models.CharField(max_length=50, primary_key=True)
+    ultima = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.nombre} @ {self.ultima:%Y-%m-%d %H:%M}"

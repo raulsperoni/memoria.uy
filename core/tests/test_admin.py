@@ -11,7 +11,7 @@ from archivo.models import (
     Cambio, Decision, FichaEntidad, Fuente, Hecho, HechoFuente, Historia, Medio, Proposicion,
     Snapshot, Tono, UsoProveedor,
 )
-from core.models import Entidad
+from core.models import Entidad, TareaCorrida
 from juego.models import (
     Burbuja, BurbujaMiembro, BurbujaPatron, BurbujaRun, Jornada, JornadaItem,
     VotoProposicion,
@@ -61,6 +61,7 @@ def crear_datos(n=1, sufijo=""):
                                        session_key=None if i == 0 else f"s{k}", opinion="acuerdo",
                                        prediccion=2, jornada=jornada)
         Decision.objects.create(pregunta="interes", entrada_hash=k, valor=0.5, modelo="jev")
+        TareaCorrida.objects.create(nombre=f"tarea{k}", ultima=timezone.now())
         UsoProveedor.objects.get_or_create(proveedor=f"p{k}", operacion="x", defaults={"costo_usd": 0.1})
         run = BurbujaRun.objects.create(k=1, n_votantes=3)
         b = Burbuja.objects.create(run=run, numero=0, nombre=f"B{k}")

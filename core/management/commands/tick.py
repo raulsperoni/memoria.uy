@@ -3,8 +3,9 @@ Corre las tareas periódicas que estén "vencidas" y termina.
 
 Reemplaza a Celery beat + worker + Redis: en Railway se ejecuta como cron
 service cada 15 min (`python manage.py tick`). El estado (última corrida de
-cada tarea) se guarda en el cache de Django (tabla en Postgres) y cada tarea
-mantiene su propio `task_lock`, así que dos ticks superpuestos no duplican
+cada tarea) se guarda en `TareaCorrida`, no en el cache: el cache de base
+borra entradas al pasar `MAX_ENTRIES` y eso hacía repetir las tareas diarias
+(registro 0018). Cada tarea mantiene su propio `task_lock`, así que dos ticks superpuestos no duplican
 trabajo.
 
     manage.py tick              # corre lo vencido
@@ -17,7 +18,6 @@ import os
 import time
 from datetime import datetime, timedelta
 
-from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -111,21 +111,30 @@ TAREAS = {
 # Tonos y fichas van al final: son lentas y no alimentan a ninguna otra.
 ORDEN = ["medios", "ciclo_ingesta", "procesar_historias", "recrawls", "cerrar_historias", "burbujas", "jornada", "resumen_staff", "tonos", "fichas"]
 
-CLAVE = "tick:ultima:{}"
+def ultima(nombre):
+    from core.models import TareaCorrida
+
+    return TareaCorrida.objects.filter(nombre=nombre).values_list("ultima", flat=True).first()
+
+
+def marcar(nombre, cuando=None):
+    from core.models import TareaCorrida
+
+    TareaCorrida.objects.update_or_create(nombre=nombre, defaults={"ultima": cuando or timezone.now()})
 
 
 def vencida(nombre, ahora=None):
     _, cada, hora = TAREAS[nombre]
     ahora = ahora or timezone.now()
-    ultima = cache.get(CLAVE.format(nombre))
+    previa = ultima(nombre)
     if cada is not None:
-        return ultima is None or ahora - ultima >= cada
+        return previa is None or ahora - previa >= cada
     hh, mm = map(int, hora.split(":"))
     local = timezone.localtime(ahora)
     umbral = local.replace(hour=hh, minute=mm, second=0, microsecond=0)
     if local < umbral:
         return False
-    return ultima is None or timezone.localtime(ultima) < umbral
+    return previa is None or timezone.localtime(previa) < umbral
 
 
 def correr(nombre):
@@ -137,7 +146,7 @@ def correr(nombre):
     except Exception as e:  # una tarea rota no frena a las demás
         logger.exception("Tarea %s falló", nombre)
         res, estado = str(e)[:200], "error"
-    cache.set(CLAVE.format(nombre), timezone.now(), timeout=None)
+    marcar(nombre)
     return estado, res, time.monotonic() - t
 
 
@@ -151,7 +160,7 @@ class Command(BaseCommand):
     def handle(self, *args, forzar, listar, **opts):
         if listar:
             for n in ORDEN:
-                u = cache.get(CLAVE.format(n))
+                u = ultima(n)
                 self.stdout.write(f"{n:20s} última: {timezone.localtime(u):%d/%m %H:%M}" if u else f"{n:20s} nunca")
             return
         a_correr = forzar or [n for n in ORDEN if vencida(n)]
